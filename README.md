@@ -8,7 +8,7 @@ Insert your code into the respective folders, i.e. `scripts`, `rules`, and `envs
 
 ## Authors
 
-* Yan Hui (@yanhui)
+* Yan Hui (@yanhui09)
 
 ## Usage
 
