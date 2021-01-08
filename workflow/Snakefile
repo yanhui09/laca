@@ -1,18 +1,40 @@
 # The main entry point of your workflow.
 # After configuring, running snakemake -n in a clone of this repository should successfully execute a dry-run of the workflow.
-
-
-report: "report/workflow.rst"
+INPUT_DIR = config["basecalled_dir"]
+OUTPUT_DIR = config["results_dir"]
+wildcard_constraints:
+        barcode="^BRK"
 
 # Allow users to fix the underlying OS via singularity.
 singularity: "docker://continuumio/miniconda3"
 
-
-rule all:
-    input:
+#rule all:
+#    input:
         # The first rule should define the default target files
         # Subsequent target rules can be specified below. They should start with all_*.
 
 
-include: "rules/common.smk"
-include: "rules/other.smk"
+#include: "rules/common.smk"
+#include: "rules/other.smk"
+rule demultiplex:
+    input: 
+        INPUT_DIR + "{live_batch}.fastq"
+    output: 
+        temp(OUTPUT_DIR + "demultiplexed_fq/{live_batch}")
+    threads: 30
+    shell:
+        "{config[guppy_dir]}/guppy_barcoder -i {input} -s {output}  -t {threads}  --barcode_kits SQK16S-GXO"
+
+rule nanofilt:
+    input: 
+        OUTPUT_DIR + "demultiplexed_fq/{live_batch}/{barcode}" 
+    output: 
+        temp(OUTPUT_DIR + "qc_fq/{live_batch}/filt_{barcode}.fasta")
+    conda:
+        "nanofilt.yaml"
+    threads: 20
+    shell: 
+        """
+        cat {input}/*.fastq > {input}.fastq
+        cat {input}.fastq | NanoFilt -q 8 -l 1000 --maxlength 1600 --headcrop 15 --tailcrop 15   > filt_$(basename {})
+        """

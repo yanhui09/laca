@@ -1,0 +1,8 @@
+# conda dependence for naonfilt
+name: nanofilt
+channels:
+  - bioconda
+dependencies:
+  - biopythonnanoget >=0.15.0
+  - nanomath >=0.13.3
+  - python >=3
