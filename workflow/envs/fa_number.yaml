@@ -1,0 +1,7 @@
+# conda dependence for fa_count(workflow/scripts/fasta_number.py)
+name: fa_count
+channels:
+  - python
+dependencies:
+  - sys
+  - die
