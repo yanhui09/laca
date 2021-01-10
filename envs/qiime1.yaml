@@ -1,0 +1,11 @@
+# conda dependence for qiime1
+name: qiime1
+channels:
+  - bioconda
+  - free
+dependencies:
+  - python = 2.7
+  - qiime
+  - matplotlib = 1.4.3
+  - mock
+  - nose

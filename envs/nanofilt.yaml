@@ -1,0 +1,6 @@
+# conda dependence for naonfilt
+name: nanofilt
+channels:
+  - bioconda
+dependencies:
+  - nanofilt
