@@ -21,11 +21,12 @@ usage () {
     echo "  -o, --output    Required, define the output directory path."
     echo "  -j, --jobs      Optional, define the thread number for analysis. Integer, default: 8."
     echo "  -m, --mem_mb    Optional, define the maximum memory usage(MB). Integer, default: 50000."
-    echo "  -h, --help    Optional, Help message."   
+    echo "  -t, --wait      Optional,  waiting seconds to exit. Default, 900, i.e. exit if no new fastq files within 15 mins."
+    echo "  -h, --help      Optional, Help message."   
     echo ""
     echo "Example:"
     echo "$0 -i ./basecalled_fqs -o ./results"
-    echo "$0 -i ./basecalled_fqs -o ./results -j 30 -m 200000"
+    echo "$0 -i ./basecalled_fqs -o ./results -j 30 -m 200000 -t 1800"
     echo "";}
 
 #############################################################################
@@ -33,7 +34,7 @@ usage () {
 if [ $# -eq 0 ] || ! [[ $* =~ ^(-|--)[a-z] ]]; then 
     echo "Invalid use: please check the help message below." ; usage; exit 1; fi
 # Params loading
-args=$(getopt --long "input:,output:,jobs::,mem_mb::,help" -o "i:o:j::m::h" -n "Input error" -- "$@")
+args=$(getopt --long "input:,output:,jobs::,mem_mb::,wait::,help" -o "i:o:j::m::t::h" -n "Input error" -- "$@")
 # Ensure corrected input of params
 if [ $? -ne 0 ]; then usage; exit 1; fi
 
@@ -45,15 +46,44 @@ while true; do
                 -o|--output) OUTPUT="$2"; shift 2;;
                 -j|--jobs) JOBS="$2"; shift 2;;
                 -m|--mem_mb) MEM_MB="$2"; shift 2;;
+                -t|--wait) WAIT="$2"; shift 2;;
                 -h|--help) usage; exit 1; shift 1;;
                 *) break;;    
         esac
 done
 #############################################################################
+# Paratermer initialization
+if [ -z "$JOBS" ]; then
+    JOBS=8
+fi
+if [ -z "$MEM_MB" ]; then
+    MEM_MB=50000
+fi
+if [ -z "$WAIT" ]; then
+    WAIT=900
+fi
 
-snakemake -p --use-conda -j "$JOBS" --resources mem_mb="$MEM_MB" \
---config basecalled_dir="$INPUT" results_dir="$OUTPUT"
+# Check if the input directory exists
+if [ ! -d "$INPUT" ]; then
+    echo "The input directory does not exist. Please double check the input path."
+    exit 1
+fi
 
-snakemake -p --use-conda -j "$JOBS" --resources mem_mb="$MEM_MB" \
---config basecalled_dir="$INPUT" results_dir="$OUTPUT" \
---forcerun "$(snakemake --list-input-changes)"
+while true; do
+    NUM_FQ1=$(ls "$INPUT" | wc -l)
+    if [ "$NUM_FQ1" -eq 0 ]; then
+        continue
+    fi
+    
+    snakemake -p --use-conda -j "$JOBS" --resources mem_mb="$MEM_MB" --config basecalled_dir="$INPUT" results_dir="$OUTPUT" \
+    --forcerun "$(snakemake --list-input-changes)"
+
+    NUM_FQ2=$(ls "$INPUT" | wc -l)
+    if [ "$NUM_FQ2" -eq "$NUM_FQ1" ]; then
+        sleep "$WAIT"
+        NUM_FQ2=$(ls "$INPUT" | wc -l)
+        if [ "$NUM_FQ2" -eq "$NUM_FQ1" ]; then
+            break
+        fi
+    fi    
+done
