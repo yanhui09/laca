@@ -35,7 +35,7 @@ checkpoint demultiplex:
     log: 
         OUTPUT_DIR + "/logs/demultiplex/{live_batch}.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/demultiplex/{live_batch}.tsv"
+        OUTPUT_DIR + "/benchmarks/demultiplex/{live_batch}.tsv"
     threads: 2
     shell:
         """
@@ -51,7 +51,7 @@ rule nanofilt:
     log: 
         OUTPUT_DIR + "/logs/nanofilt/{live_batch}/{barcode}.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/nanofilt/{live_batch}/{barcode}.tsv"
+        OUTPUT_DIR + "/benchmarks/nanofilt/{live_batch}/{barcode}.tsv"
     conda:
         "envs/nanofilt.yaml"
     shell: 
@@ -67,7 +67,7 @@ rule fq2fa:
     log: 
         OUTPUT_DIR + "/logs/fq2fa/{live_batch}/{barcode}.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/fq2fa/{live_batch}/{barcode}.tsv"
+        OUTPUT_DIR + "/benchmarks/fq2fa/{live_batch}/{barcode}.tsv"
     shell: 
         """
         {config[usearch11]} -fastq_filter {input} -fastaout {output}
@@ -82,7 +82,7 @@ rule fa_adjust:
     log: 
         OUTPUT_DIR + "/logs/fa_adjust/{live_batch}/{barcode}.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/fa_adjust/{live_batch}/{barcode}.tsv"
+        OUTPUT_DIR + "/benchmarks/fa_adjust/{live_batch}/{barcode}.tsv"
     shell: 
         "scripts/fasta_number.py {input} {wildcards.barcode}_ > {output}"
 
@@ -94,7 +94,7 @@ rule taxa_assignment:
     log: 
         OUTPUT_DIR + "/logs/taxa_assignment/{live_batch}/{barcode}.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
+        OUTPUT_DIR + "/benchmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
     threads: 4
     conda: 
         "envs/qiime1.yaml"
@@ -121,7 +121,7 @@ rule biom_per_barcode:
     log: 
         OUTPUT_DIR + "/logs/biom_perbarcode/{live_batch}/{barcode}.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/biom_perbarcode/{live_batch}/{barcode}.tsv"
+        OUTPUT_DIR + "/benchmarks/biom_perbarcode/{live_batch}/{barcode}.tsv"
     conda:
         "envs/qiime1.yaml"
     shell:
@@ -141,12 +141,12 @@ rule taxa_summary:
     log: 
         OUTPUT_DIR + "/logs/taxa_summary/{live_batch}/{barcode}.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/taxa_summary/{live_batch}/{barcode}.tsv"
+        OUTPUT_DIR + "/benchmarks/taxa_summary/{live_batch}/{barcode}.tsv"
     conda:
         "envs/qiime1.yaml"    
     shell: 
         """
-        summarize_taxa.py -i {input} -L 7 -a -o {params.dir_out} -u 0.0005  # remove bellow 0.05% as most of it is usually mess
+        summarize_taxa.py -i {input} -L 7 -a -o {params.dir_out}
         mv {params.dir_out}/{wildcards.barcode}_L7.biom {output}
         rm -rf {params.dir_out}
         """
@@ -162,7 +162,7 @@ rule biom_per_batch:
     output: 
         OUTPUT_DIR + "/bioms_out/{live_batch}.biom"
     params:
-        files=lambda wildcards, input: ','.join(input)
+        files = lambda wildcards, input: ','.join(input)
     log: 
         OUTPUT_DIR + "/logs/biom_per_batch/{live_batch}.log"
     benchmark:
@@ -179,15 +179,17 @@ rule biom_update:
         biom_l7 = OUTPUT_DIR + "/ONT-L7-GG.biom",
         tsv_l7 = OUTPUT_DIR + "/ONT-L7-GG.txt"
     params:
-        files=lambda wildcards, input: ','.join(input)
+        files = lambda wildcards, input: ','.join(input),
+        demux_dir = OUTPUT_DIR + "/demultiplex" 
     log: 
         OUTPUT_DIR + "/logs/biom_update.log"
     benchmark:
-        OUTPUT_DIR + "/bechmarks/biom_update.tsv"
+        OUTPUT_DIR + "/benchmarks/biom_update.tsv"
     conda:
         "envs/qiime1.yaml" 
     shell:
         """
         merge_otu_tables.py -i {params.files} -o {output.biom_l7}
         biom convert -i {output.biom_l7} -o {output.tsv_l7} --to-tsv
+        rm -rf {params.demux_dir} 
         """

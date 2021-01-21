@@ -1,14 +1,12 @@
 #!/bin/bash
 
 #---------------------------------------------------------------------------------
-# This script is for real-time sync new runs in the monitor path.
-# It will automatically call respective sync.sh when one run directory is created at the monitor path.
-# So it may get stuck when thousands of files running simultaneously.
-# It will start an infinite loop to monitor the input path. So remember to manually stop it if you don't want sync anymore.
+# Real-time mode
+# This script to start the snakemake workflow in a preset time terminals to achieve.
+# It will call snakemake worflow and update the analysis with --forcerun $(snakemake --list-input-change)
 
-# This needs dependency of openssh, getopt, rsync, inotify
 # University of Copenhagen
-# 2020/12/10
+# 2021/01/21
 # Yan Hui
 # huiyan@food.ku.dk
 #---------------------------------------------------------------------------------
@@ -16,14 +14,18 @@
 # Wrapped function, e.g. usage()
 usage () {
     echo ""
-    echo "Note: This script calls a sync.sh when a new run is created at the monitor path"
-    echo "It starts an infinite loop to monitor the input path. Stop the shell when you don't want monitor the path anymore."
-    echo ""
+    echo "Note: The real-time mode of snakemake workflow in analyzing nanopore amplicon sequencing."
+    cho ""
     echo "Usage: $0 [-m -h]"
-    echo "  -m, --monitor-path    Required, the monitor path (absolute/relative)."
+    echo "  -i, --input     Required, the directory path for basecalled fastqs."
+    echo "  -o, --output    Required, define the output directory path."
+    echo "  -j, --jobs      Optional, define the thread number for analysis. Integer, default: 8."
+    echo "  -m, --mem_mb    Optional, define the maximum memory usage(MB). Integer, default: 50000."
     echo "  -h, --help    Optional, Help message."   
     echo ""
-    echo "Example: $0 -m /dir_all_runs"
+    echo "Example:"
+    echo "$0 -i ./basecalled_fqs -o ./results"
+    echo "$0 -i ./basecalled_fqs -o ./results -j 30 -m 200000"
     echo "";}
 
 #############################################################################
@@ -31,7 +33,7 @@ usage () {
 if [ $# -eq 0 ] || ! [[ $* =~ ^(-|--)[a-z] ]]; then 
     echo "Invalid use: please check the help message below." ; usage; exit 1; fi
 # Params loading
-args=$(getopt --long "monitor-path:,help" -o "m:h" -n "Input error" -- "$@")
+args=$(getopt --long "input:,output:,jobs::,mem_mb::,help" -o "i:o:j::m::h" -n "Input error" -- "$@")
 # Ensure corrected input of params
 if [ $? -ne 0 ]; then usage; exit 1; fi
 
@@ -39,14 +41,19 @@ eval set -- "$args"
 
 while true; do
         case "$1" in
-                -m|--monitor-path) MONITOR_DIR="$2"; shift 1;;
+                -i|--input) INPUT="$2"; shift 2;;
+                -o|--output) OUTPUT="$2"; shift 2;;
+                -j|--jobs) JOBS="$2"; shift 2;;
+                -m|--mem_mb) MEM_MB="$2"; shift 2;;
                 -h|--help) usage; exit 1; shift 1;;
                 *) break;;    
         esac
 done
 #############################################################################
 
+snakemake -p --use-conda -j "$JOBS" --resources mem_mb="$MEM_MB" \
+--config basecalled_dir="$INPUT" results_dir="$OUTPUT"
 
-snakemake -p --use-conda -j8 --resources mem_mb=50000
-
-snakemake -p --use-conda -j8 --resources mem_mb=50000 --forcerun $(snakemake --list-input-changes)
+snakemake -p --use-conda -j "$JOBS" --resources mem_mb="$MEM_MB" \
+--config basecalled_dir="$INPUT" results_dir="$OUTPUT" \
+--forcerun "$(snakemake --list-input-changes)"
