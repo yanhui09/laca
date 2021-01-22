@@ -21,12 +21,12 @@ usage () {
     echo "  -o, --output    Required, define the output directory path."
     echo "  -j, --jobs      Optional, define the thread number for analysis. Integer, default: 8."
     echo "  -m, --mem_mb    Optional, define the maximum memory usage(MB). Integer, default: 50000."
-    echo "  -t, --wait      Optional, waiting seconds to exit. Default, 900, i.e. exit if no new fastq files within 15 mins."
+    echo "  -t, --wait      Optional, waiting seconds to exit. Default, 900, i.e. exit if no new fastq files upload within 15 mins."
     echo "  -h, --help      Optional, help message."   
     echo ""
     echo "Example:"
-    echo "$0 -i ./basecalled_fqs -o ./results"
-    echo "$0 -i ./basecalled_fqs -o ./results -j 30 -m 200000 -t 1800"
+    echo "$0 -i /path/to/basecalled_fqs -o /path/to/results"
+    echo "$0 -i /path/to/basecalled_fqs -o /path/to/results -j 30 -m 200000 -t 1800"
     echo "";}
 
 #############################################################################
@@ -76,7 +76,7 @@ while true; do
     fi
     
     snakemake -p --use-conda -j "$JOBS" --resources mem_mb="$MEM_MB" --config basecalled_dir="$INPUT" results_dir="$OUTPUT" \
-    --forcerun "$(snakemake --list-input-changes)"
+    --forcerun $(snakemake --list-input-changes)
 
     NUM_FQ2=$(ls "$INPUT" | wc -l)
     if [ "$NUM_FQ2" -eq "$NUM_FQ1" ]; then

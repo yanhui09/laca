@@ -29,7 +29,11 @@ checkpoint demultiplex:
     shell:
         """
         mkdir -p {output} && cp {input} {output}
-        {config[guppy_dir]}/guppy_barcoder -i {output} -s {output} -t {threads} --barcode_kits SQK16S-GXO -x auto
+        if nvidia-smi; then
+            {config[guppy_dir]}/guppy_barcoder -i {output} -s {output} -t {threads} --barcode_kits SQK16S-GXO -x auto
+        else
+            {config[guppy_dir]}/guppy_barcoder -i {output} -s {output} -t {threads} --barcode_kits SQK16S-GXO
+        fi
         """
 
 rule nanofilt:
@@ -169,7 +173,7 @@ rule biom_update:
         tsv_l7 = OUTPUT_DIR + "/ONT-L7-GG.txt"
     params:
         files = lambda wildcards, input: ','.join(input),
-        demux_dir = OUTPUT_DIR + "/demultiplex" 
+        demux_dir = OUTPUT_DIR + "/demultiplexed_fq" 
     log: 
         OUTPUT_DIR + "/logs/biom_update.log"
     #benchmark:
