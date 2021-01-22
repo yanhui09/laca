@@ -15,14 +15,14 @@
 usage () {
     echo ""
     echo "Note: The real-time mode of snakemake workflow in analyzing nanopore amplicon sequencing."
-    cho ""
-    echo "Usage: $0 [-m -h]"
+    echo ""
+    echo "Usage: $0 [-i -o -j -m -t -h]"
     echo "  -i, --input     Required, the directory path for basecalled fastqs."
     echo "  -o, --output    Required, define the output directory path."
     echo "  -j, --jobs      Optional, define the thread number for analysis. Integer, default: 8."
     echo "  -m, --mem_mb    Optional, define the maximum memory usage(MB). Integer, default: 50000."
-    echo "  -t, --wait      Optional,  waiting seconds to exit. Default, 900, i.e. exit if no new fastq files within 15 mins."
-    echo "  -h, --help      Optional, Help message."   
+    echo "  -t, --wait      Optional, waiting seconds to exit. Default, 900, i.e. exit if no new fastq files within 15 mins."
+    echo "  -h, --help      Optional, help message."   
     echo ""
     echo "Example:"
     echo "$0 -i ./basecalled_fqs -o ./results"
@@ -65,7 +65,7 @@ fi
 
 # Check if the input directory exists
 if [ ! -d "$INPUT" ]; then
-    echo "The input directory does not exist. Please double check the input path."
+    echo "The input directory does not exist. Please check if the input is a valid directory path."
     exit 1
 fi
 

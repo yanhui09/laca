@@ -12,7 +12,7 @@ LIVE_BATCH = glob_wildcards(INPUT_DIR + "/{batchid}.fastq").batchid
 # Allow users to fix the underlying OS via singularity.
 #singularity: "docker://continuumio/miniconda3"
 
-#test
+# test
 #BARCODE = glob_wildcards(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}/{barcode, BRK[0-9][0-9]}").barcode
 
 rule all:
