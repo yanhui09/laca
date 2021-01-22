@@ -12,19 +12,8 @@ LIVE_BATCH = glob_wildcards(INPUT_DIR + "/{batchid}.fastq").batchid
 # Allow users to fix the underlying OS via singularity.
 #singularity: "docker://continuumio/miniconda3"
 
-# test
-#BARCODE = glob_wildcards(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}/{barcode, BRK[0-9][0-9]}").barcode
-
 rule all:
     input: 
-        #expand(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}", live_batch = LIVE_BATCH),
-        #expand(OUTPUT_DIR + "/filt_fq/{live_batch}/{barcode}.fastq", live_batch = LIVE_BATCH, barcode = BARCODE),
-        #expand(OUTPUT_DIR + "/filt_fa/{live_batch}/{barcode}.fasta", live_batch = LIVE_BATCH, barcode = BARCODE),
-        #expand(OUTPUT_DIR + "/filt_fa/{live_batch}/adjusted-{barcode}.fasta", live_batch = LIVE_BATCH, barcode = BARCODE),
-        #expand(OUTPUT_DIR + "/uclust/{live_batch}/{barcode}", live_batch = LIVE_BATCH, barcode = BARCODE),
-        #expand(OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}.biom", live_batch = LIVE_BATCH, barcode = BARCODE),
-        #expand(OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}", live_batch = LIVE_BATCH, barcode = BARCODE), 
-        #expand(OUTPUT_DIR + "/bioms_out/{live_batch}.biom", live_batch = LIVE_BATCH),
         OUTPUT_DIR + "/ONT-L7-GG.txt"
     
 checkpoint demultiplex:
@@ -34,8 +23,8 @@ checkpoint demultiplex:
         temp(directory(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}"))
     log: 
         OUTPUT_DIR + "/logs/demultiplex/{live_batch}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/demultiplex/{live_batch}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/demultiplex/{live_batch}.tsv"
     threads: 2
     shell:
         """
@@ -50,8 +39,8 @@ rule nanofilt:
         temp(OUTPUT_DIR + "/filt_fq/{live_batch}/{barcode}.fastq")
     log: 
         OUTPUT_DIR + "/logs/nanofilt/{live_batch}/{barcode}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/nanofilt/{live_batch}/{barcode}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/nanofilt/{live_batch}/{barcode}.tsv"
     conda:
         "envs/nanofilt.yaml"
     shell: 
@@ -66,8 +55,8 @@ rule fq2fa:
         temp(OUTPUT_DIR + "/filt_fa/{live_batch}/{barcode}.fasta")
     log: 
         OUTPUT_DIR + "/logs/fq2fa/{live_batch}/{barcode}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/fq2fa/{live_batch}/{barcode}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/fq2fa/{live_batch}/{barcode}.tsv"
     shell: 
         """
         {config[usearch11]} -fastq_filter {input} -fastaout {output}
@@ -81,8 +70,8 @@ rule fa_adjust:
         temp(OUTPUT_DIR + "/filt_fa/{live_batch}/adjusted-{barcode}.fasta")
     log: 
         OUTPUT_DIR + "/logs/fa_adjust/{live_batch}/{barcode}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/fa_adjust/{live_batch}/{barcode}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/fa_adjust/{live_batch}/{barcode}.tsv"
     shell: 
         "scripts/fasta_number.py {input} {wildcards.barcode}_ > {output}"
 
@@ -93,8 +82,8 @@ rule taxa_assignment:
         temp(directory(OUTPUT_DIR + "/uclust/{live_batch}/{barcode}"))
     log: 
         OUTPUT_DIR + "/logs/taxa_assignment/{live_batch}/{barcode}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
     threads: 4
     conda: 
         "envs/qiime1.yaml"
@@ -120,8 +109,8 @@ rule biom_per_barcode:
         temp(OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}.biom") 
     log: 
         OUTPUT_DIR + "/logs/biom_perbarcode/{live_batch}/{barcode}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/biom_perbarcode/{live_batch}/{barcode}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/biom_perbarcode/{live_batch}/{barcode}.tsv"
     conda:
         "envs/qiime1.yaml"
     shell:
@@ -140,8 +129,8 @@ rule taxa_summary:
         dir_out = OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}"
     log: 
         OUTPUT_DIR + "/logs/taxa_summary/{live_batch}/{barcode}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/taxa_summary/{live_batch}/{barcode}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/taxa_summary/{live_batch}/{barcode}.tsv"
     conda:
         "envs/qiime1.yaml"    
     shell: 
@@ -165,8 +154,8 @@ rule biom_per_batch:
         files = lambda wildcards, input: ','.join(input)
     log: 
         OUTPUT_DIR + "/logs/biom_per_batch/{live_batch}.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/biom_per_batch/{live_batch}.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/biom_per_batch/{live_batch}.tsv"
     conda: 
         "envs/qiime1.yaml"
     shell:
@@ -183,8 +172,8 @@ rule biom_update:
         demux_dir = OUTPUT_DIR + "/demultiplex" 
     log: 
         OUTPUT_DIR + "/logs/biom_update.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/biom_update.tsv"
+    #benchmark:
+    #    OUTPUT_DIR + "/benchmarks/biom_update.tsv"
     conda:
         "envs/qiime1.yaml" 
     shell:
