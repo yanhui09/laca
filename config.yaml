@@ -2,5 +2,4 @@
 basecalled_dir: "data/0_basecalled_fq"
 results_dir: "results"
 guppy_dir: "resources/ont-guppy/bin"
-usearch11: "resources/usearch11"
 gg_13_8_dir: "resources/gg_13_8_otus"

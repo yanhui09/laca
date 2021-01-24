@@ -63,8 +63,7 @@ rule fq2fa:
     #    OUTPUT_DIR + "/benchmarks/fq2fa/{live_batch}/{barcode}.tsv"
     shell: 
         """
-        {config[usearch11]} -fastq_filter {input} -fastaout {output}
-        # find filt_fa/{wildcards.live_batch}/*.fasta -size -100k -delete # remove small files 0-10 reads
+        scripts/fq2fa.py -i {input} -o {output}
         """ 
 
 rule fa_adjust:
@@ -172,8 +171,7 @@ rule biom_update:
         biom_l7 = OUTPUT_DIR + "/ONT-L7-GG.biom",
         tsv_l7 = OUTPUT_DIR + "/ONT-L7-GG.txt"
     params:
-        files = lambda wildcards, input: ','.join(input),
-        demux_dir = OUTPUT_DIR + "/demultiplexed_fq" 
+        files = lambda wildcards, input: ','.join(input)
     log: 
         OUTPUT_DIR + "/logs/biom_update.log"
     #benchmark:
@@ -184,5 +182,4 @@ rule biom_update:
         """
         merge_otu_tables.py -i {params.files} -o {output.biom_l7}
         biom convert -i {output.biom_l7} -o {output.tsv_l7} --to-tsv
-        rm -rf {params.demux_dir} 
         """

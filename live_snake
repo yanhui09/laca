@@ -83,6 +83,7 @@ while true; do
         sleep "$WAIT"
         NUM_FQ2=$(ls "$INPUT" | wc -l)
         if [ "$NUM_FQ2" -eq "$NUM_FQ1" ]; then
+            #rm -rf "$OUTPUT/demultiplexed_fq"
             break
         fi
     fi    
