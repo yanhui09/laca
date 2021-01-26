@@ -77,7 +77,7 @@ rule taxa_assignment:
         temp(directory(OUTPUT_DIR + "/uclust/{live_batch}/{barcode}"))
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
-    threads: 4
+    threads: 8
     conda: 
         "envs/qiime1.yaml"
     shell: 
