@@ -21,8 +21,6 @@ checkpoint demultiplex:
         INPUT_DIR + "/{live_batch}.fastq"
     output: 
         temp(directory(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}"))
-    log: 
-        OUTPUT_DIR + "/logs/demultiplex/{live_batch}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/demultiplex/{live_batch}.tsv"
     threads: 2
@@ -41,8 +39,6 @@ rule nanofilt:
         OUTPUT_DIR + "/demultiplexed_fq/{live_batch}/{barcode}"
     output: 
         temp(OUTPUT_DIR + "/filt_fq/{live_batch}/{barcode}.fastq")
-    log: 
-        OUTPUT_DIR + "/logs/nanofilt/{live_batch}/{barcode}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/nanofilt/{live_batch}/{barcode}.tsv"
     conda:
@@ -57,8 +53,6 @@ rule fq2fa:
         OUTPUT_DIR + "/filt_fq/{live_batch}/{barcode}.fastq"
     output: 
         temp(OUTPUT_DIR + "/filt_fa/{live_batch}/{barcode}.fasta")
-    log: 
-        OUTPUT_DIR + "/logs/fq2fa/{live_batch}/{barcode}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/fq2fa/{live_batch}/{barcode}.tsv"
     shell: 
@@ -71,8 +65,6 @@ rule fa_adjust:
         OUTPUT_DIR + "/filt_fa/{live_batch}/{barcode}.fasta"
     output: 
         temp(OUTPUT_DIR + "/filt_fa/{live_batch}/adjusted-{barcode}.fasta")
-    log: 
-        OUTPUT_DIR + "/logs/fa_adjust/{live_batch}/{barcode}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/fa_adjust/{live_batch}/{barcode}.tsv"
     shell: 
@@ -83,8 +75,6 @@ rule taxa_assignment:
         OUTPUT_DIR + "/filt_fa/{live_batch}/adjusted-{barcode}.fasta"
     output:  
         temp(directory(OUTPUT_DIR + "/uclust/{live_batch}/{barcode}"))
-    log: 
-        OUTPUT_DIR + "/logs/taxa_assignment/{live_batch}/{barcode}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
     threads: 4
@@ -110,8 +100,6 @@ rule biom_per_barcode:
         OUTPUT_DIR + "/uclust/{live_batch}/{barcode}"
     output: 
         temp(OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}.biom") 
-    log: 
-        OUTPUT_DIR + "/logs/biom_perbarcode/{live_batch}/{barcode}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/biom_perbarcode/{live_batch}/{barcode}.tsv"
     conda:
@@ -130,8 +118,6 @@ rule taxa_summary:
         temp(OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}_L7.biom")
     params:
         dir_out = OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}"
-    log: 
-        OUTPUT_DIR + "/logs/taxa_summary/{live_batch}/{barcode}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/taxa_summary/{live_batch}/{barcode}.tsv"
     conda:
@@ -155,8 +141,6 @@ rule biom_per_batch:
         OUTPUT_DIR + "/bioms_out/{live_batch}.biom"
     params:
         files = lambda wildcards, input: ','.join(input)
-    log: 
-        OUTPUT_DIR + "/logs/biom_per_batch/{live_batch}.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/biom_per_batch/{live_batch}.tsv"
     conda: 
@@ -172,8 +156,6 @@ rule biom_update:
         tsv_l7 = OUTPUT_DIR + "/ONT-L7-GG.txt"
     params:
         files = lambda wildcards, input: ','.join(input)
-    log: 
-        OUTPUT_DIR + "/logs/biom_update.log"
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/biom_update.tsv"
     conda:
