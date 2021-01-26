@@ -27,12 +27,12 @@ Usage: ./live_snake [-i -o -j -m -t -h]
   -o, --output    Required, define the output directory path.
   -j, --jobs      Optional, define the thread number for analysis. Integer, default: 8.
   -m, --mem_mb    Optional, define the maximum memory usage(MB). Integer, default: 50000.
-  -t, --wait      Optional, waiting seconds to exit. Default, 900, i.e. exit if no new fastq files upload within 15 mins.
+  -t, --wait      Optional, waiting seconds to exit. Default, 1800, i.e. exit if no new fastq files upload within 30 mins.
   -h, --help      Optional, help message.
 
 Example:
 ./live_snake -i /path/to/basecalled_fqs -o /path/to/results
-./live_snake -i /path/to/basecalled_fqs -o /path/to/results -j 30 -m 200000 -t 1800
+./live_snake -i /path/to/basecalled_fqs -o /path/to/results -j 30 -m 200000 -t 900
 
 ```
 

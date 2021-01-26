@@ -21,12 +21,12 @@ usage () {
     echo "  -o, --output    Required, define the output directory path."
     echo "  -j, --jobs      Optional, define the thread number for analysis. Integer, default: 8."
     echo "  -m, --mem_mb    Optional, define the maximum memory usage(MB). Integer, default: 50000."
-    echo "  -t, --wait      Optional, waiting seconds to exit. Default, 900, i.e. exit if no new fastq files upload within 15 mins."
+    echo "  -t, --wait      Optional, waiting seconds to exit. Default, 1800, i.e. exit if no new fastq files upload within 30 mins."
     echo "  -h, --help      Optional, help message."   
     echo ""
     echo "Example:"
     echo "$0 -i /path/to/basecalled_fqs -o /path/to/results"
-    echo "$0 -i /path/to/basecalled_fqs -o /path/to/results -j 30 -m 200000 -t 1800"
+    echo "$0 -i /path/to/basecalled_fqs -o /path/to/results -j 30 -m 200000 -t 900"
     echo "";}
 
 #############################################################################
@@ -60,7 +60,7 @@ if [ -z "$MEM_MB" ]; then
     MEM_MB=50000
 fi
 if [ -z "$WAIT" ]; then
-    WAIT=900
+    WAIT=1800
 fi
 
 # Check if the input directory exists
@@ -76,7 +76,7 @@ while true; do
     fi
     
     snakemake -p --use-conda -j "$JOBS" --resources mem_mb="$MEM_MB" --config basecalled_dir="$INPUT" results_dir="$OUTPUT" \
-    --forcerun $(snakemake --list-input-changes)
+    --forcerun $(snakemake --list-input-changes --config basecalled_dir="$INPUT" results_dir="$OUTPUT")
 
     NUM_FQ2=$(ls "$INPUT" | wc -l)
     if [ "$NUM_FQ2" -eq "$NUM_FQ1" ]; then
