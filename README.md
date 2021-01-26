@@ -46,9 +46,9 @@ results
 └── ONT-L7-GG.txt
 ```
 
-`bioms_out` directory holds the separate biom files for real-time batches of nanopore sequencers. 
-`demultiplexed_fq` directory holds demultiplexed fastq files, which keep track of the barcode information. (It can be deleted when YOU MAKE SURE THERE NO NEW FASTQS.)
-`ONT-L7-GG.biom` and `ONT-L7-GG.txt` is the merged feature table in `biom` and `tsv` format, respectively. 
+`bioms_out` directory holds the separate biom files for real-time batches of nanopore sequencers.  
+`demultiplexed_fq` directory holds demultiplexed fastq files, which keep track of the barcode information. (It can be deleted when YOU MAKE SURE THERE NO NEW FASTQS.)  
+`ONT-L7-GG.biom` and `ONT-L7-GG.txt` is the merged feature table in `biom` and `tsv` format, respectively.   
 
 ## Depolyment
 
