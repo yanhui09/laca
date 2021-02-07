@@ -3,3 +3,5 @@ basecalled_dir: "data/0_basecalled_fq"
 results_dir: "results"
 guppy_dir: "resources/ont-guppy/bin"
 gg_13_8_dir: "resources/gg_13_8_otus"
+threads_taxa: 8
+threads_demultiplex: 2

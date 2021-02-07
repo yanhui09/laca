@@ -13,7 +13,7 @@ You can edit the path to `basecalled_dir` and `results_dir` in the `config.yaml`
 
 Or pass the arguments in the console.
 
-    snakemake -p --use-conda -j 8 --resources mem_mb=50000 --config basecalled_dir=/path/to/basecalled_fqs results_dir=/path/to/results
+    snakemake -p --use-conda -j 8 --resources mem_mb=50000 --config basecalled_dir=/path/to/basecalled_fqs results_dir=/path/to/results threads_taxa=8
 
 we provide a wrapper function to start the live-mode of snakemake workflow. It also works in a finished nanopore run. In default setting, it will automatically exit if no new basecalled fastq files upload within 15 mins.
 

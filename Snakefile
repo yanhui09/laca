@@ -23,7 +23,7 @@ checkpoint demultiplex:
         temp(directory(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}"))
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/demultiplex/{live_batch}.tsv"
-    threads: 2
+    threads: config["threads_demultiplex"]
     shell:
         """
         mkdir -p {output} && cp {input} {output}
@@ -77,7 +77,7 @@ rule taxa_assignment:
         temp(directory(OUTPUT_DIR + "/uclust/{live_batch}/{barcode}"))
     #benchmark:
     #    OUTPUT_DIR + "/benchmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
-    threads: 8
+    threads: config["threads_taxa"]
     conda: 
         "envs/qiime1.yaml"
     shell: 
