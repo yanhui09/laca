@@ -6,9 +6,13 @@ wildcard_constraints:
 #--------------
 INPUT_DIR = config["basecalled_dir"].rstrip("/")
 OUTPUT_DIR = config["results_dir"].rstrip("/")
-LIVE_BATCH = glob_wildcards(INPUT_DIR + "/{batchid}.fastq").batchid
-PROBE_1 = config["probe1_fa"].rstrip("/"),
-PROBE_2 = config["probe2_fa"].rstrip("/"),
+# linker and primer
+flinker = config["flinker"]
+fprimers = config["fprimer"]
+rlinker = config["rlinker"]
+rprimers = config["rprimer"]
+# reverse complementation
+def revcom:
 #---------------
 
 # Allow users to fix the underlying OS via singularity.

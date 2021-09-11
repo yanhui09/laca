@@ -4,5 +4,15 @@ results_dir: "results"
 guppy_dir: "resources/ont-guppy/bin"
 threads_taxa: 8
 threads_demultiplex: 2
-probe1_fa: "data/probe_1.fasta"
-probe2_fa: "data/probe_2.fasta"
+# linker and primer for umi extraction
+flinker: "GTCTCGTGGGCTCGG"
+fprimer:
+  338Fa: "ACWCCTACGGGWGGCAGCAG"
+  338Fb: "GACTCCTACGGGAGGCWGCAG"
+  27Fa: "AGAGTTTGATYMTGGCTYAG"
+  27Fb: "AGGGTTCGATTCTGGCTCAG"
+
+rlinker: "GTCTCGTGGGCTCGG"
+rprimer: 
+  1391R: "GACGGGCGGTGTGTRCA"
+  1540R: "TACGGYTACCTTGTTACGACT"
