@@ -16,6 +16,8 @@ import multiprocessing
 import itertools
 import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import argparse
 

@@ -1,7 +1,8 @@
 # This file should contain everything to configure the workflow on a global scale.
-basecalled_dir: "data/0_basecalled_fq"
+basecalled_dir: "data/run"
 results_dir: "results"
 guppy_dir: "resources/ont-guppy/bin"
-gg_13_8_dir: "resources/gg_13_8_otus"
 threads_taxa: 8
 threads_demultiplex: 2
+probe1_fa: "data/probe_1.fasta"
+probe2_fa: "data/probe_2.fasta"

@@ -7,6 +7,8 @@ wildcard_constraints:
 INPUT_DIR = config["basecalled_dir"].rstrip("/")
 OUTPUT_DIR = config["results_dir"].rstrip("/")
 LIVE_BATCH = glob_wildcards(INPUT_DIR + "/{batchid}.fastq").batchid
+PROBE_1 = config["probe1_fa"].rstrip("/"),
+PROBE_2 = config["probe2_fa"].rstrip("/"),
 #---------------
 
 # Allow users to fix the underlying OS via singularity.
@@ -20,9 +22,7 @@ checkpoint demultiplex:
     input:  
         INPUT_DIR + "/{live_batch}.fastq"
     output: 
-        temp(directory(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}"))
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/demultiplex/{live_batch}.tsv"
+        directory(OUTPUT_DIR + "/demultiplexed_fq/{live_batch}")
     threads: config["threads_demultiplex"]
     shell:
         """
@@ -38,9 +38,7 @@ rule nanofilt:
     input: 
         OUTPUT_DIR + "/demultiplexed_fq/{live_batch}/{barcode}"
     output: 
-        temp(OUTPUT_DIR + "/filt_fq/{live_batch}/{barcode}.fastq")
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/nanofilt/{live_batch}/{barcode}.tsv"
+        OUTPUT_DIR + "/filt_fq/{live_batch}/{barcode}.fastq"
     conda:
         "envs/nanofilt.yaml"
     shell: 
@@ -48,120 +46,21 @@ rule nanofilt:
         cat {input}/*.fastq | NanoFilt -q 8 -l 1000 --maxlength 1600 --headcrop 15 --tailcrop 15 > {output}
         """
 
-rule fq2fa:
+# extract UMI sequences (https://github.com/fhlab/UMIC-seq)
+rule umi_extract:
     input: 
-        OUTPUT_DIR + "/filt_fq/{live_batch}/{barcode}.fastq"
+        rules.nanofilt.output
     output: 
-        temp(OUTPUT_DIR + "/filt_fa/{live_batch}/{barcode}.fasta")
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/fq2fa/{live_batch}/{barcode}.tsv"
-    shell: 
-        """
-        scripts/fq2fa.py -i {input} -o {output}
-        """ 
-
-rule fa_adjust:
-    input: 
-        OUTPUT_DIR + "/filt_fa/{live_batch}/{barcode}.fasta"
-    output: 
-        temp(OUTPUT_DIR + "/filt_fa/{live_batch}/adjusted-{barcode}.fasta")
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/fa_adjust/{live_batch}/{barcode}.tsv"
-    shell: 
-        "scripts/fasta_number.py {input} {wildcards.barcode}_ > {output}"
-
-rule taxa_assignment:
-    input: 
-        OUTPUT_DIR + "/filt_fa/{live_batch}/adjusted-{barcode}.fasta"
-    output:  
-        temp(directory(OUTPUT_DIR + "/uclust/{live_batch}/{barcode}"))
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/taxa_assignment/{live_batch}/{barcode}.tsv"
-    threads: config["threads_taxa"]
-    conda: 
-        "envs/qiime1.yaml"
-    shell: 
-        """
-        if [ ! -f {config[gg_13_8_dir]}/rep_set/99_otus.fasta ]; then 
-            gzip -d {config[gg_13_8_dir]}/rep_set/99_otus.fasta.gz
-        fi
-        
-        if [ ! -f {config[gg_13_8_dir]}/taxonomy/99_otu_taxonomy.txt ]; then 
-            gzip -d {config[gg_13_8_dir]}/taxonomy/99_otu_taxonomy.txt.gz
-        fi
-        
-        parallel_assign_taxonomy_uclust.py -i {input} -r {config[gg_13_8_dir]}/rep_set/99_otus.fasta \
-        -t {config[gg_13_8_dir]}/taxonomy/99_otu_taxonomy.txt \
-        -o {output} -O {threads} --similarity 0.80 --min_consensus_fraction 0.60
-        """
-
-rule biom_per_barcode:
-    input: 
-        OUTPUT_DIR + "/uclust/{live_batch}/{barcode}"
-    output: 
-        temp(OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}.biom") 
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/biom_perbarcode/{live_batch}/{barcode}.tsv"
+        umi1 = OUTPUT_DIR + "/filt_fq/{barcode}_umi1.fasta",
+        umi2 = OUTPUT_DIR + "/filt_fq/{barcode}_umi2.fasta",
     conda:
-        "envs/qiime1.yaml"
-    shell:
-        """
-        scripts/read_count.sh {input} {wildcards.barcode}
-        biom convert -i {input}/{wildcards.barcode}.tmp -o {output} --process-obs-metadata=taxonomy --table-type="OTU table" --to-json 
-        rm -f {input}/{wildcards.barcode}.tmp 
-        """
-
-rule taxa_summary:
-    input: 
-        OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}.biom"
-    output: 
-        temp(OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}_L7.biom")
+        "envs/umic-seq.yaml"
     params:
-        dir_out = OUTPUT_DIR + "/live_bioms/{live_batch}/{barcode}"
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/taxa_summary/{live_batch}/{barcode}.tsv"
-    conda:
-        "envs/qiime1.yaml"    
+        scripts = "scripts/UMIC-seq.py",
+        probe1 = PROBE_1,
+        probe2 = PROBE_2,
     shell: 
         """
-        summarize_taxa.py -i {input} -L 7 -a -o {params.dir_out}
-        mv {params.dir_out}/{wildcards.barcode}_L7.biom {output}
-        rm -rf {params.dir_out}
-        """
-
-def aggregate_input(wildcards):
-    checkpoint_output = checkpoints.demultiplex.get(**wildcards).output[0]
-    return expand(OUTPUT_DIR + "/live_bioms/{{live_batch}}/{barcode}_L7.biom",
-           barcode = glob_wildcards(checkpoint_output + "/{barcode, BRK[0-9][0-9]}/{runid}.fastq").barcode)
-
-rule biom_per_batch:
-    input: 
-        aggregate_input
-    output: 
-        OUTPUT_DIR + "/bioms_out/{live_batch}.biom"
-    params:
-        files = lambda wildcards, input: ','.join(input)
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/biom_per_batch/{live_batch}.tsv"
-    conda: 
-        "envs/qiime1.yaml"
-    shell:
-        "merge_otu_tables.py -i {params.files} -o {output}"
-
-rule biom_update:
-    input: 
-        expand(OUTPUT_DIR + "/bioms_out/{live_batch}.biom", live_batch = LIVE_BATCH)
-    output: 
-        biom_l7 = OUTPUT_DIR + "/ONT-L7-GG.biom",
-        tsv_l7 = OUTPUT_DIR + "/ONT-L7-GG.txt"
-    params:
-        files = lambda wildcards, input: ','.join(input)
-    #benchmark:
-    #    OUTPUT_DIR + "/benchmarks/biom_update.tsv"
-    conda:
-        "envs/qiime1.yaml" 
-    shell:
-        """
-        merge_otu_tables.py -i {params.files} -o {output.biom_l7}
-        biom convert -i {output.biom_l7} -o {output.tsv_l7} --to-tsv
+        python {params.scripts} UMIextract --input {input} --probe {params.probe1} --umi_loc down --umi_len 15 --output {output.umi1}
+        python {params.scripts} UMIextract --input {input} --probe {params.probe2} --umi_loc up --umi_len 15 --output {output.umi2}
         """
