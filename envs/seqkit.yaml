@@ -1,5 +1,5 @@
-name: nanofilt
+name: seqkit
 channels:
   - bioconda
 dependencies:
-  - nanofilt
+  - seqkit

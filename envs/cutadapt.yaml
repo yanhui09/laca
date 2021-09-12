@@ -1,5 +1,5 @@
-name: nanofilt
+name: cutadapt
 channels:
   - bioconda
 dependencies:
-  - nanofilt
+  - cutadapt

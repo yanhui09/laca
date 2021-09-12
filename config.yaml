@@ -1,11 +1,14 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "data/run"
 results_dir: "results"
-guppy_dir: "resources/ont-guppy/bin"
+guppy: "resources/ont-guppy/bin" # guppy bin
 threads_taxa: 8
 threads_demultiplex: 2
+# demultiplex with guppy
+barcode_kits: "SQK16S-GXO"
+use_cuda: FALSE 
 # linker and primer for umi extraction
-umi_end: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence
+umi_loc: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence
 flinker: "GTCTCGTGGGCTCGG"
 fprimer:
   338Fa: "ACWCCTACGGGWGGCAGCAG"
