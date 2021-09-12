@@ -6,13 +6,39 @@ wildcard_constraints:
 #--------------
 INPUT_DIR = config["basecalled_dir"].rstrip("/")
 OUTPUT_DIR = config["results_dir"].rstrip("/")
-# linker and primer
+# linker and primer info
 flinker = config["flinker"]
 fprimers = config["fprimer"]
 rlinker = config["rlinker"]
 rprimers = config["rprimer"]
+
 # reverse complementation
-def revcom:
+def revcomp(seq):
+    return seq.translate(str.maketrans('ACGTacgtRYMKrymkVBHDvbhd', 'TGCAtgcaYRKMyrkmBVDHbvdh'))[::-1]
+flinkerR = revcomp(flinker)
+rlinkerR = revcomp(rlinker)
+fprimersR = {k: revcomp(v) for k, v in fprimers.items()}
+rprimersR = {k: revcomp(v) for k, v in rprimers.items()}
+
+# pattern search for umi using cutadapt
+# nanopore possibly sequences either strand
+def seqs_join(linker, primer, reverse=False):
+    joined = '-g ' + linker + '...' + primer
+    if reverse:
+        joined = '-G ' + primer + '...' + linker
+    return joined
+def linked_pattern(linker, primers,reverse=False):
+    linked = {k: seqs_join(linker, v, reverse) for k, v in primers.items()}        
+    return ' '.join(v for v in linked.values())
+
+# forward
+f_pattern1 = linked_pattern(flinker, fprimers)
+f_pattern2 = linked_pattern(rlinker, rprimers)
+f_pattern = f_pattern1 + ' ' + f_pattern2
+# reverse
+r_pattern1 = linked_pattern(flinkerR, fprimersR, reverse=True)
+r_pattern2 = linked_pattern(rlinkerR, rprimersR, reverse=True)
+r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------------
 
 # Allow users to fix the underlying OS via singularity.
