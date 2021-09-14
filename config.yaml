@@ -2,13 +2,20 @@
 basecalled_dir: "data/run"
 results_dir: "results"
 guppy: "resources/ont-guppy/bin" # guppy bin
-threads_taxa: 8
-threads_demultiplex: 2
+threads:
+    normal: 2 # short request for threads
+    large: 8 # threads dependent
 # demultiplex with guppy
 barcode_kits: "SQK16S-GXO"
 use_cuda: FALSE 
-# linker and primer for umi extraction
+
+# umi extraction with seqkit and cutadapt
 umi_loc: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence
+umi_len: 15 # base length of umi design
+umi_flexible: 2 # flexible base length for umi
+max_err: 0.2 # cutadapt -e 
+min_overlap: 9 # cutadapt -O, recommened: 0.25*length(linked_adapter)
+# linker and primer for umi extraction
 flinker: "GTCTCGTGGGCTCGG"
 fprimer:
   338Fa: "ACWCCTACGGGWGGCAGCAG"
