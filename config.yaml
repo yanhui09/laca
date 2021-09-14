@@ -27,3 +27,5 @@ rlinker: "GTCTCGTGGGCTCGG"
 rprimer: 
   1391R: "GACGGGCGGTGTGTRCA"
   1540R: "TACGGYTACCTTGTTACGACT"
+# umi clustering
+umi_id: 0.9

@@ -121,6 +121,7 @@ rule extract_umi:
             -o {output.umi1} -p {output.umi2} \
             {input.start} {input.end} \
             > {log} 2>&1 &
+        sleep 10 # some time for writing
         """
 
 # combine UMI sequences
@@ -128,9 +129,35 @@ rule concat_umi:
     input:
         umi1=rules.extract_umi.output.umi1,
         umi2=rules.extract_umi.output.umi2,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi.fastq"
+    output: OUTPUT_DIR + "/umi/{barcode}/umi.fasta"
     log: OUTPUT_DIR + "/logs/umi/concat_umi/{barcode}.log"
     threads: 1
     conda: "envs/seqkit.yaml"
     shell:
-        "seqkit concat {input.umi1} {input.umi2} 2> {log} > {output}"
+        "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -o {output} 2>> {log}"
+
+# cluster UMIs
+rule cluster_umi:
+    input: rules.concat_umi.output
+    output:
+        centroid=OUTPUT_DIR + "/umi/{barcode}/centroid.fasta",
+        consensus=OUTPUT_DIR + "/umi/{barcode}/consensus.fasta",
+        uc=OUTPUT_DIR + "/umi/{barcode}/uc.txt"  
+    log: OUTPUT_DIR + "/logs/umi/cluster_umi/{barcode}.log"
+    threads: config["threads"]["normal"]
+    conda: "envs/vsearch.yaml"
+    params:
+        #umi= OUTPUT_DIR + "/umi/{barcode}/umi",
+        id=config["umi_id"],
+        min_len=2*(config["umi_len"] - config["umi_flexible"]),
+        max_len=2*(config["umi_len"] + config["umi_flexible"]),
+    shell:
+        """
+        vsearch \
+            --cluster_fast {input} --clusterout_sort -id {params.id} \
+            --clusterout_id -uc {output.uc}\
+            --centroids {output.centroid} --consout {output.consensus} \
+            --minseqlength {params.min_len} --maxseqlength {params.max_len} \
+            --qmask none --threads {threads} \
+            > {log} 2>&1 &
+        """
