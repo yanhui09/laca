@@ -78,9 +78,9 @@ rule extract_umi:
             {params.r} \
             -o {output.umi1} -p {output.umi2} \
             {input.start} {input.end} \
-            > {log} 2>&1 &
-        sleep 10 # some time for writing
+            > {log} 2>&1
         """
+        #sleep 10 # some time for writing
 
 # combine UMI sequences
 rule concat_umi:
@@ -118,5 +118,5 @@ rule cluster_umi:
             --minseqlength {params.min_len} --maxseqlength {params.max_len} \
             --qmask none --threads {threads} \
             --strand both \
-            > {log} 2>&1 &
+            > {log} 2>&1
         """

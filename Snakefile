@@ -6,7 +6,6 @@ wildcard_constraints:
 INPUT_DIR = config["basecalled_dir"].rstrip("/")
 OUTPUT_DIR = config["results_dir"].rstrip("/")
 
-
 # Allow users to fix the underlying OS via singularity.
 #singularity: "docker://continuumio/miniconda3"
 
