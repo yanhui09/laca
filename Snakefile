@@ -31,5 +31,17 @@ checkpoint demultiplex:
         fi
         """
 
+# simple qc
+rule nanofilt:
+    input:  OUTPUT_DIR + "/demultiplexed/{barcode}"
+    output: OUTPUT_DIR + "/filt_fq/{barcode}.fastq"
+    log: OUTPUT_DIR + "/logs/nanofilt/{barcode}.log"
+    conda: "envs/nanofilt.yaml"
+    threads: 1
+    shell: 
+        """
+        cat {input}/*.fastq | NanoFilt -q 8 -l 1000 --maxlength 1600 --headcrop 15 --tailcrop 15 2> {log} 1> {output}
+        """
+
 include: "rules/umi.smk"
 include: "rules/umap.smk"

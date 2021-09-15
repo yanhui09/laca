@@ -32,17 +32,6 @@ r_pattern1 = linked_pattern(flinkerR, fprimersR, reverse=True)
 r_pattern2 = linked_pattern(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
-# simple qc
-rule nanofilt:
-    input:  OUTPUT_DIR + "/demultiplexed/{barcode}"
-    output: OUTPUT_DIR + "/filt_fq/{barcode}.fastq"
-    log: OUTPUT_DIR + "/logs/nanofilt/{barcode}.log"
-    conda: "envs/nanofilt.yaml"
-    threads: 1
-    shell: 
-        """
-        cat {input}/*.fastq | NanoFilt -q 8 -l 1000 --maxlength 1600 --headcrop 15 --tailcrop 15 2> {log} 1> {output}
-        """
 
 # trim umi region
 rule umi_loc:
@@ -51,7 +40,7 @@ rule umi_loc:
         start=OUTPUT_DIR + "/umi/{barcode}/start.fastq",
         end=OUTPUT_DIR + "/umi/{barcode}/end.fastq",
     log: OUTPUT_DIR + "/logs/umi/umi_loc/{barcode}.log"
-    conda: "envs/seqkit.yaml"
+    conda: "../envs/seqkit.yaml"
     threads: 1
     params:
         umi_loc=config["umi_loc"]
@@ -78,7 +67,7 @@ rule extract_umi:
         min_overlap=config["min_overlap"],
         min_len=config["umi_len"] - config["umi_flexible"],
         max_len=config["umi_len"] + config["umi_flexible"],
-    conda: "envs/cutadapt.yaml"
+    conda: "../envs/cutadapt.yaml"
     shell:
         """
         cutadapt \
@@ -101,7 +90,7 @@ rule concat_umi:
     output: OUTPUT_DIR + "/umi/{barcode}/umi.fasta"
     log: OUTPUT_DIR + "/logs/umi/concat_umi/{barcode}.log"
     threads: 1
-    conda: "envs/seqkit.yaml"
+    conda: "../envs/seqkit.yaml"
     shell:
         "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -o {output} 2>> {log}"
 
@@ -114,7 +103,7 @@ rule cluster_umi:
         uc=OUTPUT_DIR + "/umi/{barcode}/uc.txt"  
     log: OUTPUT_DIR + "/logs/umi/cluster_umi/{barcode}.log"
     threads: config["threads"]["normal"]
-    conda: "envs/vsearch.yaml"
+    conda: "../envs/vsearch.yaml"
     params:
         #umi= OUTPUT_DIR + "/umi/{barcode}/umi",
         id=config["umi_id"],
