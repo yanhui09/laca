@@ -1,6 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "data/run"
-results_dir: "results"
+results_dir: "results_deep" #"results"
 guppy: "resources/ont-guppy/bin" # guppy bin
 threads:
     normal: 2 # short request for threads
