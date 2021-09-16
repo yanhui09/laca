@@ -1,6 +1,7 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "data/run"
-results_dir: "results" #"results_deep"
+results_dir: "results"
+#results_dir: "results_deep"
 guppy: "resources/ont-guppy/bin" # guppy bin
 threads:
     normal: 2 # short request for threads
@@ -35,3 +36,7 @@ kmer_size: 5
 # umap reduction and hdbscan cluster
 hdbscan_size: 10
 hdbscan_epsilon: 0.5
+
+# read correction
+# canu
+amp_size: 1.4k

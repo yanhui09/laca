@@ -1,0 +1,5 @@
+name: canu
+channels:
+  - bioconda
+dependencies:
+  - canu
