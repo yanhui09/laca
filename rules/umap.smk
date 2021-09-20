@@ -56,20 +56,65 @@ rule correct_read:
         counts=rules.split_by_cluster.output,
         fastq=OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.fastq",
     output:
-        fastq=OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}.fastq",
-        counts=OUTPUT_DIR + "/umap/{barcode}/counts_canu.txt",
+        fasta=OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}/{c}.correctedReads.fasta.gz",
+        #counts=OUTPUT_DIR + "/umap/{barcode}/counts_canu.txt",
     log: OUTPUT_DIR + "/logs/umap/{barcode}/canu/{c}.log"
-    threads: config["threads"]["normal"]
+    threads: config["threads"]["large"]
     conda: "../envs/canu.yaml"
     params:
-        amp_size=config["amp_size"]
-        prefix=OUTPUT_DIR + "umap/{barcode}/canu_correctected/{c}"
+        amp_size=config["amp_size"],
+        prefix=OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}",
     shell:
         """
-        canu -correct -p {params.prefix}/corrected -raw -nanopore{input.fastq} \
+        canu -correct -p {wildcards.c} -d {params.prefix} \
+        -raw -nanopore {input.fastq} \
         genomeSize={params.amp_size} stopOnLowCoverage=1 \
         minInputCoverage=2 minReadLength=500 minOverlapLength=200 \
-
-        gunzip {params.prefix}/corrected.fasta.gz
+        useGrid=false maxThreads={threads} > {log} 2>&1
         """
-        
+
+# select draft sequences
+checkpoint split_seqs:
+    input: rules.correct_read.output.fasta
+    output: directory(OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}/seqs")
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/split_seqs/{c}.log"
+    threads: 1
+    conda: "../envs/seqkit.yaml"
+    shell:
+        "seqkit split {input} -i -o {output}"
+
+def get_seqs(wildcards):
+    seqs_folder= checkpoints.split_seqs.get().output[0]
+    seqs = glob_wildcards(os.path.join(seqs_folder,"{seqs}.fasta.gz")).seqs
+    return expand(OUTPUT_DIR + "/umap/{{barcode}}/split_seqs/{{c}}/seqs/{seqs}.fasta.gz", seqs=seqs)
+    
+rule drep:
+    input: get_seqs
+    output: directory(OUTPUT_DIR + "/umap/{barcode}/drep/{c}")
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/split_seqs/{c}.log"
+    threads: config["threads"]["large"]
+    conda: "../envs/drep.yaml"
+    params:
+        pa=config["pa"],
+        sa=config["sa"],
+        S_algorithm=config["S_algorithm"],
+        nc=config["nc"],
+        minl=config["minl"],
+        clusterAlg=config["clusterAlg"],
+    shell:
+        """
+        dRep dereplicate {output} -g {input} \
+        -pa {params.pa} -sa {params.sa} \
+        --S_algorithm {params.S_algorithm} \
+        --clusterAlg {params.clusterAlg} \ 
+        -nc {params.nc} -l {params.minl} -N50W 0 -sizeW 1 \
+        --ignoreGenomeQuality
+        """
+
+# racon
+
+# medaka
+
+# call variants
+
+# combine sample-specific amplicons and mapping
