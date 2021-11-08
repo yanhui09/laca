@@ -1,6 +1,55 @@
+# linker and primer info
+fprimers = config["fprimer"]
+rprimers = config["rprimer"]
+
+# reverse complementation
+def revcomp(seq):
+    return seq.translate(str.maketrans('ACGTacgtRYMKrymkVBHDvbhd', 'TGCAtgcaYRKMyrkmBVDHbvdh'))[::-1]
+fprimersR = {k: revcomp(v) for k, v in fprimers.items()}
+rprimersR = {k: revcomp(v) for k, v in rprimers.items()}
+
+# pattern search for umi using cutadapt
+# nanopore possibly sequences either strand
+def seqs_join(primer1, primer2):
+    joined = '-g ' + primer1 + '...' + revcomp(primer2)
+    return joined
+def linked_pattern(primers1, primers2):
+    primers1_values = list(primers1.values())
+    primers2_values = list(primers2.values())
+    linked = [seqs_join(primer1, primer2) for primer1 in primers1_values for primer2 in primers2_values]
+    return ' '.join(linked)
+
+# pattern
+f5_pattern1 = linked_pattern(fprimers, rprimers)
+f5_pattern2 = linked_pattern(rprimers, fprimers)
+f5_patterns = f5_pattern1 + ' ' + f5_pattern2
+#---------
+
+# trim UMIs 
+rule trim_umi:
+    input: rules.nanofilt.output,
+    output: OUTPUT_DIR + "/umap/{barcode}/trimmed.fastq",
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/trim_umi.log"
+    threads: config["threads"]["normal"]
+    params:
+        f=f5_patterns,
+        max_err=config["max_err"],
+        min_overlap=config["min_overlap"],
+    conda: "../envs/cutadapt.yaml"
+    shell:
+        """
+        cutadapt \
+            -j {threads} -e {params.max_err} -O {params.min_overlap} \
+            --discard-untrimmed \
+            {params.f} \
+            -o {output} \
+            {input} \
+            > {log} 2>&1
+        """
+
 # kmer calculation
 rule kmer_freqs:
-    input: rules.nanofilt.output
+    input: rules.trim_umi.output
     output: OUTPUT_DIR + "/umap/{barcode}/kmer_freqs.txt"
     log: OUTPUT_DIR + "/logs/umap/{barcode}/kmer_freqs.log"
     threads: config["threads"]["normal"]
@@ -10,9 +59,9 @@ rule kmer_freqs:
 	kmer_size=config["kmer_size"],
     shell:
         "python {params.scripts}/kmer_freqs.py"
-	" -k {params.kmer_size}"
-	" -r {input} -t {threads}"
-	" 2> {log} > {output}"
+        " -k {params.kmer_size}"
+        " -r {input} -t {threads}"
+        " 2> {log} > {output}"
 
 # umap cluster
 rule umap:
@@ -108,7 +157,8 @@ rule drep:
         --S_algorithm {params.S_algorithm} \
         --clusterAlg {params.clusterAlg} \
         -nc {params.nc} -l {params.minl} -N50W 0 -sizeW 1 \
-        --ignoreGenomeQuality --SkipMash >{log} 2>&1
+        --ignoreGenomeQuality --SkipMash \
+        --clusterAlg single >{log} 2>&1
         """
 
 # racon
