@@ -43,8 +43,8 @@ amp_size: 1.2k
 
 # drep
 pa: 0.9
-sa: 0.99
-S_algorithm: ANlmf
+sa: 0.95
+S_algorithm: ANImf
 nc: 0.5
 minl: 1000
-clusterAlg: single
+clusterAlg: average

@@ -81,21 +81,21 @@ checkpoint split_seqs:
     threads: 1
     conda: "../envs/seqkit.yaml"
     shell:
-        "seqkit split {input} -i -o {output}"
+        "seqkit split {input} -i -O {output} > {log} 2>&1"
 
 def get_seqs(wildcards):
-    seqs_folder= checkpoints.split_seqs.get().output[0]
+    seqs_folder= checkpoints.split_seqs.get(**wildcards).output[0]
     seqs = glob_wildcards(os.path.join(seqs_folder,"{seqs}.fasta.gz")).seqs
-    return expand(OUTPUT_DIR + "/umap/{{barcode}}/split_seqs/{{c}}/seqs/{seqs}.fasta.gz", seqs=seqs)
+    return expand(OUTPUT_DIR + "/umap/{{barcode}}/canu_corrected/{{c}}/seqs/{seqs}.fasta.gz", seqs=seqs)
     
 rule drep:
     input: get_seqs
     output: directory(OUTPUT_DIR + "/umap/{barcode}/drep/{c}")
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/split_seqs/{c}.log"
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/drep/{c}.log"
     threads: config["threads"]["large"]
     conda: "../envs/drep.yaml"
     params:
-        pa=config["pa"],
+        #pa=config["pa"],
         sa=config["sa"],
         S_algorithm=config["S_algorithm"],
         nc=config["nc"],
@@ -104,11 +104,11 @@ rule drep:
     shell:
         """
         dRep dereplicate {output} -g {input} \
-        -pa {params.pa} -sa {params.sa} \
+        -sa {params.sa} \
         --S_algorithm {params.S_algorithm} \
-        --clusterAlg {params.clusterAlg} \ 
+        --clusterAlg {params.clusterAlg} \
         -nc {params.nc} -l {params.minl} -N50W 0 -sizeW 1 \
-        --ignoreGenomeQuality
+        --ignoreGenomeQuality --SkipMash >{log} 2>&1
         """
 
 # racon
