@@ -1,5 +1,0 @@
-name: drep
-channels:
-  - bioconda
-dependencies:
-  - drep

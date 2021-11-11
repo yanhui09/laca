@@ -137,29 +137,43 @@ def get_seqs(wildcards):
     seqs = glob_wildcards(os.path.join(seqs_folder,"{seqs}.fasta.gz")).seqs
     return expand(OUTPUT_DIR + "/umap/{{barcode}}/canu_corrected/{{c}}/seqs/{seqs}.fasta.gz", seqs=seqs)
     
-rule drep:
+rule fastani:
     input: get_seqs
-    output: directory(OUTPUT_DIR + "/umap/{barcode}/drep/{c}")
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/drep/{c}.log"
+    output: OUTPUT_DIR + "/umap/{barcode}/fastani/{c}.txt"
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/fastani/{c}.log"
     threads: config["threads"]["large"]
-    conda: "../envs/drep.yaml"
+    conda: "../envs/fastani.yaml"
     params:
-        #pa=config["pa"],
-        sa=config["sa"],
-        S_algorithm=config["S_algorithm"],
-        nc=config["nc"],
-        minl=config["minl"],
-        clusterAlg=config["clusterAlg"],
+        _dir = OUTPUT_DIR + "/umap/{barcode}/fastani",
+        k = config["fastANI"]["k"],
+        fragLen = config["fastANI"]["fragLen"],
+        minFrac = config["fastANI"]["minFrac"],
     shell:
         """
-        dRep dereplicate {output} -g {input} \
-        -sa {params.sa} \
-        --S_algorithm {params.S_algorithm} \
-        --clusterAlg {params.clusterAlg} \
-        -nc {params.nc} -l {params.minl} -N50W 0 -sizeW 1 \
-        --ignoreGenomeQuality --SkipMash \
-        --clusterAlg single >{log} 2>&1
+        ls {input} > {params._dir}/{wildcards.c}.list
+        fastANI \
+        --ql {params._dir}/{wildcards.c}.list \
+        --rl {params._dir}/{wildcards.c}.list \
+        --output {output} \
+        --threads {threads} \
+        --kmer {params.k} \
+        --fragLen {params.fragLen} \
+        --minFraction {params.minFrac} \
+        > {log} 2>&1
         """
+
+rule inter_ANI:
+    input: rules.fastani.output,
+    output: OUTPUT_DIR + "/umap/{barcode}/fastani/{c}_interANI.txt",
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/fastani/{c}_interANI.log"
+    run:
+        import pandas as pd
+        f = pd.read_csv(input[0], sep="\t", header=None)
+        f.columns = ["query", "ref", "ANI", "bi_frag", "total_frag"]
+        f.drop_duplicates(subset=["query", "ref"], keep=False)
+        f.groupby(["query"]).ANI.mean().sort_values(ascending=False).to_csv(output[0], sep="\t", header=False, index=True)
+
+# use the sequence with highest inter-ANI as draft to polish
 
 # racon
 

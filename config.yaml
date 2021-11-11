@@ -41,10 +41,8 @@ hdbscan_epsilon: 0.5
 # canu
 amp_size: 1.2k
 
-# drep
-pa: 0.9
-sa: 0.95
-S_algorithm: ANImf
-nc: 0.5
-minl: 500
-clusterAlg: average
+# fastANI
+fastANI:
+  k: 16
+  fragLen: 150
+  minFrac: 0.2
