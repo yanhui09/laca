@@ -106,7 +106,6 @@ rule correct_read:
         fastq=OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.fastq",
     output:
         fasta=OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}/{c}.correctedReads.fasta.gz",
-        #counts=OUTPUT_DIR + "/umap/{barcode}/counts_canu.txt",
     log: OUTPUT_DIR + "/logs/umap/{barcode}/canu/{c}.log"
     threads: config["threads"]["large"]
     conda: "../envs/canu.yaml"
@@ -174,11 +173,13 @@ rule inter_ANI:
         f.groupby(["query"]).ANI.mean().sort_values(ascending=False).to_csv(output[0], sep="\t", header=False, index=True)
 
 # use the sequence with highest inter-ANI as draft to polish
-
-# racon
-
-# medaka
-
-# call variants
-
-# combine sample-specific amplicons and mapping
+# rename header to avoid incompatibility with racon
+rule choose_draft:
+    input: rules.inter_ANI.output,
+    output: OUTPUT_DIR + "/umap/{barcode}/polish/draft/{c}/raw.fna",
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/polish/draft/{c}.log",
+    shell: # escape the brackets by doubling it
+        """
+        cat {input} | awk '{{print $1}}' | head -n 1 | xargs -I {{}} zcat {{}} | \
+        sed 's/>.*/>{wildcards.barcode}_{wildcards.c}/' > {output} 2> {log}
+        """

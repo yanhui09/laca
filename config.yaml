@@ -46,3 +46,20 @@ fastANI:
   k: 16
   fragLen: 150
   minFrac: 0.2
+
+# choose the denoise mode for polishing
+# consensus, snp, pool
+mode: consensus
+
+minimap:
+  x: map-ont 
+
+racon:
+  iter: 2
+  m: 8
+  x: -6
+  g: -8
+  w: 500
+
+medaka:
+  m: r941_min_fast_g507

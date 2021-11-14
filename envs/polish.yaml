@@ -1,0 +1,8 @@
+name: polish
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - racon
+  - medaka
+  - minimap
