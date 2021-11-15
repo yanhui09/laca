@@ -83,26 +83,22 @@ rule umap:
        " > {log} 2>&1" 
 
 # split_by_cluster
-rule split_by_cluster:
+checkpoint split_by_cluster:
     input: 
         clusters=rules.umap.output.cluster,
         fastq=rules.nanofilt.output,
-    output: OUTPUT_DIR + "/umap/{barcode}/count.txt",
+    output: directory(OUTPUT_DIR + "/umap/{barcode}/clusters"),
     log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters.log"
     threads: 1
     conda: "../envs/seqkit.yaml"
     params:
-        outdir=OUTPUT_DIR + "/umap/{barcode}/clusters",
         scripts="scripts"
     shell:
-        """
-        bash {params.scripts}/split_by_cluster.sh {input.clusters} {input.fastq} {params.outdir} {output} 2> {log}
-        """
+        "bash {params.scripts}/split_by_cluster.sh {input.clusters} {input.fastq} {output} 2> {log}"
 
 # read correction
 rule correct_read:
     input:
-        counts=rules.split_by_cluster.output,
         fastq=OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.fastq",
     output:
         fasta=OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}/{c}.correctedReads.fasta.gz",

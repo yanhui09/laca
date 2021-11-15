@@ -68,6 +68,26 @@ checkpoint medaka_consensus:
         cp {params._dir}/consensus.fasta {output.fna}
         """
 
+# get {barcode} {c} from chekckpoint
+def get_denoised_seqs(wildcards):
+    barcodes = glob_wildcards(checkpoints.demultiplex.get(**wildcards).output[0]
+     + "/{barcode, BRK[0-9][0-9]}/{runid}.fastq").barcode
+    fnas = []
+    for i in barcodes:
+        cs = glob_wildcards(checkpoints.split_by_cluster.get(barcode=i).output[0] + "/{c}.fastq").c
+        for j in cs:
+            fnas.append(OUTPUT_DIR + "/umap/{barcode}/denoised_seqs/{c}.fna".format(barcode=i, c=j))
+    return fnas
+
+rule collect_denoised_seqs:
+    input: get_denoised_seqs
+    output: OUTPUT_DIR + "/umap/rep_seqs.fna",
+    message: "Collect denoised sequences"
+    log: OUTPUT_DIR + "/logs/umap/rep_seqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umap/rep_seqs.txt"
+    shell:
+        "cat {input} > {output} 2> {log}"
+
 # call variants with medaka
 
 # combine sample-specific amplicons and mapping
