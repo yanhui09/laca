@@ -81,13 +81,27 @@ def get_denoised_seqs(wildcards):
 
 rule collect_denoised_seqs:
     input: get_denoised_seqs
-    output: OUTPUT_DIR + "/umap/rep_seqs.fna",
+    output: OUTPUT_DIR + "/umap/denoised_seqs.fna",
     message: "Collect denoised sequences"
-    log: OUTPUT_DIR + "/logs/umap/rep_seqs.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umap/rep_seqs.txt"
+    log: OUTPUT_DIR + "/logs/umap/denoised_seqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umap/denoised_seqs.txt"
     shell:
         "cat {input} > {output} 2> {log}"
 
-# call variants with medaka
+# to do: call variants with medaka
 
-# combine sample-specific amplicons and mapping
+# dereplicate denoised sequences with mmseqs
+rule dereplicate_denoised_seqs:
+    input: OUTPUT_DIR + "/umap/denoised_seqs.fna",
+    output: OUTPUT_DIR + "/rep_seqs.fna",
+    message: "Dereplicate denoised sequences"
+    log: OUTPUT_DIR + "/logs/dereplicate_denoised_seqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/dereplicate_denoised_seqs.txt"
+    params:
+        tmp=OUTPUT_DIR + "/tmp",
+    threads: config["threads"]["large"]
+    conda: "../envs/mmseqs2.yaml"
+    shell:
+        "mmseqs easy-cluster {input} {output} {params.tmp} --threads {threads} --min-seq-id 1 -c 1 > {log} 2>&1"
+
+# create abundance matrix with minimap2

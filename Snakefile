@@ -44,4 +44,5 @@ rule nanofilt:
 
 include: "rules/umi.smk"
 include: "rules/umap.smk"
-include: "rules/polish.smk"
+include: "rules/denoise.smk"
+include: "rules/phylo.smk"
