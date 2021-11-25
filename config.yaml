@@ -52,8 +52,12 @@ fastANI:
 mode: consensus
 
 minimap:
-  x: map-ont 
+  x: map-ont
+  index_size: 4G 
 
+samtools:
+  m: 3G
+  
 racon:
   iter: 2
   m: 8

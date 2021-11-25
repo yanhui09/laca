@@ -25,11 +25,11 @@ f5_pattern2 = linked_pattern(rprimers, fprimers)
 f5_patterns = f5_pattern1 + ' ' + f5_pattern2
 #---------
 
-# trim UMIs 
-rule trim_umi:
+# trim primers 
+rule trim_primers:
     input: rules.nanofilt.output,
     output: OUTPUT_DIR + "/umap/{barcode}/trimmed.fastq",
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/trim_umi.log"
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/trim_primers.log"
     threads: config["threads"]["normal"]
     params:
         f=f5_patterns,
@@ -49,7 +49,7 @@ rule trim_umi:
 
 # kmer calculation
 rule kmer_freqs:
-    input: rules.trim_umi.output
+    input: rules.trim_primers.output
     output: OUTPUT_DIR + "/umap/{barcode}/kmer_freqs.txt"
     log: OUTPUT_DIR + "/logs/umap/{barcode}/kmer_freqs.log"
     threads: config["threads"]["normal"]

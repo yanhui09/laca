@@ -3,9 +3,19 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥5.31.1-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![Build Status](https://travis-ci.org/snakemake-workflows/NP-metagenomics.svg?branch=master)](https://travis-ci.org/snakemake-workflows/NP-metagenomics)
 
-This is a Snakemake workflow for the nanopore profiling of full-length 16S rRNA gene. Along with the workflow, one minimized version of compiled `guppy` and `Greengene 13.8` database are provided. The whole pipleline contains demultiplexing, taxonomy assignment and building the feature table.
+This is a Snakemake workflow for the nanopore amplicon sequencing, e.g., 16S rRNA gene. Along with the workflow, one minimized version of compiled `guppy` was provided for demultiplexing.
 
-## Usage
+# Installation
+Make sure conda is installed. [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is enough for the whole pipeline.
+
+Install latest version of mamba and snakemake, and activate the conda environment to run snakemake.
+```
+conda install -n base -c conda-forge mamba
+mamba create -c conda-forge -c bioconda -n snakemake snakemake
+conda activate snakemake
+```
+
+# Usage
 
 You can edit the path to `basecalled_dir` and `results_dir` in the `config.yaml`, and start snakemake workflow in the console.
 

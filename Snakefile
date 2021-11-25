@@ -11,8 +11,8 @@ OUTPUT_DIR = config["results_dir"].rstrip("/")
 
 rule all:
     input:
-        OUTPUT_DIR + "/ONT-L7-GG.txt"
-    
+        OUTPUT_DIR + "/count_matrix.tsv",
+
 checkpoint demultiplex:
     input: INPUT_DIR
     output: directory(OUTPUT_DIR + "/demultiplexed")
