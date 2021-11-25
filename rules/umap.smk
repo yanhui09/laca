@@ -27,7 +27,7 @@ f5_patterns = f5_pattern1 + ' ' + f5_pattern2
 
 # trim primers 
 rule trim_primers:
-    input: rules.nanofilt.output,
+    input: rules.collect_fastq.output,
     output: OUTPUT_DIR + "/umap/{barcode}/trimmed.fastq",
     log: OUTPUT_DIR + "/logs/umap/{barcode}/trim_primers.log"
     threads: config["threads"]["normal"]
@@ -47,16 +47,27 @@ rule trim_primers:
             > {log} 2>&1
         """
 
+# quality filter
+rule nanofilt_umap:
+    input:  rules.trim_primers.output,
+    output: OUTPUT_DIR + "/umap/{barcode}/filt.fastq"
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/nanofilt.log"
+    conda: "../envs/nanofilt.yaml"
+    shell: 
+        """
+        cat {input} | NanoFilt -q 8 -l 800 --maxlength 2000 2> {log} 1> {output}
+        """
+
 # kmer calculation
 rule kmer_freqs:
-    input: rules.trim_primers.output
+    input: rules.nanofilt_umap.output
     output: OUTPUT_DIR + "/umap/{barcode}/kmer_freqs.txt"
     log: OUTPUT_DIR + "/logs/umap/{barcode}/kmer_freqs.log"
     threads: config["threads"]["normal"]
     conda: "../envs/kmer_freqs.yaml"
     params: 
         scripts="scripts",
-	kmer_size=config["kmer_size"],
+        kmer_size=config["kmer_size"],
     shell:
         "python {params.scripts}/kmer_freqs.py"
         " -k {params.kmer_size}"
@@ -70,7 +81,6 @@ rule umap:
         cluster=OUTPUT_DIR + "/umap/{barcode}/hdbscan.tsv",
 	    plot=OUTPUT_DIR + "/umap/{barcode}/hdbscan.png",
     log: OUTPUT_DIR + "/logs/umap/{barcode}/umap.log"
-    threads: 1
     conda: "../envs/umap_cluster.yaml"
     params:
         scripts="scripts",
@@ -86,10 +96,9 @@ rule umap:
 checkpoint split_by_cluster:
     input: 
         clusters=rules.umap.output.cluster,
-        fastq=rules.nanofilt.output,
+        fastq=rules.nanofilt_umap.output,
     output: directory(OUTPUT_DIR + "/umap/{barcode}/clusters"),
     log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters.log"
-    threads: 1
     conda: "../envs/seqkit.yaml"
     params:
         scripts="scripts"
@@ -122,7 +131,6 @@ checkpoint split_seqs:
     input: rules.correct_read.output.fasta
     output: directory(OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}/seqs")
     log: OUTPUT_DIR + "/logs/umap/{barcode}/split_seqs/{c}.log"
-    threads: 1
     conda: "../envs/seqkit.yaml"
     shell:
         "seqkit split {input} -i -O {output} > {log} 2>&1"

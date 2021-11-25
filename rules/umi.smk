@@ -33,6 +33,17 @@ r_pattern2 = linked_pattern(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
+# quality filter
+rule nanofilt_umi:
+    input:  OUTPUT_DIR + "/raw_fq/{barcode}"
+    output: temp(OUTPUT_DIR + "/filt_fq/{barcode}.fastq")
+    log: OUTPUT_DIR + "/logs/nanofilt_umi/{barcode}.log"
+    conda: "../envs/nanofilt.yaml"
+    shell: 
+        """
+        cat {input} | NanoFilt -q 8 -l 1000 --maxlength 1600 --headcrop 15 --tailcrop 15 2> {log} 1> {output}
+        """
+
 # trim umi region
 rule umi_loc:
     input: OUTPUT_DIR + "/filt_fq/{barcode}.fastq"
