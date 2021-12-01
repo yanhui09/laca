@@ -181,9 +181,14 @@ rule inter_ANI:
 rule choose_draft:
     input: rules.inter_ANI.output,
     output: OUTPUT_DIR + "/umap/{barcode}/polish/draft/{c}/raw.fna",
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/polish/draft/{c}.log",
-    shell: # escape the brackets by doubling it
-        """
-        cat {input} | awk '{{print $1}}' | head -n 1 | xargs -I {{}} zcat {{}} | \
-        sed 's/>.*/>{wildcards.barcode}_{wildcards.c}/' > {output} 2> {log}
-        """
+    run:
+        import pandas as pd
+        import gzip
+        f = pd.read_csv(input[0], sep="\t", header=None)
+        f1 = f.iloc[0,0]
+        with open(output[0], "w") as out:
+            with gzip.open(f1, "rt") as inp:
+                for line in inp:
+                    if line.startswith(">"):
+                        line = ">" + wildcards.barcode + "_" + wildcards.c + "\n"
+                    out.write(line)
