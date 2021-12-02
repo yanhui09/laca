@@ -1,8 +1,8 @@
 # LCA taxonomy with MMseqs2
 # download MMseqs2 database SILVA
 #mmseqs databases SILVA silvadb tmp
-rule download_silva:
-    input: rules.count_matrix.out
+rule download_silva_mmseqs:
+    input: rules.count_matrix.output
     output: DATABASE_DIR + "/mmseq2/silvadb"
     message: "Downloading SILVA database for MMseqs2"
     params:
@@ -14,7 +14,7 @@ rule download_silva:
         "mmseqs databases SILVA {output} {params.tmp} 1> {log} 2>&1"
 
 rule create_queryDB:
-    input: rules.dereplicate_denoised_seqs.out
+    input: rules.dereplicate_denoised_seqs.output
     output: OUTPUT_DIR + "/mmseq2/queryDB"
     conda: "../envs/mmseqs2.yml"
     log: OUTPUT_DIR + "/logs/create_queryDB.log"
@@ -25,7 +25,7 @@ rule create_queryDB:
 rule taxonomy_mmseqs2:
     input:
         queryDB = rules.create_queryDB.output,
-        targetDB = rules.download_silva.output,
+        targetDB = rules.download_silva_mmseqs.output,
     output:
         taxaDB = OUTPUT_DIR + "/mmseq2/resultDB",
         tsv = OUTPUT_DIR + "/mmseq2/lca_taxonomy.tsv",
@@ -41,7 +41,19 @@ rule taxonomy_mmseqs2:
         mmseqs taxonomy {input.queryDB} {input.targetDB} {output.resultDB} {params.tmp} --threads {threads} 1> {log} 2>&1
         mmseqs createtsv {output.resultDB} {output.tsv} 1>> {log} 2>&1
         """
-        
+
+# build tree with seep
+# download database
+rule download_silva_seep:
+    input: rules.count_matrix.output
+    output: DATABASE_DIR + "/seep/sepp_silva128.qza"
+    message: "Downloading SILVA database for SEEP"
+    params:
+        link = "https://data.qiime2.org/2021.11/common/sepp-refs-silva-128.qza",
+    log: OUTPUT_DIR + "/logs/download_silva.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/download_silva.txt"
+    shell: 
+        "wget -O {output} {params.link} 1> {log} 2>&1"
 
 
 
