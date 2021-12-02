@@ -181,13 +181,14 @@ def get_barcodes(wildcards, type_o):
         output = barcodes
     return output
 
+# biom format header
 rule header_sample:
     input:
         bai = lambda wildcards: get_barcodes(wildcards, "bai"),
     output: temp(OUTPUT_DIR + "/header_sample")
     run:
         with open(output[0], 'w') as f:
-            f.write('\t'.join(SAMPLE) + '\n')
+            f.write('#OTU ID\t'+ '\t'.join(SAMPLE) + '\n')
 
 rule rowname_seqs:
     input:

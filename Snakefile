@@ -13,6 +13,8 @@ DATABASE_DIR = config["database_dir"].rstrip("/")
 rule all:
     input:
         OUTPUT_DIR + "/count_matrix.tsv",
+        OUTPUT_DIR + "/sepp/ftable_filtered.biom",
+        OUTPUT_DIR + "/sepp/sepp.tre",
 
 checkpoint demultiplex:
     input: INPUT_DIR

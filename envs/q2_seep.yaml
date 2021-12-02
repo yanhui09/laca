@@ -1,5 +1,0 @@
-name: q2_seep
-channels:
-  - qiime2
-dependencies:
-  - q2-fragment-insertion
