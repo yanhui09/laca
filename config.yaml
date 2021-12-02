@@ -6,7 +6,7 @@ guppy: "resources/ont-guppy/bin" # guppy bin
 
 threads:
     normal: 2 # short request for threads
-    large: 6 # threads dependent e.g., canu
+    large: 4 # threads dependent e.g., canu
 # demultiplex with guppy
 barcode_kits: "SQK16S-GXO"
 use_cuda: FALSE 

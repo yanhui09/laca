@@ -39,7 +39,7 @@ rule racon:
     conda: "../envs/polish.yaml"
     log: OUTPUT_DIR +"/logs/umap/{barcode}/polish/racon/{c}/round{iter}.log"
     benchmark: OUTPUT_DIR +"/benchmarks/umap/{barcode}/polish/racon/{c}/round{iter}.txt"
-    threads: config["threads"]["large"]
+    threads: 1
     shell:
         "racon -m {params.m} -x {params.x}"
         " -g {params.g} -w {params.w} -t {threads}"
