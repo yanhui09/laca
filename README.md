@@ -1,9 +1,9 @@
-# Snakemake workflow: Nanopore-amplicon
+# Snakemake workflow: Kamp
 
-[![Snakemake](https://img.shields.io/badge/snakemake-≥5.31.1-brightgreen.svg)](https://snakemake.bitbucket.io)
-[![Build Status](https://travis-ci.org/snakemake-workflows/NP-metagenomics.svg?branch=master)](https://travis-ci.org/snakemake-workflows/NP-metagenomics)
+[![Snakemake](https://img.shields.io/badge/snakemake-≥6.9.1-brightgreen.svg)](https://snakemake.bitbucket.io)
+[![Build Status](https://travis-ci.org/snakemake-workflows/Kamp.svg?branch=master)](https://travis-ci.org/snakemake-workflows/Kamp)
 
-This is a Snakemake workflow for the nanopore amplicon sequencing, e.g., 16S rRNA gene. Along with the workflow, one minimized version of compiled `guppy` was provided for demultiplexing.
+This is a kmer-based denoise pipeline for the nanopore amplicon sequencing, e.g., 16S rRNA gene. Along with the workflow, one minimized version of compiled `guppy` was provided for demultiplexing.
 
 # Installation
 Make sure conda is installed. [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is enough for the whole pipeline.
