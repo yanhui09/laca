@@ -1,6 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "/mnt/md0/UMI16S/test/data/run"
-results_dir: "/mnt/md0/UMI16S/test/results"
+results_dir: "/mnt/md0/UMI16S/test/results2"
 database_dir: "/mnt/md0/Database/NanoAmp"
 guppy: "resources/ont-guppy/bin" # guppy bin
 
@@ -10,6 +10,9 @@ threads:
 # demultiplex with guppy
 barcode_kits: "SQK16S-GXO"
 use_cuda: FALSE 
+
+# Pooling samples for denoise [True|False]
+pooling: True
 
 # umi extraction with seqkit and cutadapt
 umi_loc: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence
