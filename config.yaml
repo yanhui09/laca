@@ -38,7 +38,7 @@ umi_id: 0.9
 # kmer cluster
 kmer_size: 5
 # umap reduction and hdbscan cluster
-hdbscan_size: 50
+hdbscan_size: 10
 hdbscan_epsilon: 0.5
 
 # read correction

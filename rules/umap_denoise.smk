@@ -98,18 +98,31 @@ rule umap:
        " -c {output.cluster} -p"
        " > {log} 2>&1" 
 
-# split_by_cluster
-checkpoint split_by_cluster:
-    input: 
-        clusters = rules.umap.output.cluster,
-        fastq = rules.nanofilt_umap.output,
+# split reads by cluster
+checkpoint cluster_info:
+    input: rules.umap.output.cluster,
     output: directory(OUTPUT_DIR + "/umap/{barcode}/clusters"),
     log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters.log"
-    conda: "../envs/seqkit.yaml"
     params:
         scripts = "scripts"
+    run:
+        import pandas as pd
+        df = pd.read_csv(input[0], sep="\t")
+        df = df[["read", "bin_id"]]
+        clusters = df.bin_id.max()
+        os.makedirs(output[0])
+        for cluster in range(0, clusters+1):
+            df.loc[df.bin_id == cluster, "read"].to_csv(output[0] + "/c" + str(cluster) + ".txt", sep="\t", header=False, index=False)
+        
+rule split_by_cluster:
+    input: 
+        clusters = OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.txt",
+        fastq = rules.nanofilt_umap.output,
+    output: OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.fastq",
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters/{c}.log"
+    conda: "../envs/seqkit.yaml"
     shell:
-        "bash {params.scripts}/split_by_cluster.sh {input.clusters} {input.fastq} {output} 2> {log}"
+        "seqkit grep {input.fastq} -f {input.clusters} -o {output} 2> {log}"
 
 # read correction
 rule correct_read:
@@ -281,7 +294,7 @@ def get_denoised_seqs(wildcards, pooling = True):
 
     fnas = []
     for i in barcodes:
-        cs = glob_wildcards(checkpoints.split_by_cluster.get(barcode=i).output[0] + "/{c}.fastq").c
+        cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
         for j in cs:
             fnas.append(OUTPUT_DIR + "/umap/{barcode}/denoised_seqs/{c}.fna".format(barcode=i, c=j))
     return fnas
