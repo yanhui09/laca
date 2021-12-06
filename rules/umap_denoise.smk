@@ -89,12 +89,16 @@ rule umap:
     log: OUTPUT_DIR + "/logs/umap/{barcode}/umap.log"
     conda: "../envs/umap_cluster.yaml"
     params:
-        scripts = "scripts",
-	    size = config["hdbscan_size"],
-	    epsilon = config["hdbscan_epsilon"],
+        n_neighbors = config["umap"]["n_neighbors"],
+        min_dist = config["umap"]["min_dist"],
+	    min_cluster_size = config["hdbscan"]["min_cluster_size"],
+        min_samples = config["hdbscan"]["min_samples"],
+	    epsilon = config["hdbscan"]["epsilon"],
+
     shell:
-       "python {params.scripts}/umap_cluster.py -k {input}"
-       " -s {params.size} -e {params.epsilon}"
+       "python scripts/umap_cluster.py -k {input}"
+       " -n {params.n_neighbors} -d {params.min_dist}"
+       " -s {params.min_cluster_size} -m {params.min_samples} -e {params.epsilon}"
        " -c {output.cluster} -p"
        " > {log} 2>&1" 
 

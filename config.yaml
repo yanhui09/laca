@@ -38,8 +38,14 @@ umi_id: 0.9
 # kmer cluster
 kmer_size: 5
 # umap reduction and hdbscan cluster
-hdbscan_size: 10
-hdbscan_epsilon: 0.5
+umap:
+  n_neighbors: 100 # Increase this for global structure
+  min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
+  #n_components
+hdbscan:
+  min_cluster_size: 10 # Define the smallest size to cluster
+  min_samples: 1 # Increase this for more conservative clustering - more points as noise
+  epsilon: 0 # Lower this for more micro-clusters
 
 # read correction
 # canu
