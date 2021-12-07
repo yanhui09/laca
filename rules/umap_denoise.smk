@@ -98,7 +98,7 @@ rule umap:
     threads: config["threads"]["large"]
     shell:
        "NUMBA_NUM_THREADS={threads} python scripts/umap_cluster.py -k {input}"
-       " -n {params.n_neighbors} -d {params.min_dist} -p {params.n_components}"
+       " -n {params.n_neighbors} -d {params.min_dist} -t {params.n_components}"
        " -s {params.min_cluster_size} -m {params.min_samples} -e {params.epsilon}"
        " -c {output.cluster} -p"
        " > {log} 2>&1" 

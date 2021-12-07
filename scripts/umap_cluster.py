@@ -18,7 +18,7 @@ def parse_arguments():
     parser.add_argument("-k", "--kmer", help='kmer file from kmer_freqs.py')
     parser.add_argument("-n", "--n_neighbors", help='n_neighbors for UMAP', default=50)
     parser.add_argument("-d", "--min_dist", help='min_dist for UMAP', default=0.1)
-    parser.add_argument("-p", "--n_components", help='n_components for UMAP', default=2)
+    parser.add_argument("-t", "--n_components", help='n_components for UMAP', default=2)
     parser.add_argument("-s", "--min_cluster_size", help='min_cluster_size for HDBSCAN', default=10)
     parser.add_argument("-m", "--min_samples", help='min_samples for HDBSCAN', default=10)
     parser.add_argument("-e", "--epsilon", help='cluster selection epsilon (stop spliting)', default=0)
