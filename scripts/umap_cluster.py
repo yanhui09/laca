@@ -5,7 +5,7 @@ import umap
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from sklearn import decomposition
+#from sklearn import decomposition
 #import random
 import pandas as pd
 import hdbscan
@@ -16,11 +16,11 @@ def parse_arguments():
     """Read arguments from the console"""
     parser = argparse.ArgumentParser(description="Note: umap cluster with hdbscan.")
     parser.add_argument("-k", "--kmer", help='kmer file from kmer_freqs.py')
-    parser.add_argument("-n", "--n_neighbors", help='n_neighbors for UMAP', default=15)
+    parser.add_argument("-n", "--n_neighbors", help='n_neighbors for UMAP', default=50)
     parser.add_argument("-d", "--min_dist", help='min_dist for UMAP', default=0.1)
-    parser.add_argument("-s", "--min_cluster_size", help='min_cluster_size for HDBSCAN', default=50)
+    parser.add_argument("-s", "--min_cluster_size", help='min_cluster_size for HDBSCAN', default=10)
     parser.add_argument("-m", "--min_samples", help='min_samples for HDBSCAN', default=10)
-    parser.add_argument("-e", "--epsilon", help='cluster selection epsilon (stop spliting)', default=0.5)
+    parser.add_argument("-e", "--epsilon", help='cluster selection epsilon (stop spliting)', default=0)
     parser.add_argument("-c", "--cluster", help='export cluster file')
     parser.add_argument("-p", "--plot", help="plot the cluster [TRUE]", action="store_true", default=False)
 
@@ -32,7 +32,7 @@ def umap_reduction(kmer_freqs, n_neighbors, min_dist):
     #UMAP
     motifs = [x for x in df.columns.values if x not in ["read", "length"]]
     X = df.loc[:,motifs]
-    X_embedded = umap.UMAP(n_neighbors=int(n_neighbors), min_dist=float(min_dist), verbose=2).fit_transform(X)
+    X_embedded = umap.UMAP(random_state=123, n_neighbors=int(n_neighbors), min_dist=float(min_dist), verbose=2).fit_transform(X)
     
     df_umap = pd.DataFrame(X_embedded, columns=["D1", "D2"])
     umap_out = pd.concat([df["read"], df["length"], df_umap], axis=1)

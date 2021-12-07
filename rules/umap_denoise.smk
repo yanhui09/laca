@@ -94,9 +94,9 @@ rule umap:
 	    min_cluster_size = config["hdbscan"]["min_cluster_size"],
         min_samples = config["hdbscan"]["min_samples"],
 	    epsilon = config["hdbscan"]["epsilon"],
-
+    threads: config["threads"]["large"]
     shell:
-       "python scripts/umap_cluster.py -k {input}"
+       "NUMBA_NUM_THREADS={threads} python scripts/umap_cluster.py -k {input}"
        " -n {params.n_neighbors} -d {params.min_dist}"
        " -s {params.min_cluster_size} -m {params.min_samples} -e {params.epsilon}"
        " -c {output.cluster} -p"

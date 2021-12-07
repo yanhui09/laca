@@ -43,23 +43,18 @@ umap:
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
   #n_components
 hdbscan:
-  min_cluster_size: 10 # Define the smallest size to cluster
-  min_samples: 1 # Increase this for more conservative clustering - more points as noise
+  min_cluster_size: 8 # Define the smallest size to cluster
+  min_samples: 8 # Increase this for more conservative clustering - more points as noise
   epsilon: 0 # Lower this for more micro-clusters
 
 # read correction
 # canu
 amp_size: 1.2k
 
-# fastANI
 fastANI:
   k: 16
   fragLen: 150
   minFrac: 0.2
-
-# choose the denoise mode for polishing
-# consensus, snp, pool
-mode: consensus
 
 minimap:
   x: map-ont
