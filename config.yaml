@@ -6,7 +6,7 @@ guppy: "resources/ont-guppy/bin" # guppy bin
 
 threads:
     normal: 2 # short request for threads
-    large: 4 # threads dependent e.g., canu
+    large: 6 # threads dependent e.g., canu
 # demultiplex with guppy
 barcode_kits: "SQK16S-GXO"
 use_cuda: FALSE 
@@ -41,10 +41,10 @@ kmer_size: 5
 umap:
   n_neighbors: 100 # Increase this for global structure
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
-  #n_components
+  n_components: 2
 hdbscan:
-  min_cluster_size: 8 # Define the smallest size to cluster
-  min_samples: 8 # Increase this for more conservative clustering - more points as noise
+  min_cluster_size: 10 # Define the smallest size to cluster
+  min_samples: 10 # Increase this for more conservative clustering - more points as noise
   epsilon: 0 # Lower this for more micro-clusters
 
 # read correction

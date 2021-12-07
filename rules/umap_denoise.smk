@@ -91,13 +91,14 @@ rule umap:
     params:
         n_neighbors = config["umap"]["n_neighbors"],
         min_dist = config["umap"]["min_dist"],
+        n_components = config["umap"]["n_components"],
 	    min_cluster_size = config["hdbscan"]["min_cluster_size"],
         min_samples = config["hdbscan"]["min_samples"],
 	    epsilon = config["hdbscan"]["epsilon"],
     threads: config["threads"]["large"]
     shell:
        "NUMBA_NUM_THREADS={threads} python scripts/umap_cluster.py -k {input}"
-       " -n {params.n_neighbors} -d {params.min_dist}"
+       " -n {params.n_neighbors} -d {params.min_dist} -p {params.n_components}"
        " -s {params.min_cluster_size} -m {params.min_samples} -e {params.epsilon}"
        " -c {output.cluster} -p"
        " > {log} 2>&1" 
