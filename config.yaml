@@ -48,8 +48,15 @@ hdbscan:
   epsilon: 0 # Lower this for more micro-clusters
 
 # read correction
-# canu
-amp_size: 1.2k
+canu:
+  amp_size: 1.2k
+  stopOnLowCoverage: 1
+  minInputCoverage: 2
+  minReadLength: 500
+  minOverlapLength: 200
+  corOutCoverage: all
+  corMinCoverage: 0 
+  corMhapSensitivity: high
 
 fastANI:
   k: 16

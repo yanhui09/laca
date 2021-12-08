@@ -139,14 +139,23 @@ rule correct_read:
     threads: config["threads"]["large"]
     conda: "../envs/canu.yaml"
     params:
-        amp_size = config["amp_size"],
+        amp_size = config["canu"]["amp_size"],
+        stopOnLowCoverage = config["canu"]["stopOnLowCoverage"],
+        minInputCoverage = config["canu"]["minInputCoverage"],
+        minReadLength = config["canu"]["minReadLength"],
+        minOverlapLength = config["canu"]["minOverlapLength"],
+        corOutCoverage = config["canu"]["corOutCoverage"],
+        corMinCoverage = config["canu"]["corMinCoverage"],
+        corMhapSensitivity = config["canu"]["corMhapSensitivity"],
         prefix = OUTPUT_DIR + "/umap/{barcode}/canu_corrected/{c}",
     shell:
         """
         canu -correct -p {wildcards.c} -d {params.prefix} \
         -raw -nanopore {input.fastq} \
-        genomeSize={params.amp_size} stopOnLowCoverage=1 \
-        minInputCoverage=2 minReadLength=500 minOverlapLength=200 \
+        genomeSize={params.amp_size} stopOnLowCoverage={params.stopOnLowCoverage} \
+        minInputCoverage={params.minInputCoverage} minReadLength={params.minReadLength} \
+        minOverlapLength={params.minOverlapLength} corOutCoverage={params.corOutCoverage} \
+        corMinCoverage={params.corMinCoverage} corMhapSensitivity={params.corMhapSensitivity} \
         useGrid=false maxThreads={threads} > {log} 2>&1
         """
 
