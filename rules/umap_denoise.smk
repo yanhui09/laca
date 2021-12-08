@@ -139,7 +139,7 @@ rule correct_read:
     threads: config["threads"]["large"]
     conda: "../envs/canu.yaml"
     params:
-        amp_size = config["canu"]["amp_size"],
+        genomeSize = config["canu"]["genomeSize"],
         stopOnLowCoverage = config["canu"]["stopOnLowCoverage"],
         minInputCoverage = config["canu"]["minInputCoverage"],
         minReadLength = config["canu"]["minReadLength"],
@@ -152,7 +152,7 @@ rule correct_read:
         """
         canu -correct -p {wildcards.c} -d {params.prefix} \
         -raw -nanopore {input.fastq} \
-        genomeSize={params.amp_size} stopOnLowCoverage={params.stopOnLowCoverage} \
+        genomeSize={params.genmeSize} stopOnLowCoverage={params.stopOnLowCoverage} \
         minInputCoverage={params.minInputCoverage} minReadLength={params.minReadLength} \
         minOverlapLength={params.minOverlapLength} corOutCoverage={params.corOutCoverage} \
         corMinCoverage={params.corMinCoverage} corMhapSensitivity={params.corMhapSensitivity} \

@@ -49,7 +49,7 @@ hdbscan:
 
 # read correction
 canu:
-  amp_size: 1.2k
+  genomeSize: 1.2k
   stopOnLowCoverage: 1
   minInputCoverage: 2
   minReadLength: 500
