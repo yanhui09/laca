@@ -10,11 +10,24 @@ DATABASE_DIR = config["database_dir"].rstrip("/")
 
 rule all:
     input:
+        OUTPUT_DIR + "/Demultiplex_Done",
         OUTPUT_DIR + "/count_matrix.tsv",
         OUTPUT_DIR + "/sepp/ftable_filtered.biom",
         OUTPUT_DIR + "/sepp/sepp.tre",
 
 include: "rules/demultiplex.smk"
 #include: "rules/umi.smk"
-include: "rules/umap_denoise.smk"
+include: "rules/umap_hdbscan.smk"
+include: "rules/isONclust_consensus.smk"
+#include: "rules/isONcorrect_IsoCon.smk"
+include: "rules/quant.smk"
 include: "rules/phylo.smk"
+
+rule demultiplex:
+    input: OUTPUT_DIR + "/Demultiplex_Done"
+
+rule kmerClust:
+    input: OUTPUT_DIR + "/kmerClust_Done"
+
+rule isONclust_consensus:
+    input: OUTPUT_DIR + "/isONclust_consensus_Done"

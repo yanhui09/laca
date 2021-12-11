@@ -1,4 +1,4 @@
-checkpoint demultiplex:
+checkpoint guppy_demultiplex:
     input: INPUT_DIR
     output: directory(OUTPUT_DIR + "/demultiplexed")
     log: OUTPUT_DIR + "/logs/demultiplex.log"
@@ -6,17 +6,23 @@ checkpoint demultiplex:
     params:
         guppy=config["guppy"],
         barcode_kits=config["barcode_kits"],
-        use_cuda=config["use_cuda"],
     shell:
-        """
-        {params.guppy}/guppy_barcoder -i {input} -s {output} -t {threads} --barcode_kits {params.barcode_kits} 2>{log}
-        if {params.use_cuda}; then
-            {params.guppy}/guppy_barcoder -i {input} -s {output} -t {threads} --barcode_kits {params.barcode_kits} -x auto 2>{log}
-        fi
-        """
+        "{params.guppy}/guppy_barcoder -i {input} -s {output} -t {threads} --barcode_kits {params.barcode_kits} 2>{log}"
 
 # collect demultiplexed files
 rule collect_fastq:
     input:  OUTPUT_DIR + "/demultiplexed/{barcode}"
     output: temp(OUTPUT_DIR + "/raw_fq/{barcode}.fastq")
     shell: "cat {input}/*.fastq > {output}"
+
+def get_demultiplexed(wildcards):
+    barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
+     + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
+    return expand(OUTPUT_DIR + "/raw_fq/{barcode}.fastq", barcode=barcodes)
+
+rule checkend_demultiplex:
+    input: get_demultiplexed
+    output: OUTPUT_DIR + "/Demultiplex_DONE"
+    shell: "touch {output}"
+
+# consider add minibar? https://github.com/calacademy-research/minibar

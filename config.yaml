@@ -1,6 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
-basecalled_dir: "/mnt/md0/UMI16S/test/data/run"
-results_dir: "/mnt/md0/UMI16S/test/results2"
+basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
+results_dir: "/mnt/md0/UMI16S/test/zymock_res"
 database_dir: "/mnt/md0/Database/NanoAmp"
 guppy: "resources/ont-guppy/bin" # guppy bin
 
@@ -9,7 +9,6 @@ threads:
     large: 6 # threads dependent e.g., canu
 # demultiplex with guppy
 barcode_kits: "SQK16S-GXO"
-use_cuda: FALSE 
 
 # Pooling samples for denoise [True|False]
 pooling: True
@@ -35,6 +34,12 @@ rprimer:
 # umi cluster
 umi_id: 0.9
 
+# Quality control
+NanoFilt:
+  q: 7
+  l: 800
+  maxlength: 2000
+
 # kmer cluster
 kmer_size: 5
 # umap reduction and hdbscan cluster
@@ -43,25 +48,12 @@ umap:
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
   n_components: 2
 hdbscan:
-  min_cluster_size: 10 # Define the smallest size to cluster
-  min_samples: 10 # Increase this for more conservative clustering - more points as noise
+  min_cluster_size: 50 # Define the smallest size to cluster
+  min_samples: 50 # Increase this for more conservative clustering - more points as noise
   epsilon: 0 # Lower this for more micro-clusters
 
-# read correction
-canu:
-  genomeSize: 1.2k
-  stopOnLowCoverage: 1
-  minInputCoverage: 2
-  minReadLength: 500
-  minOverlapLength: 200
-  corOutCoverage: all
-  corMinCoverage: 0 
-  corMhapSensitivity: high
-
-fastANI:
-  k: 16
-  fragLen: 150
-  minFrac: 0.2
+NGSpeciesID:
+  racon_iter: 2
 
 minimap:
   x: map-ont
@@ -70,12 +62,5 @@ minimap:
 samtools:
   m: 3G
   
-racon:
-  iter: 2
-  m: 8
-  x: -6
-  g: -8
-  w: 500
-
 medaka:
   m: r941_min_fast_g507
