@@ -1,6 +1,6 @@
 # dereplicate denoised sequences with mmseqs
 rule dereplicate_denoised_seqs:
-    input: rules.collect_isONclust_consensus.output,
+    input: rules.collect_isONclustCon.output,
     output: OUTPUT_DIR + "/rep_seqs.fna",
     message: "Dereplicate denoised sequences"
     params:
@@ -77,9 +77,7 @@ rule samtools_index:
         "samtools index -m {params.m} -@ 1 {input} {output} 2>{log}"
 
 def get_barcodes(wildcards, type_o):
-    barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
-     + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
-    barcodes = list(set(barcodes))
+    barcodes = get_demultiplexed(wildcards)
     if type_o == "bam":
         output = expand(OUTPUT_DIR + "/mapped/{barcode}.sorted.bam", barcode=barcodes)
     elif type_o == "bai":

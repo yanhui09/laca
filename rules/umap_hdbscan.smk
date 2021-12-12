@@ -69,14 +69,11 @@ rule split_by_cluster:
 
 # get {barcode} {c} from chekckpoint
 def get_kmerClust(wildcards, pooling = True):
-    if pooling:
+    check_val_pool(pooling)
+    if pooling == True:
         barcodes = ["pooled"]
-    elif pooling is False:
-        barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
-        + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
-        barcodes = list(set(barcodes))
     else:
-        raise ValueError('Pooling only allows bool type [True/False].\n{} is used in the config file'.format(x))
+        barcodes = get_demultiplexed(wildcards)
 
     fqs = []
     for i in barcodes:

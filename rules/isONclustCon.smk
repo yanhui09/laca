@@ -34,15 +34,12 @@ rule medaka:
         """
 
 # get {barcode} {c} {id} from chekckpoint
-def get_isONclust_consensus(wildcards, pooling = True):
-    if pooling:
+def get_isONclustCon(wildcards, pooling = True):
+    check_val_pool(pooling)
+    if pooling == True:
         barcodes = ["pooled"]
-    elif pooling is False:
-        barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
-        + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
-        barcodes = list(set(barcodes))
     else:
-        raise ValueError('Pooling only allows bool type [True/False].\n{} is used in the config file'.format(x))
+        barcodes = get_demultiplexed(wildcards)
 
     fnas = []
     for i in barcodes:
@@ -53,7 +50,7 @@ def get_isONclust_consensus(wildcards, pooling = True):
                 fnas.append(OUTPUT_DIR + "/medaka/{barcode}/{c}/id_{id}/consensus.fasta".format(barcode=i, c=j, id=k))
     return fnas
 
-rule collect_isONclust_consensus:
-    input: lambda wc: get_isONclust_consensus(wc, pooling = config["pooling"]),
-    output: OUTPUT_DIR + "/isONclustConsensus.fna"
+rule collect_isONclustCon:
+    input: lambda wc: get_isONclustCon(wc, pooling = config["pooling"]),
+    output: OUTPUT_DIR + "/isONclustCon.fna"
     shell: "cat {input} > {output}"

@@ -46,7 +46,7 @@ rule pychopper:
     log: OUTPUT_DIR + "/logs/raw/{barcode}/pychopper.log"
     benchmark: OUTPUT_DIR + "/benchmarks/raw/{barcode}/pychopper.txt"
     threads: config["threads"]["normal"]
-    shell: "pychopper -i {input} -o {output} -t {threads} 2> {log}"
+    shell: "cdna_classifier.py {input} {output} -t {threads} 2> {log}"
 
 # trim primers 
 rule trim_primers:
@@ -81,25 +81,16 @@ use rule qc_filter as qc_filter_trimmed with:
     benchmark:
         OUTPUT_DIR + "/benchmarks/raw/{barcode}/qc_filter_trimmed.txt"
 
-# pooling mode will be defined later 
-def get_qced(wildcards):
-    barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
-     + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
-    return expand(OUTPUT_DIR + "/raw/qced/{barcode}.fastq", barcode=list(set(barcodes)))
-
+#  pooling fqs for sensitivity 
 rule combine_fastq:
-    input: get_qced
+    input: lambda wc: expand(OUTPUT_DIR + "/raw/qced/{barcode}.fastq", barcode=get_demultiplexed(wc))
     output: temp(OUTPUT_DIR + "/raw/qced/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
 def get_filt(wildcards, pooling = True):
-    barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
-     + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
-    barcodes = list(set(barcodes)) 
-    if pooling:
+    barcodes = get_demultiplexed(wildcards) 
+    check_val_pool(pooling)
+    if pooling == True:
         barcodes.append("pooled")
-    elif isinstance(pooling, bool):
-        raise ValueError('Pooling only allows bool type [True/False].\n{} is used in the config file'.format(x))
-    fqs = expand(OUTPUT_DIR + "/raw/qced/{barcode}.fastq", barcode=barcodes)
-    return fqs
+    return expand(OUTPUT_DIR + "/raw/qced/{barcode}.fastq", barcode=barcodes)
