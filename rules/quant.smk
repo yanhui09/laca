@@ -79,6 +79,7 @@ rule samtools_index:
 def get_barcodes(wildcards, type_o):
     barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
      + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
+    barcodes = list(set(barcodes))
     if type_o == "bam":
         output = expand(OUTPUT_DIR + "/mapped/{barcode}.sorted.bam", barcode=barcodes)
     elif type_o == "bai":

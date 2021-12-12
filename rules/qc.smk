@@ -71,6 +71,7 @@ rule nanofilt_umap:
 def get_filt(wildcards, pooling = True):
     barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
      + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
+    barcodes = list(set(barcodes)) 
     if pooling:
         fqs = expand(OUTPUT_DIR + "/umap/{barcode}/trimmed.fastq", barcode=barcodes)
         fqs.append(OUTPUT_DIR + "/umap/pooled/filt.fastq")
