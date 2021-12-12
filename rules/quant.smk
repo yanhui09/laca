@@ -1,6 +1,6 @@
 # dereplicate denoised sequences with mmseqs
 rule dereplicate_denoised_seqs:
-    input: rules.collect_isONclust_consensus.output.fna,
+    input: rules.collect_isONclust_consensus.output,
     output: OUTPUT_DIR + "/rep_seqs.fna",
     message: "Dereplicate denoised sequences"
     params:

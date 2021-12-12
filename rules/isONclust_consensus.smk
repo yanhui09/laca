@@ -54,11 +54,5 @@ def get_isONclust_consensus(wildcards, pooling = True):
 
 rule collect_isONclust_consensus:
     input: lambda wc: get_isONclust_consensus(wc, pooling = config["pooling"]),
-    output: 
-        fna = OUTPUT_DIR + "/isONclustConsensus.fna",
-        flag = OUTPUT_DIR + "/isONclustConsensus_DONE",
-    shell:
-        """
-        cat {input} > {output.fna}
-        touch {output.flag}
-        """
+    output: OUTPUT_DIR + "/isONclustConsensus.fna"
+    shell: "cat {input} > {output}"

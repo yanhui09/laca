@@ -20,9 +20,4 @@ def get_demultiplexed(wildcards):
      + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
     return expand(OUTPUT_DIR + "/raw_fq/{barcode}.fastq", barcode=barcodes)
 
-rule checkend_demultiplex:
-    input: get_demultiplexed
-    output: OUTPUT_DIR + "/Demultiplex_DONE"
-    shell: "touch {output}"
-
 # consider add minibar? https://github.com/calacademy-research/minibar

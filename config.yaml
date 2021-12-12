@@ -1,6 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
-results_dir: "/mnt/md0/UMI16S/test/zymock_res"
+results_dir: "/mnt/md0/UMI16S/zymock_res"
 database_dir: "/mnt/md0/Database/NanoAmp"
 guppy: "resources/ont-guppy/bin" # guppy bin
 
