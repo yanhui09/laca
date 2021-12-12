@@ -12,7 +12,7 @@ checkpoint guppy_demultiplex:
 # collect demultiplexed files
 rule collect_fastq:
     input:  OUTPUT_DIR + "/demultiplexed/{barcode}"
-    output: temp(OUTPUT_DIR + "/raw_fq/{barcode}.fastq")
+    output: temp(OUTPUT_DIR + "/raw/{barcode}.fastq")
     shell: "cat {input}/*.fastq > {output}"
 
 def get_demultiplexed(wildcards):

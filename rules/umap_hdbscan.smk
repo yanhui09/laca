@@ -1,13 +1,14 @@
 # kmer calculation
 rule kmer_freqs:
-    input: rules.nanofilt_umap.output
+    input: OUTPUT_DIR + "/raw/qced/{barcode}.fastq"
     output: OUTPUT_DIR + "/umap/{barcode}/kmer_freqs.txt"
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/kmer_freqs.log"
-    threads: config["threads"]["normal"]
     conda: "../envs/kmer_freqs.yaml"
     params: 
         scripts = "scripts",
         kmer_size = config["kmer_size"],
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/kmer_freqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umap/{barcode}/kmer_freqs.txt"
+    threads: config["threads"]["large"]
     shell:
         "python {params.scripts}/kmer_freqs.py"
         " -k {params.kmer_size}"
@@ -20,7 +21,6 @@ rule umap:
     output: 
         cluster=OUTPUT_DIR + "/umap/{barcode}/hdbscan.tsv",
 	    plot=OUTPUT_DIR + "/umap/{barcode}/hdbscan.png",
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/umap.log"
     conda: "../envs/umap_cluster.yaml"
     params:
         n_neighbors = config["umap"]["n_neighbors"],
@@ -29,6 +29,8 @@ rule umap:
 	    min_cluster_size = config["hdbscan"]["min_cluster_size"],
         min_samples = config["hdbscan"]["min_samples"],
 	    epsilon = config["hdbscan"]["epsilon"],
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/umap.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umap/{barcode}/umap.txt"
     threads: config["threads"]["large"]
     shell:
        "NUMBA_NUM_THREADS={threads} python scripts/umap_cluster.py -k {input}"
@@ -41,9 +43,10 @@ rule umap:
 checkpoint cluster_info:
     input: rules.umap.output.cluster,
     output: directory(OUTPUT_DIR + "/umap/{barcode}/clusters"),
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters.log"
     params:
         scripts = "scripts"
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umap/{barcode}/clusters.txt"
     run:
         import pandas as pd
         df = pd.read_csv(input[0], sep="\t")
@@ -56,10 +59,11 @@ checkpoint cluster_info:
 rule split_by_cluster:
     input: 
         clusters = OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.txt",
-        fastq = rules.nanofilt_umap.output,
+        fastq = OUTPUT_DIR + "/raw/qced/{barcode}.fastq",
     output: OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.fastq",
-    log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters/{c}.log"
     conda: "../envs/seqkit.yaml"
+    log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters/{c}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umap/{barcode}/clusters/{c}.txt"
     shell:
         "seqkit grep {input.fastq} -f {input.clusters} -o {output} 2> {log}"
 

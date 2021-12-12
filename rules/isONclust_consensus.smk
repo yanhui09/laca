@@ -1,12 +1,12 @@
 checkpoint NGSpeciesID:
     input: rules.split_by_cluster.output
     output: directory(OUTPUT_DIR + "/NGSpeciesID/{barcode}/{c}")
-    threads: config["threads"]["normal"]
     conda: "../envs/NGSpeciesID.yaml"
     params:
         racon_iter = config["NGSpeciesID"]["racon_iter"],
     log: OUTPUT_DIR + "/logs/NGSpeciesID/{barcode}/{c}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/NGSpeciesID/{barcode}/{c}.txt"
+    threads: config["threads"]["normal"]
     shell:
         "NGSpeciesID --ont --consensus"
         " --racon --racon_iter {params.racon_iter}"

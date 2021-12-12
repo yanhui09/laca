@@ -1,0 +1,12 @@
+name: isONcorrect_IsoCon
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - spoa
+  - pip:
+    - isONcorrect
+    - isONclust
+    - IsoCon

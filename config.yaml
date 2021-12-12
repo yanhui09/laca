@@ -35,10 +35,10 @@ rprimer:
 umi_id: 0.9
 
 # Quality control
-NanoFilt:
-  q: 7
-  l: 800
-  maxlength: 2000
+seqkit:
+  min-qual: 7
+  min-len: 50
+  max-len: -1
 
 # kmer cluster
 kmer_size: 5

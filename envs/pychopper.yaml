@@ -1,0 +1,7 @@
+name: pychopper
+channels:
+  - bioconda
+  - defaults
+dependencies:
+  - hmmer>=3.0
+  - pychopper>=2.0
