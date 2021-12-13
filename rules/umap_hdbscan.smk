@@ -1,6 +1,6 @@
 # kmer calculation
 rule kmer_freqs:
-    input: OUTPUT_DIR + "/raw/qced/{barcode}.fastq"
+    input: OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq"
     output: OUTPUT_DIR + "/umap/{barcode}/kmer_freqs.txt"
     conda: "../envs/kmer_freqs.yaml"
     params: 

@@ -25,33 +25,10 @@ f5_pattern2 = linked_pattern(rprimers, fprimers)
 f5_patterns = f5_pattern1 + ' ' + f5_pattern2
 #---------
 
-# quality filter
-rule qc_filter:
-    input:  rules.collect_fastq.output,
-    output: temp(OUTPUT_DIR + "/raw/filt/{barcode}.fastq")
-    conda: "../envs/seqkit.yaml"
-    params:
-        Q = config["seqkit"]["min-qual"],
-        m = config["seqkit"]["min-len"],
-        M = config["seqkit"]["max-len"],
-    log: OUTPUT_DIR + "/logs/raw/{barcode}/qc_filter.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/raw/{barcode}/qc_filter.txt"
-    threads: config["threads"]["normal"]
-    shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} {input} > {output} 2> {log}"
-
-rule pychopper:
-    input:  rules.qc_filter.output
-    output: temp(OUTPUT_DIR + "/raw/full_length/{barcode}.fastq")
-    conda: "../envs/pychopper.yaml"
-    log: OUTPUT_DIR + "/logs/raw/{barcode}/pychopper.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/raw/{barcode}/pychopper.txt"
-    threads: config["threads"]["normal"]
-    shell: "cdna_classifier.py {input} {output} -t {threads} 2> {log}"
-
 # trim primers 
 rule trim_primers:
-    input: rules.pychopper.output
-    output: temp(OUTPUT_DIR + "/raw/primers_trimmed/{barcode}.fastq")
+    input: rules.collect_fastq.output
+    output: OUTPUT_DIR + "/raw/primers_trimmed/{barcode}.fastq"
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5_patterns,
@@ -71,20 +48,24 @@ rule trim_primers:
             > {log} 2>&1
         """
 
-use rule qc_filter as qc_filter_trimmed with:
-    input:
-        rules.trim_primers.output
-    output:
-        temp(OUTPUT_DIR + "/raw/qced/{barcode}.fastq")
-    log:
-        OUTPUT_DIR + "/logs/raw/{barcode}/qc_filter_trimmed.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/raw/{barcode}/qc_filter_trimmed.txt"
+# quality filter
+rule q_filter:
+    input:  rules.trim_primers.output,
+    output: OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq"
+    conda: "../envs/seqkit.yaml"
+    params:
+        Q = config["seqkit"]["min-qual"],
+        m = config["seqkit"]["min-len"],
+        M = config["seqkit"]["max-len"],
+    log: OUTPUT_DIR + "/logs/raw/{barcode}/q_filter.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/raw/{barcode}/q_filter.txt"
+    threads: config["threads"]["normal"]
+    shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} {input} > {output} 2> {log}"
 
 #  pooling fqs for sensitivity 
 rule combine_fastq:
-    input: lambda wc: expand(OUTPUT_DIR + "/raw/qced/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: temp(OUTPUT_DIR + "/raw/qced/pooled.fastq")
+    input: lambda wc: expand(OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    output: temp(OUTPUT_DIR + "/raw/qfilt/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
@@ -93,4 +74,4 @@ def get_filt(wildcards, pooling = True):
     check_val_pool(pooling)
     if pooling == True:
         barcodes.append("pooled")
-    return expand(OUTPUT_DIR + "/raw/qced/{barcode}.fastq", barcode=barcodes)
+    return expand(OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq", barcode=barcodes)
