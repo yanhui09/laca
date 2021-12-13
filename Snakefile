@@ -17,7 +17,8 @@ rule all:
         OUTPUT_DIR + "/demultiplex_DONE",
         OUTPUT_DIR + "/qc_DONE",
         OUTPUT_DIR + "/kmerClust_DONE",
-        OUTPUT_DIR + "/isONclustConsensus_DONE",
+        OUTPUT_DIR + "/isONclustCon_DONE",
+        OUTPUT_DIR + "/isONcorCon_DONE",
         OUTPUT_DIR + "/quant_DONE",
         OUTPUT_DIR + "/phylo_DONE",
 
@@ -26,7 +27,7 @@ include: "rules/demultiplex.smk"
 include: "rules/qc.smk"
 include: "rules/umap_hdbscan.smk"
 include: "rules/isONclustCon.smk"
-#include: "rules/isONcorrect_IsoCon.smk"
+include: "rules/isONcorCon.smk"
 include: "rules/quant.smk"
 include: "rules/phylo.smk"
 
@@ -45,6 +46,10 @@ rule kmerClust:
 rule isONclustCon:
     input: OUTPUT_DIR + "/isONclustCon.fna"
     output: temp(touch(OUTPUT_DIR + "/isONclustCon_DONE"))
+
+rule isONcorCon:
+    input: OUTPUT_DIR + "/isONcorCon.fna"
+    output: temp(touch(OUTPUT_DIR + "/isONcorCon_DONE"))
 
 rule quant:
     input: OUTPUT_DIR + "/count_matrix.tsv"

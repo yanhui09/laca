@@ -1,6 +1,15 @@
+def get_denoised(clustCon):
+    if clustCon == "isONclustCon":
+        out = rules.collect_isONclustCon.output
+    elif clustCon == "isONcorCon":
+        out = rules.collect_isONcorCon.output
+    else:
+        raise ValueError("clustCon in config.yaml must be either 'isONclustCon' or 'isONcorCon'")
+    return out
+
 # dereplicate denoised sequences with mmseqs
 rule dereplicate_denoised_seqs:
-    input: rules.collect_isONclustCon.output,
+    input: get_denoised(config["clustCon"])
     output: OUTPUT_DIR + "/rep_seqs.fna",
     message: "Dereplicate denoised sequences"
     params:
@@ -35,7 +44,7 @@ rule dict:
 
 rule minimap_rep_seqs:
     input:
-        fq = rules.trim_primers.output,
+        fq = rules.q_filter.output,
         mmi = rules.index.output,
         dict = rules.dict.output,
     output: temp(OUTPUT_DIR + "/mapped/{barcode}.bam")

@@ -12,6 +12,10 @@ barcode_kits: "SQK16S-GXO"
 
 # Pooling samples for denoise [True|False]
 pooling: True
+# mode for cluster consensus [isONclustCon|isONcorCon]
+# isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
+# isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
+clustCon: isONclustCon
 
 # umi extraction with seqkit and cutadapt
 umi_loc: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence

@@ -28,7 +28,7 @@ f5_patterns = f5_pattern1 + ' ' + f5_pattern2
 # trim primers 
 rule trim_primers:
     input: rules.collect_fastq.output
-    output: OUTPUT_DIR + "/raw/primers_trimmed/{barcode}.fastq"
+    output: temp(OUTPUT_DIR + "/raw/primers_trimmed/{barcode}.fastq")
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5_patterns,
