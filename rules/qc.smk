@@ -32,15 +32,17 @@ rule trim_primers:
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5_patterns,
-        max_err = config["max_err"],
-        min_overlap = config["min_overlap"],
+        e = config["cutadapt"]["max_errors"],
+        O = config["cutadapt"]["min_overlap"],
+        m = config["cutadapt"]["minimum-length"],
     log: OUTPUT_DIR + "/logs/raw/{barcode}/trim_primers.log"
     benchmark: OUTPUT_DIR + "/benchmarks/raw/{barcode}/trim_primers.txt"
     threads: config["threads"]["large"]
     shell:
         """
         cutadapt \
-            -j {threads} -e {params.max_err} -O {params.min_overlap} \
+            -j {threads} \
+            -e {params.e} -O {params.O} -m {params.m}\
             --discard-untrimmed \
             {params.f} \
             -o {output} \

@@ -17,27 +17,33 @@ pooling: True
 umi_loc: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence
 umi_len: 15 # base length of umi design
 umi_flexible: 2 # flexible base length for umi
-max_err: 0.2 # cutadapt -e 
-min_overlap: 9 # cutadapt -O, recommened: 0.25*length(linked_adapter)
+max_err: 0.2 # cutadapt -e, high error tolerance for nanopore 
+min_overlap: 5 # cutadapt -O, recommened: 0.25*length
 # linker and primer for umi extraction
 flinker: "GTCTCGTGGGCTCGG"
+# order matters
 fprimer:
-  338Fa: "ACWCCTACGGGWGGCAGCAG"
-  338Fb: "GACTCCTACGGGAGGCWGCAG"
   27Fa: "AGAGTTTGATYMTGGCTYAG"
   27Fb: "AGGGTTCGATTCTGGCTCAG"
+  338Fa: "ACWCCTACGGGWGGCAGCAG"
+  338Fb: "GACTCCTACGGGAGGCWGCAG"
 
 rlinker: "GTCTCGTGGGCTCGG"
 rprimer: 
-  1391R: "GACGGGCGGTGTGTRCA"
   1540R: "TACGGYTACCTTGTTACGACT"
+  1391R: "GACGGGCGGTGTGTRCA"
 # umi cluster
 umi_id: 0.9
 
 # Quality control
+cutadapt:
+  max_errors: 0.3
+  min_overlap: 5
+  minimum-length: 1
+
 seqkit:
   min-qual: 7
-  min-len: 50
+  min-len: 500
   max-len: -1
 
 # kmer cluster
