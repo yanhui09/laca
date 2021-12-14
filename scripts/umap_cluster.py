@@ -43,7 +43,7 @@ def umap_reduction(kmer_freqs, n_neighbors, min_dist, n_components):
 
 def hdbscan_cluster(umap_out, min_cluster_size, min_samples, cluster_sel_epsilon, n_components):
     #HDBSCAN
-    X = umap_out.loc[:, ["D" + x for x in str(range(1, n_components + 1))]]
+    X = umap_out.loc[:, ["D" + str(x) for x in range(1, n_components + 1)]]
     umap_out["bin_id"] = hdbscan.HDBSCAN(
         min_cluster_size=int(min_cluster_size),
         min_samples=int(min_samples),
