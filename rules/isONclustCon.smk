@@ -35,7 +35,7 @@ rule medaka:
 
 # get {barcode} {c} {id} from chekckpoint
 def get_isONclustCon(wildcards, pooling = True):
-    check_val_pool(pooling)
+    check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
     else:

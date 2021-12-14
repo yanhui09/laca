@@ -25,9 +25,38 @@ f5_pattern2 = linked_pattern(rprimers, fprimers)
 f5_patterns = f5_pattern1 + ' ' + f5_pattern2
 #---------
 
+rule subsample:
+    input: rules.collect_fastq.output
+    output:
+        p = temp(OUTPUT_DIR + "/raw/subsampled/{barcode}_p.fastq"),
+        n = temp(OUTPUT_DIR + "/raw/subsampled/{barcode}.fastq"),
+    conda: "../envs/seqkit.yaml"
+    params:
+        p = config["seqkit"]["p"],
+        n = config["seqkit"]["n"],
+    log: OUTPUT_DIR + "/logs/subsample/{barcode}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/subsample/{barcode}.txt"
+    threads: 1
+    shell:
+        # I don't know why pipe fails, 
+        # portion subsampling (required by seqkit sample by number) as temp file instead.
+        """
+        seqkit sample -p {params.p} -j {threads} {input} -o {output.p} 2> {log}
+        seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} 2>> {log}
+        """
+
+def get_raw(subsample, p, n):
+    check_val("subsample", subsample, bool)
+    check_val("p[seqkit]", p, float)
+    check_val("n[seqkit]", n, int)
+    if subsample == True:
+        return rules.subsample.output.n
+    else:
+        return rules.collect_fastq.output
+
 # trim primers 
 rule trim_primers:
-    input: rules.collect_fastq.output
+    input: get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
     output: temp(OUTPUT_DIR + "/raw/primers_trimmed/{barcode}.fastq")
     conda: "../envs/cutadapt.yaml"
     params:
@@ -73,7 +102,7 @@ rule combine_fastq:
 
 def get_filt(wildcards, pooling = True):
     barcodes = get_demultiplexed(wildcards) 
-    check_val_pool(pooling)
+    check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes.append("pooled")
     return expand(OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq", barcode=barcodes)

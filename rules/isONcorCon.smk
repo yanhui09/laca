@@ -47,7 +47,7 @@ rule IsoCon:
         "IsoCon pipeline -fl_reads {input} -outfolder {output} --nr_cores {threads} > {log} 2>&1"
     
 def get_IsoCon(wildcards, pooling = True):
-    check_val_pool(pooling)
+    check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
     else:

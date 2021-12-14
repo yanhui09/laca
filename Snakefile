@@ -8,9 +8,11 @@ DATABASE_DIR = config["database_dir"].rstrip("/")
 # Allow users to fix the underlying OS via singularity.
 #singularity: "docker://continuumio/miniconda3"
 
-def check_val_pool(val):    
-    if not isinstance(val, bool):
-        raise ValueError('\n\tPooling only allows bool type [True/False].\n\t{} is used in the config file.'.format(val))
+def check_val(var, val, class_type):
+    if not isinstance(val, class_type):
+        warns = ('\n\t' + str(var) + ' only accepts ' + str(class_type) + ' values.' +
+         '\n\t' + str(val) + ' is used in config.yaml file.')
+        raise ValueError(warns)
 
 rule all:
     input:
@@ -25,7 +27,7 @@ rule all:
 include: "rules/demultiplex.smk"
 #include: "rules/umi.smk"
 include: "rules/qc.smk"
-include: "rules/umap_hdbscan.smk"
+include: "rules/kmerClust.smk"
 include: "rules/isONclustCon.smk"
 include: "rules/isONcorCon.smk"
 include: "rules/quant.smk"

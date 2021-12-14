@@ -69,7 +69,7 @@ rule split_by_cluster:
 
 # get {barcode} {c} from chekckpoint
 def get_kmerClust(wildcards, pooling = True):
-    check_val_pool(pooling)
+    check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
     else:

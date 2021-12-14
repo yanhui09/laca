@@ -1,6 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
-results_dir: "/mnt/md0/UMI16S/zymock_res"
+results_dir: "/mnt/md0/UMI16S/zymock_res_subsampled"
 database_dir: "/mnt/md0/Database/NanoAmp"
 guppy: "resources/ont-guppy/bin" # guppy bin
 
@@ -16,6 +16,16 @@ pooling: True
 # isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
 # isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
 clustCon: isONclustCon
+# Subsampling raw reads if with inadequate memory
+subsample: TRUE
+
+seqkit:
+  min-qual: 7
+  min-len: 500
+  max-len: -1
+  # subsampling params
+  p: 0.9 # subsampling portion, upper it if with uneven library [float]
+  n: 20000 # subsampling number [int]
 
 # umi extraction with seqkit and cutadapt
 umi_loc: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence
@@ -44,11 +54,6 @@ cutadapt:
   max_errors: 0.3
   min_overlap: 5
   minimum-length: 1
-
-seqkit:
-  min-qual: 7
-  min-len: 500
-  max-len: -1
 
 # kmer cluster
 kmer_size: 5
