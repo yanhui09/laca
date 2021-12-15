@@ -59,7 +59,7 @@ checkpoint cluster_info:
 rule split_by_cluster:
     input: 
         clusters = OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.txt",
-        fastq = OUTPUT_DIR + "/raw/qced/{barcode}.fastq",
+        fastq = OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq",
     output: OUTPUT_DIR + "/umap/{barcode}/clusters/{c}.fastq",
     conda: "../envs/seqkit.yaml"
     log: OUTPUT_DIR + "/logs/umap/{barcode}/clusters/{c}.log"
