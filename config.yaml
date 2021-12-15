@@ -59,7 +59,7 @@ cutadapt:
 kmer_size: 5
 # umap reduction and hdbscan cluster
 umap:
-  n_neighbors: 100 # Increase this for global structure
+  n_neighbors: 15 # Increase this for global structure
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
   n_components: 2
 hdbscan:

@@ -28,24 +28,30 @@ def parse_arguments():
 
 def umap_reduction(kmer_freqs, n_neighbors, min_dist, n_components):
     df = pd.read_csv(kmer_freqs, delimiter="\t")
+    n_neighbors = int(n_neighbors)
+    min_dist = float(min_dist)
+    n_components = int(n_components)
     #UMAP
     motifs = [x for x in df.columns.values if x not in ["read", "length"]]
     X = df.loc[:,motifs]
     X_embedded = umap.UMAP(
-        random_state=123, n_neighbors=int(n_neighbors),
-        min_dist=float(min_dist), n_components=int(n_components), verbose=2).fit_transform(X)
-    
+        random_state=123, n_neighbors=n_neighbors,
+        min_dist=min_dist, n_components=n_components, verbose=2).fit_transform(X)
     df_umap = pd.DataFrame(X_embedded, columns=["D" + str(x) for x in range(1, n_components + 1)])
     umap_out = pd.concat([df["read"], df["length"], df_umap], axis=1)
     return X_embedded, umap_out
 
 def hdbscan_cluster(umap_out, min_cluster_size, min_samples, cluster_sel_epsilon, n_components):
+    min_cluster_size = int(min_cluster_size)
+    min_samples = int(min_samples)
+    cluster_sel_epsilon = float(cluster_sel_epsilon)
+    n_components = int(n_components)
     #HDBSCAN
     X = umap_out.loc[:, ["D" + str(x) for x in range(1, n_components + 1)]]
     umap_out["bin_id"] = hdbscan.HDBSCAN(
-        min_cluster_size=int(min_cluster_size),
-        min_samples=int(min_samples),
-        cluster_selection_epsilon=float(cluster_sel_epsilon)).fit_predict(X)
+        min_cluster_size=min_cluster_size,
+        min_samples=min_samples,
+        cluster_selection_epsilon=cluster_sel_epsilon).fit_predict(X)
     return umap_out
 
 def plot_cluster(X_embedded, umap_out, plot_out):
