@@ -5,8 +5,6 @@ import umap
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-#from sklearn import decomposition
-#import random
 import pandas as pd
 import hdbscan
 import argparse
@@ -37,7 +35,7 @@ def umap_reduction(kmer_freqs, n_neighbors, min_dist, n_components):
         random_state=123, n_neighbors=int(n_neighbors),
         min_dist=float(min_dist), n_components=int(n_components), verbose=2).fit_transform(X)
     
-    df_umap = pd.DataFrame(X_embedded, columns=["D" + x for x in str(range(1, n_components + 1))])
+    df_umap = pd.DataFrame(X_embedded, columns=["D" + str(x) for x in range(1, n_components + 1)])
     umap_out = pd.concat([df["read"], df["length"], df_umap], axis=1)
     return X_embedded, umap_out
 
