@@ -53,4 +53,12 @@ def get_isONclustCon(wildcards, pooling = True):
 rule collect_isONclustCon:
     input: lambda wc: get_isONclustCon(wc, pooling = config["pooling"]),
     output: OUTPUT_DIR + "/isONclustCon.fna"
-    shell: "cat {input} > {output}"
+    run: 
+        with open(output[0], "w") as out:
+            for i in input:
+                barcode_i, c_i, id_i = i.split("/")[-4:-1]
+                with open(i, "r") as inp:
+                    for line in inp:
+                        if line.startswith(">"):
+                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "\n"
+                        out.write(line)

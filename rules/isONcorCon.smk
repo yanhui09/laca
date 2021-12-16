@@ -46,7 +46,7 @@ rule IsoCon:
     shell:
         "IsoCon pipeline -fl_reads {input} -outfolder {output} --nr_cores {threads} > {log} 2>&1"
     
-def get_IsoCon(wildcards, pooling = True):
+def get_isONcorCon(wildcards, pooling = True):
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
@@ -63,6 +63,14 @@ def get_IsoCon(wildcards, pooling = True):
     return fnas
 
 rule collect_isONcorCon:
-    input: lambda wc: get_IsoCon(wc, pooling = config["pooling"]),
+    input: lambda wc: get_isONcorCon(wc, pooling = config["pooling"]),
     output: OUTPUT_DIR + "/isONcorCon.fna"
-    shell: "cat {input} > {output}"
+    run: 
+        with open(output[0], "w") as out:
+            for i in input:
+                barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-5, -4, -2] ]
+                with open(i, "r") as inp:
+                    for line in inp:
+                        if line.startswith(">"):
+                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "\n"
+                        out.write(line)

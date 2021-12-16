@@ -79,3 +79,7 @@ samtools:
   
 medaka:
   m: r941_min_fast_g507
+
+mmseqs:
+  min-seq-id: 1
+  c: 1 # the fraction of aligned residues

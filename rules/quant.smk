@@ -10,21 +10,44 @@ def get_denoised(clustCon):
 # dereplicate denoised sequences with mmseqs
 rule dereplicate_denoised_seqs:
     input: get_denoised(config["clustCon"])
-    output: OUTPUT_DIR + "/rep_seqs.fna",
+    output: 
+        rep = temp(OUTPUT_DIR + "/mmseqs_rep_seq.fasta"),
+        all_by_cluster = temp(OUTPUT_DIR + "/mmseqs_all_seqs.fasta"),
+        tsv = temp(OUTPUT_DIR + "/mmseqs_cluster.tsv"),
+        tmp = temp(directory(OUTPUT_DIR + "/tmp")),
     message: "Dereplicate denoised sequences"
     params:
-        tmp = OUTPUT_DIR + "/tmp",
+        prefix = OUTPUT_DIR + "/mmseqs",
+        mid = config["mmseqs"]["min-seq-id"],
+        c = config["mmseqs"]["c"],
     conda: "../envs/mmseqs2.yaml"
     log: OUTPUT_DIR + "/logs/dereplicate_denoised_seqs.log"
     benchmark: OUTPUT_DIR + "/benchmarks/dereplicate_denoised_seqs.txt"
     threads: config["threads"]["large"]
     shell:
-        "mmseqs easy-cluster {input} {output} {params.tmp} --threads {threads} --min-seq-id 1 -c 1 > {log} 2>&1"
+        "mmseqs easy-cluster {input} {params.prefix} {output.tmp} "
+        "--threads {threads} --min-seq-id {params.mid} -c {params.c} > {log} 2>&1"
+
+# keep fasta header unique
+rule rename_fasta_header:
+    input: rules.dereplicate_denoised_seqs.output.rep
+    output: OUTPUT_DIR + "/rep_seq.fasta"
+    log: OUTPUT_DIR + "/logs/rename_fasta.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/rename_fasta.benchmark"
+    run:
+        with open(output[0], "w") as out:
+            with open (input[0], "r") as inp:
+                i = 1
+                for line in inp:
+                    if line.startswith(">"):
+                        line = ">kOTU_" + str(i) + "\n"
+                        i += 1 
+                    out.write(line)
 
 # create abundance matrix with minimap
 rule index:
-    input: rules.dereplicate_denoised_seqs.output,
-    output: temp(OUTPUT_DIR + "/rep_seqs.mmi")
+    input: rules.rename_fasta_header.output,
+    output: temp(OUTPUT_DIR + "/mmseqs_rep_seq.mmi")
     message: "Index denoised sequences [Generate abundance matrix]"
     params:
         index_size = config["minimap"]["index_size"],
@@ -34,8 +57,8 @@ rule index:
     shell: "minimap2 -I {params.index_size} -d {output} {input} 2> {log}"
 
 rule dict:
-    input: rules.dereplicate_denoised_seqs.output,
-    output: temp(OUTPUT_DIR + "/rep_seqs.dict")
+    input: rules.rename_fasta_header.output,
+    output: temp(OUTPUT_DIR + "/mmseqs_rep_seq.dict")
     message: "Dict denoised sequences [Generate abundance matrix]"
     conda: "../envs/polish.yaml"
     log: OUTPUT_DIR + "/logs/rep_seqs/dict.log"
