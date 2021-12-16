@@ -18,6 +18,6 @@ rule collect_fastq:
 def get_demultiplexed(wildcards):
     barcodes = glob_wildcards(checkpoints.guppy_demultiplex.get(**wildcards).output[0]
      + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
-    return list(set(barcodes))
+    return sorted(set(barcodes))
 
 # consider add minibar? https://github.com/calacademy-research/minibar

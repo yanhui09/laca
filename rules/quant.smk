@@ -108,7 +108,7 @@ rule samtools_index:
     shell:
         "samtools index -m {params.m} -@ 1 {input} {output} 2>{log}"
 
-def get_barcodes(wildcards, type_o):
+def get_qout(wildcards, type_o):
     barcodes = get_demultiplexed(wildcards)
     if type_o == "bam":
         output = expand(OUTPUT_DIR + "/mapped/{barcode}.sorted.bam", barcode=barcodes)
@@ -117,45 +117,42 @@ def get_barcodes(wildcards, type_o):
     elif type_o == "count":
         output = expand(OUTPUT_DIR + "/mapped/{barcode}.count", barcode=barcodes)
     else:
-        output = barcodes
+        raise ValueError("type_o must be 'bam', 'bai', or 'count'")
     return output
 
 # biom format header
-rule header_sample:
+rule rowname_kOTU:
     input:
-        bai = lambda wildcards: get_barcodes(wildcards, "bai"),
-    output: temp(OUTPUT_DIR + "/header_sample")
-    run:
-        with open(output[0], 'w') as f:
-            f.write('#OTU ID\t'+ '\t'.join(SAMPLE) + '\n')
-
-rule rowname_seqs:
-    input:
-        bam = lambda wildcards: get_barcodes(wildcards, "bam"),
-        bai = lambda wildcards: get_barcodes(wildcards, "bai"),
+        bam = lambda wildcards: get_qout(wildcards, "bam"),
+        bai = lambda wildcards: get_qout(wildcards, "bai"),
     output: temp(OUTPUT_DIR + "/rowname_seqs")
     conda: "../envs/polish.yaml"
+    log: OUTPUT_DIR + "/logs/rep_seqs/rowname_kOTU.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/rep_seqs/rowname_kOTU.txt"
     shell:
         """
-        samtools idxstats $(ls {input.bam} | head -n 1) | grep -v "*" | cut -f1 > {output}
+        echo '#OTU ID' > {output}
+        samtools idxstats $(ls {input.bam} | head -n 1) | grep -v "*" | cut -f1 >> {output}
         """
        
 rule seqs_count:
     input:
-        bam = OUTPUT_DIR + "/mapped/{sample}.sorted.bam",
-        bai = OUTPUT_DIR + "/mapped/{sample}.sorted.bam.bai"
-    output: temp(OUTPUT_DIR + "/mapped/{sample}.count")
+        bam = OUTPUT_DIR + "/mapped/{barcode}.sorted.bam",
+        bai = OUTPUT_DIR + "/mapped/{barcode}.sorted.bam.bai"
+    output: temp(OUTPUT_DIR + "/mapped/{barcode}.count")
     conda: "../envs/polish.yaml"
+    log: OUTPUT_DIR + "/logs/rep_seqs/seqs_count/{barcode}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/rep_seqs/seqs_count/{barcode}.txt"
     shell:
         """
-        samtools idxstats {input.bam} | grep -v "*" | cut -f3 > {output}
+        echo '{wildcards.barcode}' > {output}
+        samtools idxstats {input.bam} | grep -v "*" | cut -f3 >> {output}
         """
 
 rule count_matrix:
     input:
-        seqs_count = lambda wildcards: get_barcodes(wildcards, "count"),
-        header_sample = rules.header_sample.output,
-        rowname_seqs = rules.rowname_seqs.output,
+        rowname_seqs = rules.rowname_kOTU.output,
+        seqs_count = lambda wildcards: get_qout(wildcards, "count"),
     output: OUTPUT_DIR + "/count_matrix.tsv"
     shell:
-        "paste {input.rowname_seqs} {input.seqs_count} | cat {input.header_sample} - > {output}"
+        "paste {input.rowname_seqs} {input.seqs_count} > {output}"
