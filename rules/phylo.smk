@@ -2,7 +2,7 @@
 # download MMseqs2 database SILVA
 #mmseqs databases SILVA silvadb tmp
 rule download_silva_mmseqs:
-    input: rules.count_matrix.output
+    input: OUTPUT_DIR + "/rep_seq.fasta"
     output: DATABASE_DIR + "/mmseq2/silvadb"
     message: "Downloading SILVA database for MMseqs2"
     params:
@@ -14,7 +14,7 @@ rule download_silva_mmseqs:
         "mmseqs databases SILVA {output} {params.tmp} 1> {log} 2>&1"
 
 rule create_queryDB:
-    input: rules.dereplicate_denoised_seqs.output
+    input: OUTPUT_DIR + "/rep_seq.fasta"
     output: OUTPUT_DIR + "/mmseq2/queryDB"
     conda: "../envs/mmseqs2.yaml"
     log: OUTPUT_DIR + "/logs/create_queryDB.log"
@@ -45,7 +45,7 @@ rule taxonomy_mmseqs2:
 # build tree with sepp
 # download database
 rule download_silva_sepp:
-    input: rules.count_matrix.output
+    input: OUTPUT_DIR + "/rep_seq.fasta"
     output: DATABASE_DIR + "/sepp/sepp_silva128.qza"
     message: "Downloading SILVA database for SEPP"
     params:
@@ -56,7 +56,7 @@ rule download_silva_sepp:
         "wget -O {output} {params.link} 1> {log} 2>&1"
 
 rule q2_rep_seqs:
-    input: rules.dereplicate_denoised_seqs.output
+    input: OUTPUT_DIR + "/rep_seq.fasta"
     output: OUTPUT_DIR + "/sepp/rep_seqs.qza"
     conda: "../envs/q2_sepp.yaml"
     log: OUTPUT_DIR + "/logs/q2_rep_seqs.log"
@@ -93,7 +93,7 @@ rule q2_sepp:
         """
 
 rule q2_ftable:
-    input: rules.count_matrix.output
+    input: OUTPUT_DIR + "/count_matrix.tsv"
     output: 
         biom = OUTPUT_DIR + "/sepp/ftable.biom",
         qza = OUTPUT_DIR + "/sepp/ftable.qza",
