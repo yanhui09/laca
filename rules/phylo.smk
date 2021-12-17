@@ -67,7 +67,6 @@ rule q2_rep_seqs:
         --type 'FeatureData[Sequence]' \
         --input-path {input} \
         --output-path {output} \
-        --input-format fasta \
         1> {log} 2>&1
         """
 
