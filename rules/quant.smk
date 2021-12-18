@@ -11,7 +11,7 @@ def get_denoised(clustCon):
 rule dereplicate_denoised_seqs:
     input: get_denoised(config["clustCon"])
     output: 
-        rep = temp(OUTPUT_DIR + "/mmseqs_rep_seqs.fasta"),
+        rep = temp(OUTPUT_DIR + "/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp(OUTPUT_DIR + "/mmseqs_all_seqs.fasta"),
         tsv = temp(OUTPUT_DIR + "/mmseqs_cluster.tsv"),
         tmp = temp(directory(OUTPUT_DIR + "/tmp")),
@@ -47,7 +47,7 @@ rule rename_fasta_header:
 # create abundance matrix with minimap
 rule index:
     input: rules.rename_fasta_header.output,
-    output: temp(OUTPUT_DIR + "/mmseqs_rep_seqs.mmi")
+    output: temp(OUTPUT_DIR + "/mmseqs_rep_seq.mmi")
     message: "Index denoised sequences [Generate abundance matrix]"
     params:
         index_size = config["minimap"]["index_size"],
@@ -58,7 +58,7 @@ rule index:
 
 rule dict:
     input: rules.rename_fasta_header.output,
-    output: temp(OUTPUT_DIR + "/mmseqs_rep_seqs.dict")
+    output: temp(OUTPUT_DIR + "/mmseqs_rep_seq.dict")
     message: "Dict denoised sequences [Generate abundance matrix]"
     conda: "../envs/polish.yaml"
     log: OUTPUT_DIR + "/logs/rep_seqs/dict.log"
