@@ -59,6 +59,7 @@ rule quant:
 
 rule phylo: 
     input:
+        OUTPUT_DIR + "/mmseqs2/taxonomy.tsv",
         expand(OUTPUT_DIR + "/sepp/ftable_filtered.{ext}", ext=["tsv", "biom"]),
         OUTPUT_DIR + "/sepp/sepp.tre",
     output: temp(touch(OUTPUT_DIR + "/phylo_DONE"))

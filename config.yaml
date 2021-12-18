@@ -1,7 +1,7 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
 results_dir: "/mnt/md0/UMI16S/zymock_res_subsampled"
-database_dir: "/mnt/md0/Database/NanoAmp"
+database_dir: "/mnt/md0/Database/Kamp"
 guppy: "resources/ont-guppy/bin" # guppy bin
 
 threads:
@@ -83,3 +83,4 @@ medaka:
 mmseqs:
   min-seq-id: 1
   c: 1 # the fraction of aligned residues
+  lca-mode: 3 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [3]

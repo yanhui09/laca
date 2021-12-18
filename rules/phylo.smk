@@ -1,46 +1,74 @@
 # LCA taxonomy with MMseqs2
 # download MMseqs2 database SILVA
 #mmseqs databases SILVA silvadb tmp
-rule download_silva_mmseqs:
+rule database_mmseqs2:
     input: OUTPUT_DIR + "/rep_seq.fasta"
-    output: DATABASE_DIR + "/mmseq2/silvadb"
+    output: 
+        db = expand(DATABASE_DIR + "/mmseqs2/silva{ext}",
+         ext = ["", ".dbtype", ".index", ".lookup", ".source", ".version",
+                "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
+        tmp = temp(directory(DATABASE_DIR + "/mmseqs2/tmp")),
     message: "Downloading SILVA database for MMseqs2"
-    params:
-        tmp = DATABASE_DIR + "/mmseq2/tmp",
     conda: "../envs/mmseqs2.yaml"
+    params:
+        db = DATABASE_DIR + "/mmseqs2/silva",
     log: OUTPUT_DIR + "/logs/download_silva_mmseqs.log"
     benchmark: OUTPUT_DIR + "/benchmarks/download_silva_mmseqs.txt"
     shell: 
-        "mmseqs databases SILVA {output} {params.tmp} 1> {log} 2>&1"
+        "mmseqs databases SILVA {params.db} {output.tmp} 1> {log} 2>&1"
 
-rule create_queryDB:
+rule createdb_mmseqs2:
     input: OUTPUT_DIR + "/rep_seq.fasta"
-    output: OUTPUT_DIR + "/mmseq2/queryDB"
+    output: 
+        expand(OUTPUT_DIR + "/mmseqs2/queryDB{ext}",
+         ext = ["", ".dbtype", ".index", ".lookup", ".source",
+                "_h", "_h.dbtype", "_h.index"]),
     conda: "../envs/mmseqs2.yaml"
+    params:
+        queryDB = OUTPUT_DIR + "/mmseqs2/queryDB",
     log: OUTPUT_DIR + "/logs/create_queryDB.log"
     benchmark: OUTPUT_DIR + "/benchmarks/create_queryDB.txt"
     shell: 
-        "mmseqs createdb {input} {output} 1> {log} 2>&1"
+        "mmseqs createdb {input} {params.queryDB} 1> {log} 2>&1"
 
 rule taxonomy_mmseqs2:
     input:
-        queryDB = rules.create_queryDB.output,
-        targetDB = rules.download_silva_mmseqs.output,
+        queryDB = rules.createdb_mmseqs2.output[0],
+        targetDB = rules.database_mmseqs2.output.db[0],
     output:
-        taxaDB = OUTPUT_DIR + "/mmseq2/resultDB",
-        tsv = OUTPUT_DIR + "/mmseq2/lca_taxonomy.tsv",
+        resultDB = multiext(OUTPUT_DIR + "/mmseqs2/resultDB",
+         ".0", ".1", ".2", ".3", ".4", ".5", ".dbtype", ".index"),
+        tmp = temp(directory(OUTPUT_DIR + "/mmseqs2/tmp")),
     message: "Running LCA taxonomy with MMseqs2"
-    params:
-        tmp = OUTPUT_DIR + "/mmseq2/tmp",
     conda: "../envs/mmseqs2.yaml"
+    params: 
+        resultDB = OUTPUT_DIR + "/mmseqs2/resultDB",
+        lca_mode = config["mmseqs"]["lca-mode"],
     log: OUTPUT_DIR + "/logs/taxonomy_mmseqs2.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy_mmseqs2.txt"
     threads: config["threads"]["large"]
     shell:
-        """
-        mmseqs taxonomy {input.queryDB} {input.targetDB} {output.resultDB} {params.tmp} --threads {threads} 1> {log} 2>&1
-        mmseqs createtsv {output.resultDB} {output.tsv} 1>> {log} 2>&1
-        """
+        "mmseqs taxonomy {input.queryDB} {input.targetDB} {params.resultDB} {output.tmp}"
+       # " --lca-ranks species,genus,family,order,class,phylum,superkingdom"
+        " --search-type 3 --lca-mode {params.lca_mode} --tax-lineage 1"
+        " --threads {threads} 1> {log} 2>&1"
+
+rule createtsv_mmseqs2:
+    input:
+        queryDB = rules.createdb_mmseqs2.output[0],
+        resultDB = rules.taxonomy_mmseqs2.output.resultDB,
+    output: OUTPUT_DIR + "/mmseqs2/taxonomy.tsv",
+    message: "Creating tsv file for LCA taxonomy"
+    conda: "../envs/mmseqs2.yaml"
+    params: 
+        resultDB = OUTPUT_DIR + "/mmseqs2/resultDB",
+    log: OUTPUT_DIR + "/logs/createtsv_mmseqs2.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/createtsv_mmseqs2.txt"
+    threads: config["threads"]["normal"]
+    shell:
+        "mmseqs createtsv  {input.queryDB} {params.resultDB} {output}"
+        " --full-header --threads {threads}"
+        " 1> {log} 2>&1"
 
 # build tree with sepp
 # download database
