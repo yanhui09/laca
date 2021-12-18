@@ -83,4 +83,5 @@ medaka:
 mmseqs:
   min-seq-id: 1
   c: 1 # the fraction of aligned residues
+  dbname: NT # predefined database name in `mmseqs databases`
   lca-mode: 3 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [3]

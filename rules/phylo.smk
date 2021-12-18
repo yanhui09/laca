@@ -1,24 +1,25 @@
 # LCA taxonomy with MMseqs2
 # download MMseqs2 database SILVA
-#mmseqs databases SILVA silvadb tmp
+DB_NAME = config["mmseqs"]["dbname"]
 rule database_mmseqs2:
-    input: OUTPUT_DIR + "/rep_seq.fasta"
+    input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: 
-        db = expand(DATABASE_DIR + "/mmseqs2/silva{ext}",
+        db = expand(DATABASE_DIR + "/mmseqs2/"+ DB_NAME + "{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source", ".version",
                 "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
         tmp = temp(directory(DATABASE_DIR + "/mmseqs2/tmp")),
-    message: "Downloading SILVA database for MMseqs2"
+    message: "Downloading MMseqs2 database [{params.dbname}]"
     conda: "../envs/mmseqs2.yaml"
     params:
-        db = DATABASE_DIR + "/mmseqs2/silva",
+        dbname = DB_NAME,
+        targetDB = DATABASE_DIR + "/mmseqs2/"+ DB_NAME,
     log: OUTPUT_DIR + "/logs/download_silva_mmseqs.log"
     benchmark: OUTPUT_DIR + "/benchmarks/download_silva_mmseqs.txt"
     shell: 
-        "mmseqs databases SILVA {params.db} {output.tmp} 1> {log} 2>&1"
+        "mmseqs databases {params.dbname} {params.targetDB} {output.tmp} 1> {log} 2>&1"
 
 rule createdb_mmseqs2:
-    input: OUTPUT_DIR + "/rep_seq.fasta"
+    input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: 
         expand(OUTPUT_DIR + "/mmseqs2/queryDB{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
