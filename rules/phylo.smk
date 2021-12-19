@@ -4,7 +4,7 @@ DB_NAME = config["mmseqs"]["dbname"]
 rule database_mmseqs2:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: 
-        db = expand(DATABASE_DIR + "/mmseqs2/"+ DB_NAME + "{ext}",
+        db = expand(DATABASE_DIR + "/mmseqs2/"+ DB_NAME + "/" + DB_NAME + "{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source", ".version",
                 "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
         tmp = temp(directory(DATABASE_DIR + "/mmseqs2/tmp")),
@@ -12,7 +12,7 @@ rule database_mmseqs2:
     conda: "../envs/mmseqs2.yaml"
     params:
         dbname = DB_NAME,
-        targetDB = DATABASE_DIR + "/mmseqs2/"+ DB_NAME,
+        targetDB = DATABASE_DIR + "/mmseqs2/"+ DB_NAME + "/" + DB_NAME,
     log: OUTPUT_DIR + "/logs/download_silva_mmseqs.log"
     benchmark: OUTPUT_DIR + "/benchmarks/download_silva_mmseqs.txt"
     shell: 
