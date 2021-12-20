@@ -83,7 +83,7 @@ medaka:
 mmseqs:
   min-seq-id: 1
   c: 1 # the fraction of aligned residues
-  #dbname: SILVA # predefined database name in `mmseqs databases`; The provided NT database do not have taxonomy info.
+  taxdb: SILVA # predefined taxonomy database name in `mmseqs databases`; The provided NT database do not have taxonomy info yet.
   # make a custom seqTaxDB using a chosen blast databases;
   blastdb_ftp: "ftp://ftp.ncbi.nlm.nih.gov/blast/db/refseq_rna.??.tar.gz"
   blastdb_alias: "refseq_rna" # alias for blast database; leave this as empty string [""] if you want to use the default database by mmseqs2

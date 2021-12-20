@@ -1,28 +1,28 @@
 # LCA taxonomy with MMseqs2
-#DB_NAME = config["mmseqs"]["dbname"]
-## use predefined MMseqs2 database
-#rule database_mmseqs2:
-#    input: OUTPUT_DIR + "/rep_seqs.fasta"
-#    output: 
-#        db = expand(DATABASE_DIR + "/mmseqs2/"+ DB_NAME + "/" + DB_NAME + "{ext}",
-#         ext = ["", ".dbtype", ".index", ".lookup", ".source", ".version",
-#                "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
-#        tmp = temp(directory(DATABASE_DIR + "/mmseqs2/tmp")),
-#    message: "Downloading MMseqs2 database [{params.dbname}]"
-#    conda: "../envs/mmseqs2.yaml"
-#    params:
-#        dbname = DB_NAME,
-#        targetDB = DATABASE_DIR + "/mmseqs2/"+ DB_NAME + "/" + DB_NAME,
-#    log: OUTPUT_DIR + "/logs/download_silva_mmseqs.log"
-#    benchmark: OUTPUT_DIR + "/benchmarks/download_silva_mmseqs.txt"
-#    shell: 
-#        "mmseqs databases {params.dbname} {params.targetDB} {output.tmp} 1> {log} 2>&1"
+TaxDB = config["mmseqs"]["taxdb"]
+# use predefined MMseqs2 database
+rule databases_mmseq:
+    input: OUTPUT_DIR + "/rep_seqs.fasta"
+    output: 
+        taxdb = expand(DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB + "{ext}",
+         ext = ["", ".dbtype", ".index", ".lookup", ".source", ".version",
+                "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
+        tmp = temp(directory(DATABASE_DIR + "/mmseqs2/tmp")),
+    message: "Downloading MMseqs2 database [{params.taxdb}]"
+    conda: "../envs/mmseqs2.yaml"
+    params:
+        taxdb = TaxDB,
+        targetDB = DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB,
+    log: OUTPUT_DIR + "/logs/databases_mmseqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/databases_mmseqs.txt"
+    shell: 
+        "mmseqs databases {params.taxdb} {params.targetDB} {output.tmp} 1> {log} 2>&1"
 
 # create seqTaxDB manually
 # the predefined one do not have taxonomy information
 rule download_taxdump:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
-    output: temp(directory(DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/taxdump")),
+    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/taxdump")),
     log: OUTPUT_DIR + "/logs/download_taxdump.log"
     benchmark: OUTPUT_DIR + "/benchmarks/download_taxdump.txt"
     shell:
@@ -33,7 +33,7 @@ rule download_taxdump:
 
 rule download_blastdb:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
-    output: temp(directory(DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/blastdb")),
+    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
     params:
         ftp = config["mmseqs"]["blastdb_ftp"],
     log: OUTPUT_DIR + "/logs/download_blastdb.log"
@@ -47,11 +47,11 @@ rule download_blastdb:
 rule blastdbcmd:
     input: rules.download_blastdb.output
     output:
-        fna = temp(DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/custom.fna"),
-        taxidmapping = temp(DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/custom.taxidmapping"),
+        fna = temp(DATABASE_DIR + "/mmseqs2/customDB/custom.fna"),
+        taxidmapping = temp(DATABASE_DIR + "/mmseqs2/customDB/custom.taxidmapping"),
     conda: "../envs/blast.yaml"
     params:
-        db = DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/blastdb/" + config["mmseqs"]["blastdb_alias"],
+        db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs"]["blastdb_alias"],
     log: OUTPUT_DIR + "/logs/blastdbcmd.log"
     benchmark: OUTPUT_DIR + "/benchmarks/blastdbcmd.txt"
     shell:
@@ -63,12 +63,12 @@ rule blastdbcmd:
 rule createdb_seqTax:
     input: rules.blastdbcmd.output.fna
     output: 
-        expand(DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/customDB{ext}",
+        expand(DATABASE_DIR + "/mmseqs2/customDB/customDB{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
                 "_h", "_h.dbtype", "_h.index"]),
     conda: "../envs/mmseqs2.yaml"
     params:
-        DB = DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/customDB",
+        DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
     log: OUTPUT_DIR + "/logs/create_customDB.log"
     benchmark: OUTPUT_DIR + "/benchmarks/create_customDB.txt"
     shell: 
@@ -80,12 +80,12 @@ rule createtaxdb_seqTax:
         taxdump = rules.download_taxdump.output,
         taxidmapping = rules.blastdbcmd.output.taxidmapping,
     output: 
-        tax = expand(DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/customDB{ext}",
+        taxdb = expand(DATABASE_DIR + "/mmseqs2/customDB/customDB{ext}",
                      ext = ["_mapping", "_taxonomy"]),
         tmp = temp(directory(DATABASE_DIR + "/mmseqs2/tmp")),
     conda: "../envs/mmseqs2.yaml"
     params:
-        DB = DATABASE_DIR + "/mmseqs2/seqTaxDB_custom/customDB",
+        DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
     log: OUTPUT_DIR + "/logs/create_taxdb.log"
     benchmark: OUTPUT_DIR + "/benchmarks/create_taxdb.txt"
     shell: 
@@ -108,12 +108,20 @@ rule createdb_query:
     shell: 
         "mmseqs createdb {input} {params.DB} 1> {log} 2>&1"
 
+def get_seqTaxDB(blastdb_alias, db):
+    if blastdb_alias == "":
+        dbname = db
+    else:
+        dbname = "customDB"
+    return expand(DATABASE_DIR + "/mmseqs2/"+ dbname + "/" + dbname + "{ext}",
+         ext = ["", ".dbtype", ".index", ".lookup", ".source",
+                "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
+
 rule taxonomy:
     input:
-        rules.createtaxdb_seqTax.output.tax,
+        get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[-0],
         queryDB = rules.createdb_query.output[0],
-        #targetDB = rules.database_mmseqs2.output.db[0],
-        targetDB = rules.createdb_seqTax.output[0],
+        targetDB = get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[0],
     output:
         resultDB = multiext(OUTPUT_DIR + "/mmseqs2/resultDB",
          ".0", ".1", ".2", ".3", ".4", ".5", ".dbtype", ".index"),
