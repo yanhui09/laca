@@ -80,6 +80,9 @@ samtools:
 medaka:
   m: r941_min_fast_g507
 
+classifier:
+  - kraken2 # the first to be final taxonomy
+
 mmseqs:
   min-seq-id: 1
   c: 1 # the fraction of aligned residues
@@ -88,3 +91,8 @@ mmseqs:
   blastdb_ftp: "ftp://ftp.ncbi.nlm.nih.gov/blast/db/refseq_rna.??.tar.gz"
   blastdb_alias: "refseq_rna" # alias for blast database; leave this as empty string [""] if you want to use the default database by mmseqs2
   lca-mode: 3 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [3]
+
+kraken2:
+  buildb_cmd: "--standard"
+  classify_cmd: ""
+  

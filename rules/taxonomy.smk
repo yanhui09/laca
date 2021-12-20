@@ -13,8 +13,8 @@ rule databases_mmseq:
     params:
         taxdb = TaxDB,
         targetDB = DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB,
-    log: OUTPUT_DIR + "/logs/databases_mmseqs.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/databases_mmseqs.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/databases_mmseqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/databases_mmseqs.txt"
     shell: 
         "mmseqs databases {params.taxdb} {params.targetDB} {output.tmp} 1> {log} 2>&1"
 
@@ -23,8 +23,8 @@ rule databases_mmseq:
 rule download_taxdump:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/taxdump")),
-    log: OUTPUT_DIR + "/logs/download_taxdump.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/download_taxdump.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/download_taxdump.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_taxdump.txt"
     shell:
         """
         wget ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz -P {output} 1> {log} 2>&1
@@ -36,12 +36,12 @@ rule download_blastdb:
     output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
     params:
         ftp = config["mmseqs"]["blastdb_ftp"],
-    log: OUTPUT_DIR + "/logs/download_blastdb.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/download_blastdb.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/download_blastdb.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_blastdb.txt"
     shell:
         """
         wget {params.ftp} -P {output} 1> {log} 2>&1
-        for file in {output}/*.tar.gz; do tar -xzvf $file -C {output} 1>> {log} 2>&1; done
+        for file in {output}/*.tar.gz; do tar -xzvf '$file' -C {output} 1>> {log} 2>&1; done
         """
 
 rule blastdbcmd:
@@ -52,8 +52,8 @@ rule blastdbcmd:
     conda: "../envs/blast.yaml"
     params:
         db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs"]["blastdb_alias"],
-    log: OUTPUT_DIR + "/logs/blastdbcmd.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/blastdbcmd.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/blastdbcmd.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blastdbcmd.txt"
     shell:
         """
         blastdbcmd -db {params.db} -entry all > {output.fna} 2> {log}
@@ -69,8 +69,8 @@ rule createdb_seqTax:
     conda: "../envs/mmseqs2.yaml"
     params:
         DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
-    log: OUTPUT_DIR + "/logs/create_customDB.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/create_customDB.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/create_customDB.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/create_customDB.txt"
     shell: 
         "mmseqs createdb {input} {params.DB} 1> {log} 2>&1"
 
@@ -86,8 +86,8 @@ rule createtaxdb_seqTax:
     conda: "../envs/mmseqs2.yaml"
     params:
         DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
-    log: OUTPUT_DIR + "/logs/create_taxdb.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/create_taxdb.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/create_taxdb.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/create_taxdb.txt"
     shell: 
         "mmseqs createtaxdb {params.DB} {output.tmp} "
         "--ncbi-tax-dump {input.taxdump} --tax-mapping-file {input.taxidmapping} 1> {log} 2>&1"
@@ -102,9 +102,9 @@ rule createdb_query:
     params:
         DB = OUTPUT_DIR + "/mmseqs2/queryDB",
     log:
-        OUTPUT_DIR + "/logs/create_queryDB.log"
+        OUTPUT_DIR + "/logs/taxonomy/mmseqs2/create_queryDB.log"
     benchmark:
-        OUTPUT_DIR + "/benchmarks/create_queryDB.txt"
+        OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/create_queryDB.txt"
     shell: 
         "mmseqs createdb {input} {params.DB} 1> {log} 2>&1"
 
@@ -131,8 +131,8 @@ rule taxonomy:
     params: 
         resultDB = OUTPUT_DIR + "/mmseqs2/resultDB",
         lca_mode = config["mmseqs"]["lca-mode"],
-    log: OUTPUT_DIR + "/logs/taxonomy.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/taxonomy.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/taxonomy.txt"
     threads: config["threads"]["large"]
     shell:
         "mmseqs taxonomy {input.queryDB} {input.targetDB} {params.resultDB} {output.tmp}"
@@ -149,8 +149,8 @@ rule createtsv:
     conda: "../envs/mmseqs2.yaml"
     params: 
         resultDB = OUTPUT_DIR + "/mmseqs2/resultDB",
-    log: OUTPUT_DIR + "/logs/createtsv_mmseqs2.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/createtsv_mmseqs2.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/createtsv_mmseqs2.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/createtsv_mmseqs2.txt"
     threads: config["threads"]["normal"]
     shell:
         "mmseqs createtsv  {input.queryDB} {params.resultDB} {output}"
@@ -158,3 +158,36 @@ rule createtsv:
         " 1> {log} 2>&1"
 
 # add kraken classifier
+rule build_database:
+    input: OUTPUT_DIR + "/rep_seqs.fasta"
+    output: 
+        temp(directory(DATABASE_DIR + "/kraken2/library")),
+        temp(directory(DATABASE_DIR + "/kraken2/taxonomy")),
+        temp(DATABASE_DIR + "/kraken2/seqid2taxid.map"),
+        k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
+    conda: "../envs/kraken2.yaml"
+    params:
+        buildb_cmd = config["kraken2"]["buildb_cmd"],
+        dbloc = DATABASE_DIR + "/kraken2",
+    log: OUTPUT_DIR + "/logs/taxonomy/kraken2/build_database.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/build_database.txt"
+    threads: config["threads"]["large"]
+    shell:
+        "kraken2-build --db {params.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"
+
+rule classify_kraken2:
+    input:
+        rules.build_database.output.k2d, 
+        fna = OUTPUT_DIR + "/rep_seqs.fasta",
+    output: OUTPUT_DIR  + "/kraken2/classified.tsv",
+    conda: "../envs/kraken2.yaml"
+    params:
+        dbloc = DATABASE_DIR + "/kraken2",
+        classify_cmd = config["kraken2"]["classify_cmd"],
+    log: OUTPUT_DIR + "/logs/taxonomy/kraken2/classify.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/classify.txt"
+    threads: config["threads"]["large"]
+    shell:
+        "kraken2 --db {params.dbloc} --threads {threads} --output {output} {input.fna}"
+        " {params.classify_cmd} 1> {log} 2>&1"
+    
