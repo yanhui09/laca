@@ -31,7 +31,8 @@ include: "rules/kmerClust.smk"
 include: "rules/isONclustCon.smk"
 include: "rules/isONcorCon.smk"
 include: "rules/quant.smk"
-include: "rules/phylo.smk"
+include: "rules/taxonomy.smk"
+include: "rules/tree.smk"
 
 rule demultiplex:
     input: lambda wc: expand(OUTPUT_DIR + "/raw/{barcode}.fastq", barcode=get_demultiplexed(wc))
@@ -57,9 +58,7 @@ rule quant:
     input: OUTPUT_DIR + "/count_matrix.tsv"
     output: temp(touch(OUTPUT_DIR + "/quant_DONE"))
 
-rule phylo: 
+rule taxa: 
     input:
-        OUTPUT_DIR + "/mmseqs2/taxonomy.tsv",
-        expand(OUTPUT_DIR + "/sepp/ftable_filtered.{ext}", ext=["tsv", "biom"]),
-        OUTPUT_DIR + "/sepp/sepp.tre",
-    output: temp(touch(OUTPUT_DIR + "/phylo_DONE"))
+        OUTPUT_DIR + "/taxonomy.tsv"
+    output: temp(touch(OUTPUT_DIR + "/taxa_DONE"))
