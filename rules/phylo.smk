@@ -41,7 +41,7 @@ rule download_blastdb:
     shell:
         """
         wget {params.ftp} -P {output} 1> {log} 2>&1
-        tar -xzvf {output}/*.tar.gz -C {output} 1>> {log} 2>&1
+        for file in {output}/*.tar.gz; do tar -xzvf $file -C {output} 1>> {log} 2>&1; done
         """
 
 rule blastdbcmd:
