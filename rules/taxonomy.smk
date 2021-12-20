@@ -31,29 +31,46 @@ rule download_taxdump:
         tar -xzvf {output}/taxdump.tar.gz -C {output} 1>> {log} 2>&1
         """
 
-rule download_blastdb:
+#rule download_blastdb:
+#    input: OUTPUT_DIR + "/rep_seqs.fasta"
+#    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
+#    params:
+#        ftp = config["mmseqs"]["blastdb_ftp"],
+#    log: OUTPUT_DIR + "/logs/taxonomy/download_blastdb.log"
+#    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_blastdb.txt"
+#    shell:
+#        """
+#        wget {params.ftp} -P {output} 1> {log} 2>&1
+#        for file in {output}/*.tar.gz; do tar -xzvf '$file' -C {output} 1>> {log} 2>&1; done
+#        """
+
+rule update_blastdb:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
     params:
-        ftp = config["mmseqs"]["blastdb_ftp"],
-    log: OUTPUT_DIR + "/logs/taxonomy/download_blastdb.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_blastdb.txt"
+        blastdb_alias = config["mmseqs"]["blastdb_alias"],
+    conda: "../envs/blast.yaml"
+    log: OUTPUT_DIR + "/logs/taxonomy/blast/update_blastdb.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blast/update_blastdb.txt"
+    threads: config["threads"]["normal"]
     shell:
         """
-        wget {params.ftp} -P {output} 1> {log} 2>&1
-        for file in {output}/*.tar.gz; do tar -xzvf '$file' -C {output} 1>> {log} 2>&1; done
+        mkdir {output} && cd {output}
+        update_blastdb.pl {params.blastdb_alias} --force \
+        --decompress --num_threads {threads} 1> {log} 2>&1
+        cd - 1>> {log} 2>&1
         """
 
 rule blastdbcmd:
-    input: rules.download_blastdb.output
+    input: rules.update_blastdb.output
     output:
         fna = temp(DATABASE_DIR + "/mmseqs2/customDB/custom.fna"),
         taxidmapping = temp(DATABASE_DIR + "/mmseqs2/customDB/custom.taxidmapping"),
     conda: "../envs/blast.yaml"
     params:
         db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs"]["blastdb_alias"],
-    log: OUTPUT_DIR + "/logs/taxonomy/blastdbcmd.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blastdbcmd.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/blast/blastdbcmd.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blast/blastdbcmd.txt"
     shell:
         """
         blastdbcmd -db {params.db} -entry all > {output.fna} 2> {log}
