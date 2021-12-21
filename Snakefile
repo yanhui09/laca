@@ -36,30 +36,30 @@ include: "rules/tree.smk"
 
 rule demultiplex:
     input: lambda wc: expand(OUTPUT_DIR + "/raw/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: temp(touch(OUTPUT_DIR + "/demultiplex_DONE"))
+    output: temp(touch(OUTPUT_DIR + "/.demultiplex_DONE"))
 
 rule qc:
     input: lambda wc: get_filt(wc, pooling = config["pooling"]),
-    output: temp(touch(OUTPUT_DIR + "/qc_DONE"))
+    output: temp(touch(OUTPUT_DIR + "/.qc_DONE"))
 
 rule kmerClust:
     input: lambda wc: get_kmerClust(wc, pooling = config["pooling"]),
-    output: temp(touch(OUTPUT_DIR + "/kmerClust_DONE"))
+    output: temp(touch(OUTPUT_DIR + "/.kmerClust_DONE"))
 
 rule isONclustCon:
     input: OUTPUT_DIR + "/isONclustCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/isONclustCon_DONE"))
+    output: temp(touch(OUTPUT_DIR + "/.isONclustCon_DONE"))
 
 rule isONcorCon:
     input: OUTPUT_DIR + "/isONcorCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/isONcorCon_DONE"))
+    output: temp(touch(OUTPUT_DIR + "/.isONcorCon_DONE"))
 
 rule quant:
     input: OUTPUT_DIR + "/count_matrix.tsv"
-    output: temp(touch(OUTPUT_DIR + "/quant_DONE"))
+    output: temp(touch(OUTPUT_DIR + "/.quant_DONE"))
 
 rule taxa: 
     input:
         [OUTPUT_DIR + "/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
         OUTPUT_DIR + "/taxonomy.tsv",
-    output: temp(touch(OUTPUT_DIR + "/taxa_DONE"))
+    output: temp(touch(OUTPUT_DIR + "/.taxa_DONE"))
