@@ -57,7 +57,7 @@ rule update_blastdb:
         """
         mkdir {output} && cd {output}
         update_blastdb.pl {params.blastdb_alias} --force \
-        --decompress --num_threads {threads} 1> {log} 2>&1
+        --decompress --num_threads {threads} --source ncbi 1> {log} 2>&1
         cd - 1>> {log} 2>&1
         """
 
@@ -182,15 +182,15 @@ rule build_database:
         temp(directory(DATABASE_DIR + "/kraken2/taxonomy")),
         temp(DATABASE_DIR + "/kraken2/seqid2taxid.map"),
         k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
+        dbloc = directory(DATABASE_DIR + "/kraken2"),
     conda: "../envs/kraken2.yaml"
     params:
         buildb_cmd = config["kraken2"]["buildb_cmd"],
-        dbloc = DATABASE_DIR + "/kraken2",
     log: OUTPUT_DIR + "/logs/taxonomy/kraken2/build_database.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/build_database.txt"
     threads: config["threads"]["large"]
     shell:
-        "kraken2-build --db {params.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"
+        "kraken2-build --db {output.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"
 
 rule classify_kraken2:
     input:
