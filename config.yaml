@@ -94,5 +94,5 @@ mmseqs:
 
 kraken2:
   buildb_cmd: "--standard"
-  classify_cmd: ""
+  classify_cmd: "--confidence 0.1"
   

@@ -162,7 +162,7 @@ rule createtsv:
         queryDB = rules.createdb_query.output[0],
         resultDB = rules.taxonomy.output.resultDB,
     output: OUTPUT_DIR + "/mmseqs2/taxonomy.tsv",
-    message: "Creating tsv file for LCA taxonomy"
+    message: "Creating tsv file for taxonomy"
     conda: "../envs/mmseqs2.yaml"
     params: 
         resultDB = OUTPUT_DIR + "/mmseqs2/resultDB",
@@ -178,9 +178,9 @@ rule createtsv:
 rule build_database:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: 
-        temp(directory(DATABASE_DIR + "/kraken2/library")),
-        temp(directory(DATABASE_DIR + "/kraken2/taxonomy")),
-        temp(DATABASE_DIR + "/kraken2/seqid2taxid.map"),
+        #temp(directory(DATABASE_DIR + "/kraken2/library")),
+        #temp(directory(DATABASE_DIR + "/kraken2/taxonomy")),
+        #temp(DATABASE_DIR + "/kraken2/seqid2taxid.map"),
         k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
         dbloc = directory(DATABASE_DIR + "/kraken2"),
     conda: "../envs/kraken2.yaml"
@@ -207,4 +207,33 @@ rule classify_kraken2:
     shell:
         "kraken2 --db {params.dbloc} --threads {threads} --output {output} {input.fna}"
         " {params.classify_cmd} 1> {log} 2>&1"
-    
+
+# use taxonkit to get NCBI taxonomy
+rule lineage_taxonkit:
+    input:
+        taxdump = rules.download_taxdump.output,
+        tsv = rules.classify_kraken2.output,
+    output: OUTPUT_DIR + "/kraken2/lineage.tsv",
+    conda: "../envs/taxonkit.yaml"
+    log: OUTPUT_DIR + "/logs/taxonomy/kraken2/lineage_taxonkit.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/lineage_taxonkit.txt"
+    threads: config["threads"]["normal"]
+    shell:
+        "cut -f 3 {input.tsv} | sort -u | taxonkit reformat -I 1 -P -j {threads}"
+        " --data-dir {input.taxdump} -o {output} 1> {log} 2>&1"
+
+rule taxonomy_kraken2:
+    input:
+        rules.classify_kraken2.output,
+        rules.lineage_taxonkit.output,
+    output: OUTPUT_DIR + "/kraken2/taxonomy.tsv"
+    run:
+        import pandas as pd
+        df = pd.read_csv(input[0], sep = "\t", header = None)
+        df = df.iloc[:, 1:3]
+        df.columns = ['kOTUid', 'taxid']
+        tax = pd.read_csv(input[1], sep = "\t", header = None)
+        tax.columns = ['taxid', 'lineage']
+        df = df.merge(tax, how = "left",  on = 'taxid')
+        df = df[['kOTUid', 'lineage']]
+        df.to_csv(output[0], sep = "\t", index = False, header = False)

@@ -22,7 +22,7 @@ rule all:
         OUTPUT_DIR + "/isONclustCon_DONE",
         OUTPUT_DIR + "/isONcorCon_DONE",
         OUTPUT_DIR + "/quant_DONE",
-        OUTPUT_DIR + "/phylo_DONE",
+#        OUTPUT_DIR + "/taxonomy_DONE",
 
 include: "rules/demultiplex.smk"
 #include: "rules/umi.smk"
