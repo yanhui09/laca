@@ -237,3 +237,9 @@ rule taxonomy_kraken2:
         df = df.merge(tax, how = "left",  on = 'taxid')
         df = df[['kOTUid', 'lineage']]
         df.to_csv(output[0], sep = "\t", index = False, header = False)
+
+rule get_taxonomy:
+    input: OUTPUT_DIR + "/" + config["classifier"][0] + "/taxonomy.tsv",
+    output: OUTPUT_DIR + "/taxonomy.tsv"
+    shell:
+        "cp -f {input} {output}"

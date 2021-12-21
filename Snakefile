@@ -22,7 +22,7 @@ rule all:
         OUTPUT_DIR + "/isONclustCon_DONE",
         OUTPUT_DIR + "/isONcorCon_DONE",
         OUTPUT_DIR + "/quant_DONE",
-#        OUTPUT_DIR + "/taxonomy_DONE",
+        OUTPUT_DIR + "/taxonomy_DONE",
 
 include: "rules/demultiplex.smk"
 #include: "rules/umi.smk"
@@ -60,5 +60,6 @@ rule quant:
 
 rule taxa: 
     input:
-        OUTPUT_DIR + "/taxonomy.tsv"
+        [OUTPUT_DIR + "/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
+        OUTPUT_DIR + "/taxonomy.tsv",
     output: temp(touch(OUTPUT_DIR + "/taxa_DONE"))

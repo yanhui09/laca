@@ -82,6 +82,7 @@ medaka:
 
 classifier:
   - kraken2 # the first to be final taxonomy
+  - mmseqs2
 
 mmseqs:
   min-seq-id: 1
