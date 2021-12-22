@@ -96,4 +96,23 @@ mmseqs:
 kraken2:
   buildb_cmd: "--standard"
   classify_cmd: "--confidence 0.1"
-  
+
+# params to build a de novo phylogenetic tree
+# trim possible primers on representative sequences for multi-primer PCR
+fprimer_max:
+  338Fa: "ACWCCTACGGGWGGCAGCAG"
+  338Fb: "GACTCCTACGGGAGGCWGCAG"
+rprimer_min:
+  1391R: "GACGGGCGGTGTGTRCA"
+
+phylogen:
+  - FastTree # the first to be final taxonomy
+  - IQ-TREE
+  - RAxML
+
+q2-phylogen:
+  # supplementary parameters for q2_phylogen pipeline `align-to-tree-mafft-{fasttree, iqtree, raxml}`
+  # https://docs.qiime2.org/2021.11/plugins/available/phylogeny/
+  fasttree: ""
+  iqtree: ""
+  raxml: ""

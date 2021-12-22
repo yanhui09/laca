@@ -1,0 +1,10 @@
+name: q2_phylogen
+channels:
+  - qiime2
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - q2-alignment
+  - q2-phylogeny
+  - q2cli

@@ -63,3 +63,9 @@ rule taxa:
         [OUTPUT_DIR + "/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
         OUTPUT_DIR + "/taxonomy.tsv",
     output: temp(touch(OUTPUT_DIR + "/.taxa_DONE"))
+
+rule tree: 
+    input:
+        [OUTPUT_DIR + "/tree/" + str(x) + "/rooted_tree.nwk" for x in config["phylogen"]],
+        OUTPUT_DIR + "/tree.nwk",
+    output: temp(touch(OUTPUT_DIR + "/.tree_DONE"))
