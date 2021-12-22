@@ -111,6 +111,17 @@ rule q2_export:
         1>> {log} 2>&1
         """
 
+# check phylogen choice
+def check_phylogen_val(phylogen):
+    if phylogen:
+        for i in phylogen:
+            if i not in ["FastTree", "IQ-TREE", "RAxML"]:
+                raise ValueError("\t\nPhylogenetic method to generate the tree file not recognized.\t\nPlease choose from FastTree, IQ-TREE, or RXaML in the config.yaml file.")
+    else:
+        raise ValueError("\t\nPhylogenetic method to generate the tree file not specified.\t\nPlease choose from FastTree, IQ-TREE, or RXaML in the config.yaml file.")
+
+check_phylogen_val(config["phylogen"])
+
 # only take the aligned sequences
 # max fprimer and min rprimer
 fprimers_max = config["fprimer_max"]
