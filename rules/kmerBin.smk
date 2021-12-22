@@ -68,7 +68,7 @@ rule split_by_cluster:
         "seqkit grep {input.fastq} -f {input.clusters} -o {output} 2> {log}"
 
 # get {barcode} {c} from chekckpoint
-def get_kmerClust(wildcards, pooling = True):
+def get_kmerBin(wildcards, pooling = True):
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]

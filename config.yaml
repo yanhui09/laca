@@ -67,6 +67,11 @@ hdbscan:
   min_samples: 50 # Increase this for more conservative clustering - more points as noise
   epsilon: 0 # Lower this for more micro-clusters
 
+ClustCon:
+  min_score_frac: 0.8
+  min_reads: 5
+  max_recursion: -1 # set to non-zero value to override python's max recursion depth
+
 NGSpeciesID:
   racon_iter: 2
 
@@ -76,6 +81,13 @@ minimap:
 
 samtools:
   m: 3G
+
+racon:
+  iter: 2
+  m: 8
+  x: -6
+  g: -8
+  w: 500
   
 medaka:
   m: r941_min_fast_g507

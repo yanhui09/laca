@@ -30,7 +30,7 @@ checkpoint isONcorrect:
     conda: "../envs/isONcorrect_IsoCon.yaml"
     log: OUTPUT_DIR + "/logs/isONcorrect/{barcode}/{c}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONcorrect/{barcode}/{c}.txt"
-    threads: config["threads"]["large"]
+    threads: config["threads"]["normal"]
     shell:
         "run_isoncorrect --t {threads} --fastq_folder {input}  --outfolder {output} > {log} 2>&1"
 
@@ -42,7 +42,7 @@ rule IsoCon:
     conda: "../envs/isONcorrect_IsoCon.yaml"
     log: OUTPUT_DIR + "/logs/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}.txt"
-    threads: config["threads"]["large"]
+    threads: config["threads"]["normal"]
     shell:
         "IsoCon pipeline -fl_reads {input} -outfolder {output} --nr_cores {threads} > {log} 2>&1"
     
