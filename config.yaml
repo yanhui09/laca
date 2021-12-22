@@ -106,9 +106,9 @@ rprimer_min:
   1391R: "GACGGGCGGTGTGTRCA"
 
 phylogen:
-  - FastTree # the first to be final taxonomy
-  - IQ-TREE
-  - RAxML
+  - FastTree # the first to be final taxonomy; You can enable the other two, which are more time consuming.
+  #- IQ-TREE
+  #- RAxML
 
 q2-phylogen:
   # supplementary parameters for q2_phylogen pipeline `align-to-tree-mafft-{fasttree, iqtree, raxml}`

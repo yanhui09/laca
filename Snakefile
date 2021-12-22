@@ -66,6 +66,6 @@ rule taxa:
 
 rule tree: 
     input:
-        [OUTPUT_DIR + "/tree/" + str(x) + "/rooted_tree.nwk" for x in config["phylogen"]],
+        [OUTPUT_DIR + "/tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],
         OUTPUT_DIR + "/tree.nwk",
     output: temp(touch(OUTPUT_DIR + "/.tree_DONE"))

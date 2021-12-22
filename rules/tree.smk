@@ -48,19 +48,21 @@ rule q2_fasttree:
     input: rules.q2_repseqs.output
     output: 
         expand(OUTPUT_DIR + "/tree/FastTree/{prefix}.qza",
-         prefix = ["masked_alignment", "rooted_tree", "alignment", "tree"]),
-        _dir = directory(OUTPUT_DIR + "/tree/FastTree"),
+         prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]),
     conda: "../envs/q2_phylogen.yaml"
     params:
         supp = config["q2-phylogen"]["fasttree"]
     log: OUTPUT_DIR + "/logs/tree/q2_fasttree.log"
     benchmark: OUTPUT_DIR + "/benchmarks/tree/q2_fasttree.txt"
-    threads: config["threads"]["normal"]
+    threads: config["threads"]["large"]
     shell:
         """
         qiime phylogeny align-to-tree-mafft-fasttree \
         --i-sequences {input} \
-        --output-dir {output._dir} \
+        --o-alignment {output[0]} \
+        --o-masked-alignment {output[1]} \
+        --o-tree {output[2]} \
+        --o-rooted-tree {output[3]} \
         --p-n-threads {threads} \
         {params.supp} > {log} 2>&1 
         """
@@ -69,19 +71,21 @@ rule q2_iqtree:
     input: rules.q2_repseqs.output
     output: 
         expand(OUTPUT_DIR + "/tree/IQ-TREE/{prefix}.qza",
-         prefix = ["masked_alignment", "rooted_tree", "alignment", "tree"]),
-        _dir = directory(OUTPUT_DIR + "/tree/IQ-TREE"),
+         prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]),
     conda: "../envs/q2_phylogen.yaml"
     params:
         supp = config["q2-phylogen"]["iqtree"]
     log: OUTPUT_DIR + "/logs/tree/q2_iqtree.log"
     benchmark: OUTPUT_DIR + "/benchmarks/tree/q2_iqtree.txt"
-    threads: config["threads"]["normal"]
+    threads: config["threads"]["large"]
     shell:
         """
-        qiime phylogeny align-to-tree-iqtree \
+        qiime phylogeny align-to-tree-mafft-iqtree \
         --i-sequences {input} \
-        --output-dir {output._dir} \
+        --o-alignment {output[0]} \
+        --o-masked-alignment {output[1]} \
+        --o-tree {output[2]} \
+        --o-rooted-tree {output[3]} \
         --p-n-threads {threads} \
         {params.supp} > {log} 2>&1 
         """
@@ -90,40 +94,43 @@ rule q2_raxml:
     input: rules.q2_repseqs.output
     output: 
         expand(OUTPUT_DIR + "/tree/RAxML/{prefix}.qza",
-         prefix = ["masked_alignment", "rooted_tree", "alignment", "tree"]),
-        _dir = directory(OUTPUT_DIR + "/tree/RAxML"),
+         prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]),
     conda: "../envs/q2_phylogen.yaml"
     params:
         supp = config["q2-phylogen"]["raxml"]
     log: OUTPUT_DIR + "/logs/tree/q2_raxml.log"
     benchmark: OUTPUT_DIR + "/benchmarks/tree/q2_raxml.txt"
-    threads: config["threads"]["normal"]
+    threads: config["threads"]["large"]
     shell:
         """
-        qiime phylogeny align-to-tree-raxml \
+        qiime phylogeny align-to-tree-mafft-raxml \
         --i-sequences {input} \
-        --output-dir {output._dir} \
+        --o-alignment {output[0]} \
+        --o-masked-alignment {output[1]} \
+        --o-tree {output[2]} \
+        --o-rooted-tree {output[3]} \
         --p-n-threads {threads} \
         {params.supp} > {log} 2>&1 
         """
 
 rule q2export_tree:
     input: OUTPUT_DIR + "/tree/{phylogen}/rooted_tree.qza"
-    output: OUTPUT_DIR + "/tree/{phylogen}/rooted_tree.nwk"
+    output: OUTPUT_DIR + "/tree/{phylogen}/tree.nwk"
     conda: "../envs/q2_phylogen.yaml"
+    params:
+        _dir = OUTPUT_DIR + "/tree/{phylogen}",
     log: OUTPUT_DIR + "/logs/tree/{phylogen}_export.log"
     benchmark: OUTPUT_DIR + "/benchmarks/tree/{phylogen}_export.txt"
     shell:
         """
         qiime tools export \
         --input-path {input} \
-        --output-path {output} \
-        --output-format Newick \
+        --output-path {params._dir} \
         > {log} 2>&1
         """
 
 rule get_tree:
-    input: OUTPUT_DIR + "/tree/" + config["phylogen"][0] + "/rooted_tree.nwk",
+    input: OUTPUT_DIR + "/tree/" + config["phylogen"][0] + "/tree.nwk",
     output: OUTPUT_DIR + "/tree.nwk"
     shell:
         "cp -f {input} {output}"
