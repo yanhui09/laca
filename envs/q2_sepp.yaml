@@ -1,9 +1,0 @@
-name: q2_sepp
-channels:
-  - qiime2
-  - bioconda
-  - conda-forge
-  - defaults
-dependencies:
-  - q2-fragment-insertion
-  - q2cli
