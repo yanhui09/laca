@@ -35,16 +35,16 @@ checkpoint isONcorrect:
         "run_isoncorrect --t {threads} --fastq_folder {input}  --outfolder {output} > {log} 2>&1"
 
 rule IsoCon:
-    input: OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/corrected/{cid}.fastq"
+    input: OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/corrected/{cid}/corrected_reads.fastq"
     output:
         _dir = directory(OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}"),
-        fna = OUTPUT_DIR + "/IsoCon/{barcode}/{c}/IsoCon/id{cid}/final_candidates.fa"
+        fna = OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}/final_candidates.fa",
     conda: "../envs/isONcorrect_IsoCon.yaml"
     log: OUTPUT_DIR + "/logs/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}.txt"
     threads: config["threads"]["normal"]
     shell:
-        "IsoCon pipeline -fl_reads {input} -outfolder {output} --nr_cores {threads} > {log} 2>&1"
+        "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
     
 def get_isONcorCon(wildcards, pooling = True):
     check_val("pooling", pooling, bool)
@@ -57,7 +57,7 @@ def get_isONcorCon(wildcards, pooling = True):
     for i in barcodes:
         cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
         for j in cs:
-            cids = glob_wildcards(checkpoints.isONcorrect.get(barcode=i, c=j).output[0] + "/{cid}.fastq").cid
+            cids = glob_wildcards(checkpoints.isONcorrect.get(barcode=i, c=j).output[0] + "/{cid}/corrected_reads.fastq").cid
             for k in cids:
                 fnas.append(OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}/final_candidates.fa".format(barcode=i, c=j, cid=k))
     return fnas
@@ -71,6 +71,8 @@ rule collect_isONcorCon:
                 barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-5, -4, -2] ]
                 with open(i, "r") as inp:
                     for line in inp:
+                        j = 0
                         if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "\n"
+                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "_" + j + "\n"
+                            j += 1
                         out.write(line)
