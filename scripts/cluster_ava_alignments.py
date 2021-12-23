@@ -112,7 +112,7 @@ def fancy_dendrogram(*args, **kwargs):
     return ddata
 
 def run_clustering(df, args, default_sim):
-    Z   = sch.linkage(squareform(df), 'ward', optimal_ordering=True)
+    Z   = sch.linkage(squareform(df, checks=False), 'ward', optimal_ordering=True)
 
     c, coph_dists = sch.cophenet(Z, pdist(df))
 
