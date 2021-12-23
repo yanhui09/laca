@@ -2,9 +2,9 @@
 rule minimap2clust:
     input: rules.split_by_cluster.output
     output: OUTPUT_DIR + "/ClustCon/{barcode}/avr_aln/{c}/minimap2clust.paf"
-    conda: '../envs/polish.yml'
-    log: OUTPUT_DIR + "/ClustCon/{barcode}/minimap2clust/{c}.log"
-    benchmark: OUTPUT_DIR + "/ClustCon/{barcode}/minimap2clust/{c}.text"
+    conda: '../envs/polish.yaml'
+    log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/minimap2clust/{c}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/minimap2clust/{c}.txt"
     shell:
         "minimap2 -t {threads} -x ava-ont --no-long-join -r100"
         " {input} {input} > {output} 2> {log}"
@@ -20,26 +20,61 @@ rule bin2clustering:
         min_score_frac = config["ClustCon"]["min_score_frac"],
         min_reads = config["ClustCon"]["min_reads"],
         max_recurs = config["ClustCon"]["max_recursion"],
+    log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/bin2clust/{c}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/bin2clust/{c}.txt"
     shell:
         "python scripts/cluster_ava_alignments.py -p {params.prefix}"
         " -R {params.max_recurs}"
-        " -s {params.min_score_frac} -n {params.min_reads} {input}"
+        " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
+checkpoint get_bin2clust:
+    input: rules.bin2clustering.output.info,
+    output: directory(OUTPUT_DIR + "/ClustCon/{barcode}/{c}/clusters")
+    run:
+        import pandas as pd
+        df = pd.read_csv(input[0])
+        for clust_id, df_clust in df.groupby('cluster'):
+            clust_id = f"id_{clust_id}"
+            clust_dir = output[0] + str("/{clust_id}").format(clust_id=clust_id)
+            os.makedirs(clust_dir, exist_ok=True)
+            read_pool = clust_dir + "/pool.csv"
+            df_clust['read_id'].to_csv(read_pool, index=False, header=False)
+            read_ref = clust_dir + "/ref.csv"
+            ref_idx  = df_clust['clust_read_score'].idxmax()
+            ref_read = df_clust.loc[ref_idx, ['read_id']]
+            ref_read.to_csv(read_ref, index=False, header=False)
+    
+rule get_clust_reads:
+    input:
+        pool = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/clusters/{clust_id}/pool.csv",
+        ref = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/clusters/{clust_id}/ref.csv",
+        binned = rules.split_by_cluster.output,
+    output:
+        pool = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
+        ref = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna",
+    conda: '../envs/seqkit.yaml'
+    log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/{c}/id_{clust_id}/get_clust_reads.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/{c}/id_{clust_id}/get_clust_reads.txt"
+    shell:
+        """
+        seqkit grep -f {input.pool} {input.binned} > {output.pool} 2> {log}
+        seqkit grep -f {input.ref} {input.binned} | seqkit fq2fa > {output.ref} 2> {log}
+        """
 
 # align merged assemblies with raw reads
 # reused in racon iterations
 rule minimap2polish:
     input: 
-      ref = OUTPUT_DIR + "/ClustCon/{barcode}/polish/draft/{c}/{assembly}.fna",
-      fastq = OUTPUT_DIR + "/ClustCon/{barcode}/clusters/{c}.fastq",
-    output: OUTPUT_DIR + "/ClustCon/{barcode}/polish/draft/{c}/{assembly}.paf",
-    message: "{wildcards.c} for polish: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
+      ref = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.fna",
+      fastq = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
+    output: OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.paf",
+    message: "Polish {wildcards.c} [id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
     params:
         x = config["minimap"]["x"]
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/polish/minimap/{c}/{assembly}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/polish/minimap/{c}/{assembly}.txt"
-    threads: config["threads"]["large"]
+    log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/{c}/id_{clust_id}/minimap2polish/{assembly}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/{c}/id_{clust_id}/minimap2polish/{assembly}.txt"
+    threads: config["threads"]["normal"]
     shell:
         "minimap2 -t {threads} -x {params.x}"
         " {input.ref} {input.fastq} > {output} 2> {log}"
@@ -47,77 +82,81 @@ rule minimap2polish:
 def get_racon_input(wildcards):
     # adjust input based on racon iteritions
     if int(wildcards.iter) == 1:
-        prefix = OUTPUT_DIR + "/ClustCon/{barcode}/polish/draft/{c}/raw"
+        prefix = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/draft/raw"
         return(prefix + ".paf", prefix + ".fna")
     else:
-        prefix = OUTPUT_DIR + "/ClustCon/{barcode}/polish/draft/{c}/racon_{iter}".format(barcode=wildcards.barcode, c=wildcards.c, iter=str(int(wildcards.iter) - 1))
+        prefix = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}".format(barcode=wildcards.barcode,
+         c=wildcards.c, clust_id=wildcards.clust_id, iter=str(int(wildcards.iter) - 1))
         return(prefix + ".paf", prefix + ".fna")
 
 rule racon:
     input:
-        OUTPUT_DIR + "/ClustCon/{barcode}/clusters/{c}.fastq",
+        OUTPUT_DIR + "/ClustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
         get_racon_input,
-    output: OUTPUT_DIR + "/ClustCon/{barcode}/polish/draft/{c}/racon_{iter}.fna"
-    message: "Polish {wildcards.c} draft with racon, round={wildcards.iter} [{wildcards.barcode}]"
+    output: OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}.fna"
+    message: "Polish {wildcards.c} draft [id={wildcards.clust_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
     params:
         m = config["racon"]["m"],
         x = config["racon"]["x"],
         g = config["racon"]["g"],
         w = config["racon"]["w"],
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR +"/logs/ClustCon/{barcode}/polish/racon/{c}/round{iter}.log"
-    benchmark: OUTPUT_DIR +"/benchmarks/ClustCon/{barcode}/polish/racon/{c}/round{iter}.txt"
+    log: OUTPUT_DIR +"/logs/ClustCon/{barcode}/{c}/id_{clust_id}/racon/round{iter}.log"
+    benchmark: OUTPUT_DIR +"/benchmarks/ClustCon/{barcode}/{c}/id_{clust_id}/racon/round{iter}.txt"
     threads: 1
     shell:
         "racon -m {params.m} -x {params.x}"
         " -g {params.g} -w {params.w} -t {threads}"
         " {input} > {output} 2> {log}"
 
-checkpoint medaka_consensus:
+rule medaka_consensus:
     input:
-        fna = expand(OUTPUT_DIR + "/ClustCon/{{barcode}}/polish/draft/{{c}}/racon_{iter}.fna", 
+        fna = expand(OUTPUT_DIR + "/ClustCon/{{barcode}}/{{c}}/polish/{{clust_id}}/draft/racon_{iter}.fna", 
         iter = config["racon"]["iter"]),
-        fastq = OUTPUT_DIR + "/ClustCon/{barcode}/clusters/{c}.fastq",
+        fastq = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
     output: 
-        fna = OUTPUT_DIR + "/ClustCon/{barcode}/denoised_seqs/{c}.fna",
-    message: "Generate consensus for {wildcards.c} with medaka [{wildcards.barcode}]"
+        fasta = OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/medaka/consensus.fasta",
+        _dir = directory(OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/{clust_id}/medaka"),
+    message: "Generate Clust consensus [id={wildcards.clust_id}] in {wildcards.c} with medaka [{wildcards.barcode}]"
     params:
         m = config["medaka"]["m"],
-        _dir = OUTPUT_DIR + "/ClustCon/{barcode}/polish/medaka/{c}",
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/polish/medaka/{c}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/polish/medaka/{c}.txt"
-    threads: config["threads"]["large"]
+    log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/{c}/id_{clust_id}/medaka.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/{c}/id_{clust_id}/medaka.txt"
+    threads: config["threads"]["normal"]
     shell:
         """
         medaka_consensus -i {input.fastq} \
-        -d {input.fna} -o {params._dir} \
+        -d {input.fasta} -o {output._dir} \
         -t {threads} -m {params.m} > {log} 2>&1;
-        cp {params._dir}/consensus.fasta {output.fna}
         """
 
 # get {barcode} {c} from chekckpoint
 def get_ClustCon(wildcards, pooling = True):
-    if pooling:
+    check_val("pooling", pooling, bool)
+    if pooling == True:
         barcodes = ["pooled"]
-    elif pooling is False:
-        barcodes = glob_wildcards(checkpoints.demultiplex.get(**wildcards).output[0]
-        + "/{barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq").barcode
     else:
-        raise ValueError('Pooling only allows bool type [True/False].\n{} is used in the config file'.format(x))
+        barcodes = get_demultiplexed(wildcards)
 
     fnas = []
     for i in barcodes:
         cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
         for j in cs:
-            fnas.append(OUTPUT_DIR + "/ClustCon/{barcode}/denoised_seqs/{c}.fna".format(barcode=i, c=j))
+            ids = glob_wildcards(checkpoints.get_bin2clust.get(barcode=i, c=j).output[0] + "/id_{clust_id}/pool.csv").clust_id
+            for k in ids:
+                fnas.append(OUTPUT_DIR + "/ClustCon/{barcode}/{c}/polish/id_{id}/medaka/consensus.fasta".format(barcode=i, c=j, id=k))
     return fnas
 
 rule collect_ClustCon:
     input: lambda wc: get_ClustCon(wc, pooling = config["pooling"]),
-    output: OUTPUT_DIR + "/ClustCon.fna",
-    message: "Collect consensus sequences from kmer clusters."
-    log: OUTPUT_DIR + "/logs/ClustCon/collect_ClustCon.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/collect_ClustCon.txt"
-    shell:
-        "cat {input} > {output} 2> {log}"
+    output: OUTPUT_DIR + "/ClustCon.fna"
+    run: 
+        with open(output[0], "w") as out:
+            for i in input:
+                barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-6, -5, -3] ]
+                with open(i, "r") as inp:
+                    for line in inp:
+                        if line.startswith(">"):
+                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "\n"
+                        out.write(line)

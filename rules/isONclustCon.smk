@@ -19,7 +19,7 @@ rule medaka:
     output: 
         fasta = OUTPUT_DIR + "/medaka/{barcode}/{c}/id_{id}/consensus.fasta",
         _dir = directory(OUTPUT_DIR + "/medaka/{barcode}/{c}/id_{id}"),
-    message: "Polish NGSpeciesID consensus (ID={wildcards.id}) in {wildcards.c} with medaka [{wildcards.barcode}]"
+    message: "Generate NGSpeciesID consensus (ID={wildcards.id}) in {wildcards.c} with medaka [{wildcards.barcode}]"
     params:
         m = config["medaka"]["m"],
     conda: "../envs/polish.yaml"
