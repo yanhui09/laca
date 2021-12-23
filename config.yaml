@@ -10,10 +10,6 @@ threads:
 
 # Pooling samples for denoise [True|False]
 pooling: True
-# mode for cluster consensus [isONclustCon|isONcorCon]
-# isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
-# isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
-clustCon: isONclustCon
 
 ##############################################################
 # Demultiplex with guppy
@@ -62,6 +58,10 @@ hdbscan:
 
 ##############################################################
 # cluster within kmer bins
+# mode for cluster consensus [ClustCon|isONclustCon|isONcorCon]
+# ClustCon: cluster based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
+# isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
+# isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
 cluster:
   - ClustCon # the first for the final kOTUs
   #- isONclustCon

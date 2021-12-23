@@ -1,3 +1,14 @@
+# check classifier choice
+def check_classifier_val(classifier):
+    if classifier:
+        for i in classifier:
+            if i not in ["kraken2", "mmseqs2"]:
+                raise ValueError("\t\nClassifier not recognized.\t\nPlease choose from kraken2 or mmseqs2 in the config.yaml file.")
+    else:
+        raise ValueError("\t\nClassifier not specified.\t\nPlease choose from kraken2 or mmseqs2 in the config.yaml file.")
+
+check_classifier_val(config["classifier"])
+
 # LCA taxonomy with MMseqs2
 TaxDB = config["mmseqs"]["taxdb"]
 # use predefined MMseqs2 database

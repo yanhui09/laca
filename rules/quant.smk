@@ -1,15 +1,19 @@
-def get_denoised(clustCon):
-    if clustCon == "isONclustCon":
-        out = rules.collect_isONclustCon.output
-    elif clustCon == "isONcorCon":
-        out = rules.collect_isONcorCon.output
+# check classifier choice
+def check_cluster_val(cluster):
+    if cluster:
+        for i in cluster:
+            if i not in ["ClustCon", "isONclustCon", "isONcorCon"]:
+                raise ValueError("\t\nCluster method not recognized.\t\nPlease choose from ClustCon, isONclustCon or isONcorCon in the config.yaml file.")
     else:
-        raise ValueError("clustCon in config.yaml must be either 'isONclustCon' or 'isONcorCon'")
-    return out
+        raise ValueError("\t\nCluster method not specified.\t\nPlease choose from ClustCon, isONclustCon or isONcorCon in the config.yaml file.")
+
+check_cluster_val(config["cluster"])
 
 # dereplicate denoised sequences with mmseqs
 rule dereplicate_denoised_seqs:
-    input: get_denoised(config["clustCon"])
+    input: 
+        [OUTPUT_DIR + "/" + str(x) + ".fna" for x in config["cluster"]][1:],
+        first = OUTPUT_DIR + "/" + str(config["cluster"][0]) + ".fna",
     output: 
         rep = temp(OUTPUT_DIR + "/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp(OUTPUT_DIR + "/mmseqs_all_seqs.fasta"),
@@ -25,7 +29,7 @@ rule dereplicate_denoised_seqs:
     benchmark: OUTPUT_DIR + "/benchmarks/dereplicate_denoised_seqs.txt"
     threads: config["threads"]["large"]
     shell:
-        "mmseqs easy-cluster {input} {params.prefix} {output.tmp} "
+        "mmseqs easy-cluster {input.first} {params.prefix} {output.tmp} "
         "--threads {threads} --min-seq-id {params.mid} -c {params.c} > {log} 2>&1"
 
 # keep fasta header unique
