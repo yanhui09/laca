@@ -38,7 +38,7 @@ include: "rules/demultiplex.smk"
 #include: "rules/umi.smk"
 include: "rules/qc.smk"
 include: "rules/kmerBin.smk"
-include: "rules/ClustCon.smk"
+include: "rules/clustCon.smk"
 include: "rules/isONclustCon.smk"
 include: "rules/isONcorCon.smk"
 include: "rules/quant.smk"
@@ -57,9 +57,9 @@ rule kmerBin:
     input: lambda wc: get_kmerBin(wc, pooling = config["pooling"]),
     output: temp(touch(OUTPUT_DIR + "/.kmerBin_DONE"))
 
-rule ClustCon:
-    input: OUTPUT_DIR + "/ClustCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/.ClustCon_DONE"))
+rule clustCon:
+    input: OUTPUT_DIR + "/clustCon.fna"
+    output: temp(touch(OUTPUT_DIR + "/.clustCon_DONE"))
 
 rule isONclustCon:
     input: OUTPUT_DIR + "/isONclustCon.fna"

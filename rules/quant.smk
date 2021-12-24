@@ -1,5 +1,5 @@
 # check classifier choice
-check_list_ele("cluster", config["cluster"], ["ClustCon", "isONclustCon", "isONcorCon"])
+check_list_ele("cluster", config["cluster"], ["clustCon", "isONclustCon", "isONcorCon"])
 
 # dereplicate denoised sequences with mmseqs
 rule dereplicate_denoised_seqs:
