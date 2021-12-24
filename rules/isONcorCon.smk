@@ -70,9 +70,9 @@ rule collect_isONcorCon:
             for i in input:
                 barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-5, -4, -2] ]
                 with open(i, "r") as inp:
+                    j = 0
                     for line in inp:
-                        j = 0
                         if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "_" + j + "\n"
+                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "_cand" + str(j) + "\n"
                             j += 1
                         out.write(line)
