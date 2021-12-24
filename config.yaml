@@ -64,8 +64,8 @@ hdbscan:
 # isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
 cluster:
   - clustCon # the first for the final kOTUs
-  #- isONclustCon
-  #- isONcorCon
+  - isONclustCon
+  - isONcorCon
 
 clustCon:
   min_score_frac: 0.8

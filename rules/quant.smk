@@ -1,8 +1,8 @@
 # check classifier choice
 check_list_ele("cluster", config["cluster"], ["clustCon", "isONclustCon", "isONcorCon"])
 
-# dereplicate denoised sequences with mmseqs
-rule dereplicate_denoised_seqs:
+# dereplicate sequences with mmseqs
+rule derep_denoised_seqs:
     input: 
         [OUTPUT_DIR + "/" + str(x) + ".fna" for x in config["cluster"]][1:],
         first = OUTPUT_DIR + "/" + str(config["cluster"][0]) + ".fna",
@@ -17,8 +17,8 @@ rule dereplicate_denoised_seqs:
         mid = config["mmseqs"]["min-seq-id"],
         c = config["mmseqs"]["c"],
     conda: "../envs/mmseqs2.yaml"
-    log: OUTPUT_DIR + "/logs/dereplicate_denoised_seqs.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/dereplicate_denoised_seqs.txt"
+    log: OUTPUT_DIR + "/logs/derep_denoised_seqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/derep_denoised_seqs.txt"
     threads: config["threads"]["large"]
     shell:
         "mmseqs easy-cluster {input.first} {params.prefix} {output.tmp} "
@@ -26,7 +26,7 @@ rule dereplicate_denoised_seqs:
 
 # keep fasta header unique
 rule rename_fasta_header:
-    input: rules.dereplicate_denoised_seqs.output.rep
+    input: rules.derep_denoised_seqs.output.rep
     output: OUTPUT_DIR + "/rep_seqs.fasta"
     log: OUTPUT_DIR + "/logs/rename_fasta.log"
     benchmark: OUTPUT_DIR + "/benchmarks/rename_fasta.benchmark"

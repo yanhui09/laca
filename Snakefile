@@ -26,13 +26,14 @@ def check_list_ele(var, val, eles):
 
 rule all:
     input:
-        OUTPUT_DIR + "/demultiplex_DONE",
-        OUTPUT_DIR + "/qc_DONE",
-        OUTPUT_DIR + "/kmerClust_DONE",
-        OUTPUT_DIR + "/isONclustCon_DONE",
-        OUTPUT_DIR + "/isONcorCon_DONE",
-        OUTPUT_DIR + "/quant_DONE",
-        OUTPUT_DIR + "/taxonomy_DONE",
+        OUTPUT_DIR + "/.demultiplex_DONE",
+        OUTPUT_DIR + "/.qc_DONE",
+        OUTPUT_DIR + "/.kmerClust_DONE",
+        OUTPUT_DIR + "/.clustCon_DONE",
+        OUTPUT_DIR + "/.isONclustCon_DONE",
+        OUTPUT_DIR + "/.isONcorCon_DONE",
+        OUTPUT_DIR + "/.quant_DONE",
+        OUTPUT_DIR + "/.taxonomy_DONE",
 
 include: "rules/demultiplex.smk"
 #include: "rules/umi.smk"
