@@ -5,6 +5,7 @@ rule minimap2clust:
     conda: '../envs/polish.yaml'
     log: OUTPUT_DIR + "/logs/ClustCon/{barcode}/minimap2clust/{c}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/ClustCon/{barcode}/minimap2clust/{c}.txt"
+    threads: config["threads"]["large"]
     shell:
         "minimap2 -t {threads} -x ava-ont --no-long-join -r100"
         " {input} {input} > {output} 2> {log}"

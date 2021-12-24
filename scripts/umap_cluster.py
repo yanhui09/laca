@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#to do: gpu support https://github.com/rapidsai/cuml
 
 import numpy as np
 import umap

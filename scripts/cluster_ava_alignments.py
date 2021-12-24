@@ -224,17 +224,20 @@ def main(args):
     if args.max_recursion > 0:
         sys.setrecursionlimit(args.max_recursion)
 
-    cols = ['qname', 'qlen', 'qstart', 'qend', 'strand', 'tname', \
-            'tlen', 'tstart', 'tend', 'matches', 'alnlen', 'mapqv', \
-            'tp', 'cm', 's1', 'dv', 'rl']
-    df = pd.read_csv(args.paf, sep='\t', header=None, usecols=list(range(17)), names=cols)
+    #cols = ['qname', 'qlen', 'qstart', 'qend', 'strand', 'tname', \
+    #        'tlen', 'tstart', 'tend', 'matches', 'alnlen', 'mapqv', \
+    #        'tp', 'cm', 's1', 'dv', 'rl']
+    #df = pd.read_csv(args.paf, sep='\t', header=None, usecols=list(range(17)), names=cols)
+    cols = ['qname', 'qlen', 'tname', 'tlen', 'alnlen', 'dv']
+    dtypes = {0:"category", 1:"int16", 5:"category", 6:"int16", 10:"int16", 15:"category"}
+    df = pd.read_csv(args.paf, sep='\t', header=None, usecols=[0,1,5,6,10,15], names=cols, dtype=dtypes)
     
     bin_id = args.paf.split('/')[-2]
 
     if df.shape[0]>0:
         df['longread'] = df[['qlen','tlen']].apply(max, axis=1)
 
-        df['dv'] = df['dv'].apply(lambda x: float(x.split(':')[-1]))
+        df['dv'] = df['dv'].apply(lambda x: float(x.split(':')[-1])).astype(np.float32)
         df['sim'] = 1 - df['dv']
     
         df1 = df.groupby(['qname', 'tname']).apply(lambda x: x.sort_values(['alnlen'], ascending=False)).reset_index(drop=True)
