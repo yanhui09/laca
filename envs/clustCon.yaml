@@ -1,4 +1,4 @@
-name: ClustCon
+name: clustCon
 channels:
  - conda-forge
  - bioconda 
