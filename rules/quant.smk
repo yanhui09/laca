@@ -1,13 +1,5 @@
 # check classifier choice
-def check_cluster_val(cluster):
-    if cluster:
-        for i in cluster:
-            if i not in ["ClustCon", "isONclustCon", "isONcorCon"]:
-                raise ValueError("\t\nCluster method not recognized.\t\nPlease choose from ClustCon, isONclustCon or isONcorCon in the config.yaml file.")
-    else:
-        raise ValueError("\t\nCluster method not specified.\t\nPlease choose from ClustCon, isONclustCon or isONcorCon in the config.yaml file.")
-
-check_cluster_val(config["cluster"])
+check_list_ele("cluster", config["cluster"], ["ClustCon", "isONclustCon", "isONcorCon"])
 
 # dereplicate denoised sequences with mmseqs
 rule dereplicate_denoised_seqs:

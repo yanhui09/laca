@@ -14,6 +14,16 @@ def check_val(var, val, class_type):
          '\n\t' + str(val) + ' is used in config.yaml file.')
         raise ValueError(warns)
 
+# check list elements
+def check_list_ele(var, val, eles):
+    var = var.capitalize()
+    if val:
+        for i in val:
+            if i not in eles:
+                raise ValueError("\t\n{} parameters not recognized.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
+    else:
+        raise ValueError("\t\n{} parameters not specified.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
+
 rule all:
     input:
         OUTPUT_DIR + "/demultiplex_DONE",
