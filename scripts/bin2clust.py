@@ -232,21 +232,17 @@ def main(args):
     chunksize = 10 ** 6
     for chunk in pd.read_csv(args.paf, sep='\t', header=None, usecols=[0,1,5,6,10,15], names=cols, dtype=dtypes, chunksize=chunksize):
         if chunk.shape[0]>0:
-            #chunk['longread'] = chunk[['qlen','tlen']].apply(max, axis=1)
-            #chunk['dv'] = chunk['dv'].apply(lambda x: float(x.split(':')[-1])).astype(np.float32)
-            #chunk['sim'] = 1 - chunk['dv']
             chunk['sim'] = 1 - pd.Series([x.split(':')[-1] for x in chunk['dv']], dtype=np.float32)
-            chunk['score'] = (chunk['alnlen']/10000)**2 * chunk['sim']
-            chunk = chunk.drop(columns=['dv', 'alnlen'])
+            chunk = chunk.drop(columns=['dv'])
             df = pd.concat([df, chunk])
 
+        # only keep the longest fragment     
+        df.sort_values(['alnlen'], ascending=False).drop_duplicates(['qname', 'tname'], inplace = True)
+        df['score'] = (df['alnlen']/10000)**2 * df['sim']
+        df = df.drop(columns=['alnlen'])
 
-        # Combine top alignment length with its similarity score to get distance metric
-        #df1['score'] = (df1['alnlen']/10000)**2 * df1['sim']
-
-        nan_value = 0
-        #df_pivot = df_both.pivot_table(index='qname', columns='tname', values='score').fillna(nan_value)
         #create similarity matrix out of pairwise alignment scores
+        nan_value = 0
         # make unique, sorted, common index
         idx = sorted(set(df['qname']).union(df['tname']))
         # reshape
@@ -259,12 +255,6 @@ def main(args):
         clusters,cluster_dfs,cbar,axc,idx2 = run_clustering(df_pivot, args, nan_value)
         
         create_figure(clusters, idx2, axc, args)
-        #df1 = df.groupby(['qname', 'tname']).apply(lambda x: x.sort_values(['alnlen'], ascending=False)).reset_index(drop=True)
-        #df1 = df1.groupby(['qname', 'tname']).head(1)
-        #df1 = df1.loc[:,['qname','tname','score','qlen','tlen']]
-        #df2 = df1.rename(columns={'qname':'tname', 'tname':'qname', 'qlen':'tlen', 'tlen':'qlen'})
-        #df_both = df1.append(df2, ignore_index=True, sort=False)
-        #rls = dict([(row['qname'],row['qlen']) for idx,row in df_both.loc[:,['qname','qlen']].iterrows()])
         rls = dict(zip(df['qname'].append(df['tname']), df['qlen'].append(df['tlen'])))
 
         clust_info_out = '{}.info.csv'.format(args.prefix)
