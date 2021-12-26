@@ -12,9 +12,7 @@ rule minimap2clust:
 
 rule bin2clustering:
     input: OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/minimap2clust.paf"
-    output:
-        heatmap = OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.heatmap.png",
-        info = OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.info.csv",
+    output: OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.info.csv",
     conda: '../envs/clustCon.yaml'
     params:
         prefix = OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust",
@@ -24,12 +22,12 @@ rule bin2clustering:
     log: OUTPUT_DIR + "/logs/clustCon/{barcode}/bin2clust/{c}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/bin2clust/{c}.txt"
     shell:
-        "python scripts/cluster_ava_alignments.py -p {params.prefix}"
+        "python scripts/bin2clust.py -p {params.prefix}"
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
 checkpoint get_bin2clust:
-    input: rules.bin2clustering.output.info,
+    input: rules.bin2clustering.output,
     output: directory(OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters")
     run:
         import pandas as pd
