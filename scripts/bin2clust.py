@@ -1,12 +1,7 @@
-#import os,sys
 import sys
 import pandas as pd
 import argparse
-#import collections
-#import matplotlib; matplotlib.use('Agg')
-#import matplotlib.pyplot as plt
 import scipy.cluster.hierarchy as sch
-#from scipy.spatial.distance import pdist
 from scipy.spatial.distance import squareform
 import numpy as np
 
@@ -23,7 +18,7 @@ def parse_args():
     return args
 
 def run_clustering(df, args, default_sim):
-    Z   = sch.linkage(squareform(df, checks=False), 'ward', optimal_ordering=True)
+    Z   = sch.linkage(squareform(df, checks=False), 'ward')
     args.max_dist = 3*np.median(Z[:,2])
     clusters = sch.fcluster(Z, args.max_dist, criterion='distance')
     
