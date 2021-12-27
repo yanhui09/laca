@@ -52,8 +52,8 @@ umap:
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
   n_components: 2
 hdbscan:
-  min_cluster_size: 50 # Define the smallest size to cluster
-  min_samples: 50 # Increase this for more conservative clustering - more points as noise
+  min_cluster_size: 10 # Define the smallest size to cluster
+  min_samples: 10 # Increase this for more conservative clustering - more points as noise
   epsilon: 0 # Lower this for more micro-clusters
 
 ##############################################################

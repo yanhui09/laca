@@ -25,8 +25,10 @@ def run_clustering(df, args, default_sim):
     df['cluster'] = clusters
     # exclude self comparison
     df.replace(0, np.nan, inplace=True)
-    # mean score to others within group, aggregate by sum (one read only assigned to one cluster) 
-    mean_scores = df.groupby(['cluster']).mean().sum()
+    # mean score to others within group and across groups
+    scores = df.groupby(['cluster']).mean()
+    # extract value by numerical index    
+    mean_scores = scores.values[[x-1 for x in clusters], range(scores.shape[1])]
     df_out = pd.DataFrame(data={'qname': df.index, 'score': mean_scores, 'cluster': clusters})
     df_out.reset_index(drop=True, inplace=True)
     return df_out
@@ -41,7 +43,7 @@ def main(args):
     chunksize = 10 ** 6
     for chunk in pd.read_csv(args.paf, sep='\t', header=None, usecols=[0,1,5,6,10,15], names=cols, dtype=dtypes, chunksize=chunksize):
         if chunk.shape[0] > 0:
-            chunk['sim'] = 1 - pd.Series([x.split(':')[-1] for x in chunk['dv']], dtype=np.float32)
+            chunk['sim'] = [1 - float(x.split(':')[-1]) for x in chunk['dv']]
             chunk['score'] = (chunk['alnlen']/10000)**2 * chunk['sim']
             chunk = chunk.drop(columns=['dv', 'alnlen'])
             df = pd.concat([df, chunk])
@@ -76,13 +78,12 @@ def main(args):
     # add kmer bin info
     bin_id = args.paf.split('/')[-2]
     cluster_df['bin_id'] = bin_id
-    # keep reads with max_score_frac > args.min_score_frac
+    # keep reads > args.min_score_frac
     cluster_df = cluster_df[cluster_df['max_score_frac'] > args.min_score_frac]
     # keep clusters > args.min_reads
     cluster_df = cluster_df[cluster_df.groupby('cluster')['qname'].transform('count') >= args.min_reads]
-    # reorder columns
+    
     cluster_df = cluster_df[['bin_id', 'cluster', 'qname', 'qlen', 'score_mean', 'max_score_frac']]
-    # round values
     cluster_df['score_mean'] = cluster_df['score_mean'].round(3)
     cluster_df['max_score_frac'] = cluster_df['max_score_frac'].round(3)
     # to csv
