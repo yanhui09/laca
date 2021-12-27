@@ -28,8 +28,8 @@ f5_patterns = f5_pattern1 + ' ' + f5_pattern2
 rule subsample:
     input: rules.collect_fastq.output
     output:
-        p = temp(OUTPUT_DIR + "/raw/subsampled/{barcode}_p.fastq"),
-        n = temp(OUTPUT_DIR + "/raw/subsampled/{barcode}.fastq"),
+        p = temp(OUTPUT_DIR + "/qc/subsampled/{barcode}_p.fastq"),
+        n = temp(OUTPUT_DIR + "/qc/subsampled/{barcode}.fastq"),
     conda: "../envs/seqkit.yaml"
     params:
         p = config["seqkit"]["p"],
@@ -57,15 +57,15 @@ def get_raw(subsample, p, n):
 # trim primers 
 rule trim_primers:
     input: get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
-    output: temp(OUTPUT_DIR + "/raw/primers_trimmed/{barcode}.fastq")
+    output: temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}.fastq")
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5_patterns,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
         m = config["cutadapt"]["minimum-length"],
-    log: OUTPUT_DIR + "/logs/raw/{barcode}/trim_primers.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/raw/{barcode}/trim_primers.txt"
+    log: OUTPUT_DIR + "/logs/qc/{barcode}/trim_primers.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/trim_primers.txt"
     threads: config["threads"]["large"]
     shell:
         """
@@ -82,21 +82,21 @@ rule trim_primers:
 # quality filter
 rule q_filter:
     input:  rules.trim_primers.output,
-    output: OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq"
+    output: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min-qual"],
         m = config["seqkit"]["min-len"],
         M = config["seqkit"]["max-len"],
-    log: OUTPUT_DIR + "/logs/raw/{barcode}/q_filter.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/raw/{barcode}/q_filter.txt"
+    log: OUTPUT_DIR + "/logs/qc/{barcode}/q_filter.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/q_filter.txt"
     threads: config["threads"]["normal"]
     shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} {input} > {output} 2> {log}"
 
 #  pooling fqs for sensitivity 
 rule combine_fastq:
-    input: lambda wc: expand(OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: temp(OUTPUT_DIR + "/raw/qfilt/pooled.fastq")
+    input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    output: temp(OUTPUT_DIR + "/qc/qfilt/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
@@ -105,4 +105,4 @@ def get_filt(wildcards, pooling = True):
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes.append("pooled")
-    return expand(OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq", barcode=barcodes)
+    return expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=barcodes)

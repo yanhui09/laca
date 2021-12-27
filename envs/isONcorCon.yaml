@@ -1,4 +1,4 @@
-name: isONcorrect_IsoCon
+name: isONcorCon
 channels:
   - bioconda
   - defaults

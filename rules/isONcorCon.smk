@@ -3,7 +3,7 @@ rule isONclust:
     output:
         _dir = directory(OUTPUT_DIR + "/isONclust/{barcode}/{c}"),
         tsv = OUTPUT_DIR + "/isONclust/{barcode}/{c}/final_clusters.tsv"
-    conda: "../envs/isONcorrect_IsoCon.yaml"
+    conda: "../envs/isONcorCon.yaml"
     log: OUTPUT_DIR + "/logs/isONclust/{barcode}/{c}/cluster.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONclust/{barcode}/{c}/cluster.txt"
     threads: config["threads"]["normal"]
@@ -16,7 +16,7 @@ rule isONclust_write:
         tsv = rules.isONclust.output.tsv,
         fqs = rules.split_by_cluster.output,
     output: directory(OUTPUT_DIR + "/isONclust/{barcode}/{c}/fastq_files")
-    conda: "../envs/isONcorrect_IsoCon.yaml"
+    conda: "../envs/isONcorCon.yaml"
     log: OUTPUT_DIR + "/logs/isONclust/{barcode}/{c}/write.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONclust/{barcode}/{c}/write.txt"
     shell:
@@ -27,7 +27,7 @@ rule isONclust_write:
 checkpoint isONcorrect:
     input: rules.isONclust_write.output,
     output: directory(OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/corrected"),
-    conda: "../envs/isONcorrect_IsoCon.yaml"
+    conda: "../envs/isONcorCon.yaml"
     log: OUTPUT_DIR + "/logs/isONcorrect/{barcode}/{c}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONcorrect/{barcode}/{c}.txt"
     threads: config["threads"]["normal"]
@@ -39,7 +39,7 @@ rule IsoCon:
     output:
         _dir = directory(OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}"),
         fna = OUTPUT_DIR + "/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}/final_candidates.fa",
-    conda: "../envs/isONcorrect_IsoCon.yaml"
+    conda: "../envs/isONcorCon.yaml"
     log: OUTPUT_DIR + "/logs/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONcorrect/{barcode}/{c}/IsoCon/id_{cid}.txt"
     threads: config["threads"]["normal"]
