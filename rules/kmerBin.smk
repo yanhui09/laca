@@ -2,15 +2,14 @@
 rule kmer_freqs:
     input: OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq"
     output: OUTPUT_DIR + "/umap/{barcode}/kmer_freqs.txt"
-    conda: "../envs/kmer_freqs.yaml"
+    conda: "../envs/kmerBin.yaml"
     params: 
-        scripts = "scripts",
         kmer_size = config["kmer_size"],
     log: OUTPUT_DIR + "/logs/umap/{barcode}/kmer_freqs.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umap/{barcode}/kmer_freqs.txt"
     threads: config["threads"]["large"]
     shell:
-        "python {params.scripts}/kmer_freqs.py"
+        "python scripts/kmerFreqs.py"
         " -k {params.kmer_size}"
         " -r {input} -t {threads}"
         " 2> {log} > {output}"
@@ -21,7 +20,7 @@ rule umap:
     output: 
         cluster=OUTPUT_DIR + "/umap/{barcode}/hdbscan.tsv",
 	    plot=OUTPUT_DIR + "/umap/{barcode}/hdbscan.png",
-    conda: "../envs/umap_cluster.yaml"
+    conda: "../envs/kmerBin.yaml"
     params:
         n_neighbors = config["umap"]["n_neighbors"],
         min_dist = config["umap"]["min_dist"],
@@ -33,7 +32,7 @@ rule umap:
     benchmark: OUTPUT_DIR + "/benchmarks/umap/{barcode}/umap.txt"
     threads: config["threads"]["large"]
     shell:
-       "NUMBA_NUM_THREADS={threads} python scripts/umap_cluster.py -k {input}"
+       "NUMBA_NUM_THREADS={threads} python scripts/kmerBin.py -k {input}"
        " -n {params.n_neighbors} -d {params.min_dist} -t {params.n_components}"
        " -s {params.min_cluster_size} -m {params.min_samples} -e {params.epsilon}"
        " -c {output.cluster} -p"

@@ -1,0 +1,10 @@
+name: kmerBin
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pandas
+  - matplotlib-base
+  - umap-learn
+  - hdbscan
+  - biopython
