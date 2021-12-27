@@ -22,17 +22,19 @@ def run_clustering(df, args, default_sim):
     args.max_dist = 3*np.median(Z[:,2])
     clusters = sch.fcluster(Z, args.max_dist, criterion='distance')
     
-    df.loc[:,'cluster'] = clusters
-    df                  = df.reset_index()
-    cluster_dfs         = df.groupby('cluster')
-    return cluster_dfs
+    df['cluster'] = clusters
+    # exclude self comparison
+    df.replace(0, np.nan, inplace=True)
+    # mean score to others within group, aggregate by sum (one read only assigned to one cluster) 
+    mean_scores = df.groupby(['cluster']).mean().sum()
+    df_out = pd.DataFrame(data={'qname': df.index, 'score': mean_scores, 'cluster': clusters})
+    df_out.reset_index(drop=True, inplace=True)
+    return df_out
 
 def main(args):
     if args.max_recursion > 0:
         sys.setrecursionlimit(args.max_recursion)
 
-    bin_id = args.paf.split('/')[-2]
-    
     df = pd.DataFrame()              
     cols = ['qname', 'qlen', 'tname', 'tlen', 'alnlen', 'dv']
     dtypes = {0:"category", 1:"int16", 5:"category", 6:"int16", 10:"int16", 15:"category"}
@@ -50,7 +52,6 @@ def main(args):
             pass
     # keep the longest in case of supplementary alignments, minimap sort this by default  
     df.drop_duplicates(['qname', 'tname'], inplace = True)
-    
     #create similarity matrix out of pairwise alignment scores
     nan_value = 0
     # make unique, sorted, common index
@@ -62,40 +63,30 @@ def main(args):
     .pipe(lambda x: x+x.values.T)
     )
     # clustering     
-    cluster_dfs = run_clustering(df_pivot, args, nan_value)
-
-    # prepare clustering info
-    clust_info_out = '{}.info.csv'.format(args.prefix)
-    # dict to store sequence length
+    cluster_df = run_clustering(df_pivot, args, nan_value)
+    
+    # mean score within cluster
+    cluster_df['score_mean'] = cluster_df.groupby(['cluster'])['score'].transform('mean')
+    # rls dict
     rls = dict(zip(df['qname'].append(df['tname']), df['qlen'].append(df['tlen'])))
-    with open(clust_info_out, 'w') as f:
-        f.write('bin_id,cluster,read_id,read_len,clust_read_score,frac_max_score\n')
-        for cluster,df_c in cluster_dfs:
-            keep_cols = df_c['qname'].append(pd.Series(['qname', 'cluster']))
-            df_c = df_c.loc[:,keep_cols] # only keep the columns of reads from the cluster
-            rls_c = []
-            read_means = []
-            for idx,row in df_c.iterrows():
-                nonself   = row.replace(1.00, np.nan).dropna()
-                dist_idx   = [i for i in nonself.index if (i!='qname' and i!='cluster')]
-                read_means.append(nonself.loc[dist_idx].mean())
-                rls_c.append(rls[row['qname']])
-
-            df_c.loc[:,'score_mean'] = read_means
-            clust_mean_score = df_c.loc[:,'score_mean'].mean()
-            clust_mean_rl = np.mean(rls_c)
-            max_score = (clust_mean_rl/10000)**2
-            max_score_frac = clust_mean_score / max_score
-            
-            df_c = df_c.set_index('qname')
-            if df_c.shape[0]>=args.min_reads and max_score_frac>=args.min_score_frac:
-                for r in df_c.index.values:
-                    f.write('{},{},{},{},{},{}\n'.format(bin_id, \
-                                                         cluster, \
-                                                         r, \
-                                                         rls[r], \
-                                                         round(df_c.loc[r,'score_mean'],3), \
-                                                         round(max_score_frac,3)))
+    cluster_df['qlen'] = cluster_df['qname'].map(rls)
+    
+    cluster_df['mean_qlen'] = cluster_df.groupby('cluster')['qlen'].transform('mean')
+    cluster_df['max_score_frac'] = cluster_df['score_mean']/(cluster_df['mean_qlen']/10000)**2
+    # add kmer bin info
+    bin_id = args.paf.split('/')[-2]
+    cluster_df['bin_id'] = bin_id
+    # keep reads with max_score_frac > args.min_score_frac
+    cluster_df = cluster_df[cluster_df['max_score_frac'] > args.min_score_frac]
+    # keep clusters > args.min_reads
+    cluster_df = cluster_df[cluster_df.groupby('cluster')['qname'].transform('count') >= args.min_reads]
+    # reorder columns
+    cluster_df = cluster_df[['bin_id', 'cluster', 'qname', 'qlen', 'score_mean', 'max_score_frac']]
+    # round values
+    cluster_df['score_mean'] = cluster_df['score_mean'].round(3)
+    cluster_df['max_score_frac'] = cluster_df['max_score_frac'].round(3)
+    # to csv
+    cluster_df.to_csv('{}.csv'.format(args.prefix), index=False)
 
 if __name__ == '__main__':
     args = parse_args()

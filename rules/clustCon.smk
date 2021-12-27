@@ -12,7 +12,7 @@ rule minimap2clust:
 
 rule bin2clustering:
     input: OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/minimap2clust.paf"
-    output: OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.info.csv",
+    output: OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.csv",
     conda: '../envs/clustCon.yaml'
     params:
         prefix = OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust",
