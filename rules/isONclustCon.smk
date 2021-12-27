@@ -1,11 +1,11 @@
 checkpoint NGSpeciesID:
     input: rules.split_by_cluster.output
-    output: directory(OUTPUT_DIR + "/NGSpeciesID/{barcode}/{c}")
+    output: directory(OUTPUT_DIR + "/isONclustCon/{barcode}/{c}")
     conda: "../envs/NGSpeciesID.yaml"
     params:
         racon_iter = config["NGSpeciesID"]["racon_iter"],
-    log: OUTPUT_DIR + "/logs/NGSpeciesID/{barcode}/{c}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/NGSpeciesID/{barcode}/{c}.txt"
+    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/NGSpeciesID.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/NGSpeciesID.txt"
     threads: config["threads"]["normal"]
     shell:
         "NGSpeciesID --ont --consensus"
@@ -14,17 +14,17 @@ checkpoint NGSpeciesID:
 
 rule medaka:
     input:
-        fasta = OUTPUT_DIR + "/NGSpeciesID/{barcode}/{c}/racon_cl_id_{id}/consensus.fasta",
-        fastq = OUTPUT_DIR + "/NGSpeciesID/{barcode}/{c}/reads_to_consensus_{id}.fastq",
+        fasta = OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/racon_cl_id_{id}/consensus.fasta",
+        fastq = OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/reads_to_consensus_{id}.fastq",
     output: 
-        fasta = OUTPUT_DIR + "/medaka/{barcode}/{c}/id_{id}/consensus.fasta",
-        _dir = directory(OUTPUT_DIR + "/medaka/{barcode}/{c}/id_{id}"),
+        fasta = OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/id_{id}/medaka/consensus.fasta",
+        _dir = directory(OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/id_{id}/medaka"),
     message: "Generate NGSpeciesID consensus (ID={wildcards.id}) in {wildcards.c} with medaka [{wildcards.barcode}]"
     params:
         m = config["medaka"]["m"],
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/medaka/{barcode}/{c}/id_{id}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/medaka/{barcode}/{c}/id_{id}.txt"
+    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/medaka/id_{id}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/medaka/id_{id}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -47,7 +47,7 @@ def get_isONclustCon(wildcards, pooling = True):
         for j in cs:
             ids = glob_wildcards(checkpoints.NGSpeciesID.get(barcode=i, c=j).output[0] + "/reads_to_consensus_{id}.fastq").id
             for k in ids:
-                fnas.append(OUTPUT_DIR + "/medaka/{barcode}/{c}/id_{id}/consensus.fasta".format(barcode=i, c=j, id=k))
+                fnas.append(OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/id_{id}/medaka/consensus.fasta".format(barcode=i, c=j, id=k))
     return fnas
 
 rule collect_isONclustCon:
@@ -56,7 +56,7 @@ rule collect_isONclustCon:
     run: 
         with open(output[0], "w") as out:
             for i in input:
-                barcode_i, c_i, id_i = i.split("/")[-4:-1]
+                barcode_i, c_i, id_i = i.split("/")[-5:-2]
                 with open(i, "r") as inp:
                     for line in inp:
                         if line.startswith(">"):
