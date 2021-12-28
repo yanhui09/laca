@@ -29,7 +29,7 @@ def run_clustering(df, args, default_sim):
     scores = df.groupby(['cluster']).mean()
     # extract value by numerical index    
     mean_scores = scores.values[[x-1 for x in clusters], range(scores.shape[1])]
-    df_out = pd.DataFrame(data={'qname': df.index, 'score': mean_scores, 'cluster': clusters})
+    df_out = pd.DataFrame(data={'qname': df.index, 'clust_read_score': mean_scores, 'cluster': clusters})
     df_out.reset_index(drop=True, inplace=True)
     return df_out
 
@@ -67,8 +67,6 @@ def main(args):
     # clustering     
     cluster_df = run_clustering(df_pivot, args, nan_value)
     
-    # mean score within cluster
-    cluster_df['clust_read_score'] = cluster_df.groupby(['cluster'])['score'].transform('mean')
     # rls dict
     rls = dict(zip(df['qname'].append(df['tname']), df['qlen'].append(df['tlen'])))
     cluster_df['qlen'] = cluster_df['qname'].map(rls)

@@ -60,8 +60,8 @@ rule get_clust_reads:
     benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/id_{clust_id}/get_clust_reads.txt"
     shell:
         """
-        seqkit grep -f {input.pool} {input.binned} -o {output.pool} > {log} 2>& 1
-        seqkit grep -f {input.ref} {input.binned} | seqkit fq2fa -o {output.ref} >> {log} 2>& 1
+        seqkit grep -f {input.pool} {input.binned} -o {output.pool} --quiet 2> {log}
+        seqkit grep -f {input.ref} {input.binned} --quiet | seqkit fq2fa -o {output.ref} 2> {log}
         """
 
 # align merged assemblies with raw reads
