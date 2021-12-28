@@ -56,7 +56,7 @@ checkpoint cluster_info:
 rule split_by_cluster:
     input: 
         clusters = OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.txt",
-        fastq = OUTPUT_DIR + "/raw/qfilt/{barcode}.fastq",
+        fastq = OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq",
     output: OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.fastq",
     conda: "../envs/seqkit.yaml"
     log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/clusters/{c}.log"

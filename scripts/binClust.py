@@ -68,24 +68,25 @@ def main(args):
     cluster_df = run_clustering(df_pivot, args, nan_value)
     
     # mean score within cluster
-    cluster_df['score_mean'] = cluster_df.groupby(['cluster'])['score'].transform('mean')
+    cluster_df['clust_read_score'] = cluster_df.groupby(['cluster'])['score'].transform('mean')
     # rls dict
     rls = dict(zip(df['qname'].append(df['tname']), df['qlen'].append(df['tlen'])))
     cluster_df['qlen'] = cluster_df['qname'].map(rls)
     
     cluster_df['mean_qlen'] = cluster_df.groupby('cluster')['qlen'].transform('mean')
-    cluster_df['max_score_frac'] = cluster_df['score_mean']/(cluster_df['mean_qlen']/10000)**2
+    cluster_df['frac_max_score'] = cluster_df['clust_read_score']/(cluster_df['mean_qlen']/10000)**2
     # add kmer bin info
     bin_id = args.paf.split('/')[-2]
     cluster_df['bin_id'] = bin_id
     # keep reads > args.min_score_frac
-    cluster_df = cluster_df[cluster_df['max_score_frac'] > args.min_score_frac]
+    cluster_df = cluster_df[cluster_df['frac_max_score'] > args.min_score_frac]
     # keep clusters > args.min_reads
     cluster_df = cluster_df[cluster_df.groupby('cluster')['qname'].transform('count') >= args.min_reads]
     
-    cluster_df = cluster_df[['bin_id', 'cluster', 'qname', 'qlen', 'score_mean', 'max_score_frac']]
-    cluster_df['score_mean'] = cluster_df['score_mean'].round(3)
-    cluster_df['max_score_frac'] = cluster_df['max_score_frac'].round(3)
+    cluster_df = cluster_df[['bin_id', 'cluster', 'qname', 'qlen', 'clust_read_score', 'frac_max_score']]
+    cluster_df.rename(columns={'qname': 'read_id', 'qlen': 'read_len'}, inplace=True)
+    cluster_df['clust_read_score'] = cluster_df['clust_read_score'].round(3)
+    cluster_df['frac_max_score'] = cluster_df['frac_max_score'].round(3)
     # to csv
     cluster_df.to_csv('{}.csv'.format(args.prefix), index=False)
 
