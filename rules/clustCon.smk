@@ -36,12 +36,16 @@ checkpoint get_bin2clust:
             clust_id = f"id_{clust_id}"
             clust_dir = output[0] + str("/{clust_id}").format(clust_id=clust_id)
             os.makedirs(clust_dir, exist_ok=True)
-            read_pool = clust_dir + "/pool.csv"
-            df_clust['read_id'].to_csv(read_pool, index=False, header=False)
+            
             read_ref = clust_dir + "/ref.csv"
             ref_idx  = df_clust['clust_read_score'].idxmax()
             ref_read = df_clust.loc[ref_idx, ['read_id']]
             ref_read.to_csv(read_ref, index=False, header=False)
+            
+            # except ref to pool
+            pool_read = df_clust.loc[~df_clust.index.isin([ref_idx]), ['read_id']]
+            read_pool = clust_dir + "/pool.csv"
+            pool_read.to_csv(read_pool, index=False, header=False)
     
 rule get_clust_reads:
     input:
@@ -56,8 +60,8 @@ rule get_clust_reads:
     benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/id_{clust_id}/get_clust_reads.txt"
     shell:
         """
-        seqkit grep -f {input.pool} {input.binned} > {output.pool} 2> {log}
-        seqkit grep -f {input.ref} {input.binned} | seqkit fq2fa > {output.ref} 2> {log}
+        seqkit grep -f {input.pool} {input.binned} -o {output.pool} > {log} 2>& 1
+        seqkit grep -f {input.ref} {input.binned} | seqkit fq2fa -o {output.ref} >> {log} 2>& 1
         """
 
 # align merged assemblies with raw reads
@@ -126,7 +130,7 @@ rule medaka_consensus:
     shell:
         """
         medaka_consensus -i {input.fastq} \
-        -d {input.fasta} -o {output._dir} \
+        -d {input.fna} -o {output._dir} \
         -t {threads} -m {params.m} > {log} 2>&1;
         """
 
