@@ -59,15 +59,21 @@ rule kmerBin:
     output: temp(touch(OUTPUT_DIR + "/.kmerBin_DONE"))
 
 rule clustCon:
-    input: OUTPUT_DIR + "/clustCon.fna"
+    input:
+        OUTPUT_DIR + "/.kmerBin_DONE",
+        OUTPUT_DIR + "/clustCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.clustCon_DONE"))
 
 rule isONclustCon:
-    input: OUTPUT_DIR + "/isONclustCon.fna"
+    input:
+        OUTPUT_DIR + "/.kmerBin_DONE",
+        OUTPUT_DIR + "/isONclustCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.isONclustCon_DONE"))
 
 rule isONcorCon:
-    input: OUTPUT_DIR + "/isONcorCon.fna"
+    input: 
+        OUTPUT_DIR + "/.kmerBin_DONE",
+        OUTPUT_DIR + "/isONcorCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.isONcorCon_DONE"))
 
 rule quant:

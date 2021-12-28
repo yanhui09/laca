@@ -42,7 +42,7 @@ checkpoint get_bin2clust:
             ref_read = df_clust.loc[ref_idx, ['read_id']]
             ref_read.to_csv(read_ref, index=False, header=False)
             
-            # except ref to pool
+            # exclude ref in pool
             pool_read = df_clust.loc[~df_clust.index.isin([ref_idx]), ['read_id']]
             read_pool = clust_dir + "/pool.csv"
             pool_read.to_csv(read_pool, index=False, header=False)
@@ -56,15 +56,15 @@ rule get_clust_reads:
         pool = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
         ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna",
     conda: '../envs/seqkit.yaml'
-    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/id_{clust_id}/get_clust_reads.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/id_{clust_id}/get_clust_reads.txt"
+    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/{clust_id}/get_clust_reads.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/{clust_id}/get_clust_reads.txt"
     shell:
         """
         seqkit grep -f {input.pool} {input.binned} -o {output.pool} --quiet 2> {log}
         seqkit grep -f {input.ref} {input.binned} --quiet | seqkit fq2fa -o {output.ref} 2> {log}
         """
 
-# align merged assemblies with raw reads
+# align assemblies with raw reads
 # reused in racon iterations
 rule minimap2polish:
     input: 
@@ -75,8 +75,8 @@ rule minimap2polish:
     params:
         x = config["minimap"]["x"]
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/id_{clust_id}/minimap2polish/{assembly}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/id_{clust_id}/minimap2polish/{assembly}.txt"
+    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/{clust_id}/minimap2polish/{assembly}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/{clust_id}/minimap2polish/{assembly}.txt"
     threads: config["threads"]["normal"]
     shell:
         "minimap2 -t {threads} -x {params.x}"
@@ -104,8 +104,8 @@ rule racon:
         g = config["racon"]["g"],
         w = config["racon"]["w"],
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR +"/logs/clustCon/{barcode}/{c}/id_{clust_id}/racon/round{iter}.log"
-    benchmark: OUTPUT_DIR +"/benchmarks/clustCon/{barcode}/{c}/id_{clust_id}/racon/round{iter}.txt"
+    log: OUTPUT_DIR +"/logs/clustCon/{barcode}/{c}/{clust_id}/racon/round{iter}.log"
+    benchmark: OUTPUT_DIR +"/benchmarks/clustCon/{barcode}/{c}/{clust_id}/racon/round{iter}.txt"
     threads: 1
     shell:
         "racon -m {params.m} -x {params.x}"
