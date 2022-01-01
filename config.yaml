@@ -68,7 +68,7 @@ cluster:
   - isONcorCon
 
 clustCon:
-  min_score_frac: 0
+  min_score_frac: 0.8
   min_reads: 5
   max_recursion: -1 # set to non-zero value to override python's max recursion depth
 

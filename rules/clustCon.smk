@@ -26,8 +26,35 @@ rule bin2clustering:
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
+def get_clust(wildcards, pooling = True):
+    check_val("pooling", pooling, bool)
+    if pooling == True:
+        barcodes = ["pooled"]
+    else:
+        barcodes = get_demultiplexed(wildcards)
+
+    bin2clusters = []
+    for i in barcodes:
+        cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+        for c in cs:
+            bin2clusters.append(OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.csv".format(barcode=i, c=c))
+    return bin2clusters
+ 
+checkpoint clusters_cleanup:
+    input: lambda wc: get_clust(wc, pooling = config["pooling"])
+    output: directory(OUTPUT_DIR + "/clustCon/clusters")
+    run:
+        import shutil
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input):
+            num_lines = sum(1 for line in open(i))
+            if num_lines > 1:
+                barcode, c = [ i.split("/")[index] for index in [-4, -2] ]
+                shutil.copy(i, output[0] + "/{barcode}_{c}.csv".format(barcode=barcode, c=c))
+
 checkpoint get_bin2clust:
-    input: rules.bin2clustering.output,
+    input: OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}.csv"
     output: directory(OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters")
     run:
         import pandas as pd
@@ -135,24 +162,19 @@ rule medaka_consensus:
         """
 
 # get {barcode} {c} from chekckpoint
-def get_clustCon(wildcards, pooling = True):
-    check_val("pooling", pooling, bool)
-    if pooling == True:
-        barcodes = ["pooled"]
-    else:
-        barcodes = get_demultiplexed(wildcards)
-
+def get_clustCon(wildcards):
+    b_cs = glob_wildcards(checkpoints.clusters_cleanup.get(**wildcards).output[0] + "/{b_c}.csv").b_c
+    #b_cs = glob_wildcards(OUTPUT_DIR + "/clustCon/clusters/{b_c}.csv").b_c
     fnas = []
-    for i in barcodes:
-        cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
-        for j in cs:
-            ids = glob_wildcards(checkpoints.get_bin2clust.get(barcode=i, c=j).output[0] + "/id_{clust_id}/pool.csv").clust_id
-            for k in ids:
-                fnas.append(OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/id_{id}/medaka/consensus.fasta".format(barcode=i, c=j, id=k))
+    for i in b_cs:
+        b, c = i.split("_")
+        ids = glob_wildcards(checkpoints.get_bin2clust.get(barcode=b, c=c).output[0] + "/id_{clust_id}/pool.csv").clust_id
+        for j in ids:
+            fnas.append(OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/id_{id}/medaka/consensus.fasta".format(barcode=b, c=c, id=j))
     return fnas
 
 rule collect_clustCon:
-    input: lambda wc: get_clustCon(wc, pooling = config["pooling"]),
+    input: lambda wc: get_clustCon(wc),
     output: OUTPUT_DIR + "/clustCon.fna"
     run: 
         with open(output[0], "w") as out:

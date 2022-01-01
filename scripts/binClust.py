@@ -83,8 +83,8 @@ def main(args):
     
     cluster_df = cluster_df[['bin_id', 'cluster', 'qname', 'qlen', 'clust_read_score', 'frac_max_score']]
     cluster_df.rename(columns={'qname': 'read_id', 'qlen': 'read_len'}, inplace=True)
-    cluster_df['clust_read_score'] = cluster_df['clust_read_score'].round(3)
-    cluster_df['frac_max_score'] = cluster_df['frac_max_score'].round(3)
+    cluster_df['clust_read_score'] = cluster_df['clust_read_score']
+    cluster_df['frac_max_score'] = cluster_df['frac_max_score']
     # to csv
     cluster_df.to_csv('{}.csv'.format(args.prefix), index=False)
 
