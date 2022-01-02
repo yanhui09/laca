@@ -47,23 +47,6 @@ rule update_blastdb:
         for file in {output}/*.tar.gz; do tar -xzvf $file -C {output} 1>> {log} 2>&1; done
         """
 
-#rule update_blastdb:
-#    input: OUTPUT_DIR + "/rep_seqs.fasta"
-#    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
-#    params:
-#        blastdb_alias = config["mmseqs"]["blastdb_alias"],
-#    conda: "../envs/blast.yaml"
-#    log: OUTPUT_DIR + "/logs/taxonomy/blast/update_blastdb.log"
-#    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blast/update_blastdb.txt"
-#    threads: config["threads"]["normal"]
-#    shell:
-#        """
-#        mkdir {output} && cd {output}
-#        update_blastdb.pl {params.blastdb_alias} --force \
-#        --decompress --num_threads {threads} --source ncbi 1> {log} 2>&1
-#        cd - 1>> {log} 2>&1
-#        """
-
 rule blastdbcmd:
     input: rules.update_blastdb.output
     output:
