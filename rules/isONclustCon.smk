@@ -4,12 +4,14 @@ checkpoint NGSpeciesID:
     conda: "../envs/NGSpeciesID.yaml"
     params:
         racon_iter = config["NGSpeciesID"]["racon_iter"],
+        abundance_ratio = config["NGSpeciesID"]["abundance_ratio"],
     log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/NGSpeciesID.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/NGSpeciesID.txt"
     threads: config["threads"]["normal"]
     shell:
         "NGSpeciesID --ont --consensus"
         " --racon --racon_iter {params.racon_iter}"
+        " --abundance_ratio {params.abundance_ratio}"
         " --fastq {input} --outfolder {output} --t {threads} > {log} 2>&1"
 
 rule medaka:

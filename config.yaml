@@ -84,6 +84,10 @@ medaka:
 
 NGSpeciesID:
   racon_iter: 2
+  abundance_ratio: 0.8 
+  # Determine the final cluster size together with min_cluster_size in kmerBin
+  # Tunn it to discard small clusters, which may yield error in polishment;
+  # E.g., To keep cluster > 8 under min kmerBin > 10, take 0.8 (8/10) for abundance_ratio.
 
 minimap:
   x: map-ont
