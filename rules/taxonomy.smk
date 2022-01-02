@@ -34,35 +34,35 @@ rule download_taxdump:
         tar -xzvf {output}/taxdump.tar.gz -C {output} 1>> {log} 2>&1
         """
 
-#rule download_blastdb:
-#    input: OUTPUT_DIR + "/rep_seqs.fasta"
-#    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
-#    params:
-#        ftp = config["mmseqs"]["blastdb_ftp"],
-#    log: OUTPUT_DIR + "/logs/taxonomy/download_blastdb.log"
-#    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_blastdb.txt"
-#    shell:
-#        """
-#        wget {params.ftp} -P {output} 1> {log} 2>&1
-#        for file in {output}/*.tar.gz; do tar -xzvf '$file' -C {output} 1>> {log} 2>&1; done
-#        """
-
 rule update_blastdb:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
     params:
-        blastdb_alias = config["mmseqs"]["blastdb_alias"],
-    conda: "../envs/blast.yaml"
-    log: OUTPUT_DIR + "/logs/taxonomy/blast/update_blastdb.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blast/update_blastdb.txt"
-    threads: config["threads"]["normal"]
+        ftp = "ftp://ftp.ncbi.nlm.nih.gov/blast/db/" + config["mmseqs"]["blastdb_alias"] + "*.tar.gz",
+    log: OUTPUT_DIR + "/logs/taxonomy/download_blastdb.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_blastdb.txt"
     shell:
         """
-        mkdir {output} && cd {output}
-        update_blastdb.pl {params.blastdb_alias} --force \
-        --decompress --num_threads {threads} --source ncbi 1> {log} 2>&1
-        cd - 1>> {log} 2>&1
+        wget {params.ftp} -P {output} 1> {log} 2>&1
+        for file in {output}/*.tar.gz; do tar -xzvf $file -C {output} 1>> {log} 2>&1; done
         """
+
+#rule update_blastdb:
+#    input: OUTPUT_DIR + "/rep_seqs.fasta"
+#    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
+#    params:
+#        blastdb_alias = config["mmseqs"]["blastdb_alias"],
+#    conda: "../envs/blast.yaml"
+#    log: OUTPUT_DIR + "/logs/taxonomy/blast/update_blastdb.log"
+#    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blast/update_blastdb.txt"
+#    threads: config["threads"]["normal"]
+#    shell:
+#        """
+#        mkdir {output} && cd {output}
+#        update_blastdb.pl {params.blastdb_alias} --force \
+#        --decompress --num_threads {threads} --source ncbi 1> {log} 2>&1
+#        cd - 1>> {log} 2>&1
+#        """
 
 rule blastdbcmd:
     input: rules.update_blastdb.output
