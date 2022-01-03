@@ -69,8 +69,8 @@ checkpoint get_bin2clust:
             ref_read = df_clust.loc[ref_idx, ['read_id']]
             ref_read.to_csv(read_ref, index=False, header=False)
             
-            # exclude ref in pool
-            pool_read = df_clust.loc[~df_clust.index.isin([ref_idx]), ['read_id']]
+            # include ref in pool
+            pool_read = df_clust['read_id']
             read_pool = clust_dir + "/pool.csv"
             pool_read.to_csv(read_pool, index=False, header=False)
     
@@ -88,7 +88,8 @@ rule get_clust_reads:
     shell:
         """
         seqkit grep -f {input.pool} {input.binned} -o {output.pool} --quiet 2> {log}
-        seqkit grep -f {input.ref} {input.binned} --quiet | seqkit fq2fa -o {output.ref} 2> {log}
+        seqkit grep -f {input.ref} {input.binned} --quiet | seqkit fq2fa | \
+        seqkit replace -p '^(.+)$' -r '{wildcards.barcode}_{wildcards.c}_{wildcards.clust_id}' -o {output.ref} 2> {log}
         """
 
 # align assemblies with raw reads
