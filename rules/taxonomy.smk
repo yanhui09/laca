@@ -59,9 +59,11 @@ rule blastdbcmd:
     log: OUTPUT_DIR + "/logs/taxonomy/blast/blastdbcmd.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blast/blastdbcmd.txt"
     shell:
+    # ignore err: [blastdbcmd] error while reading seqid
+    # I don't know how to escape it using blastdbcmd
         """
-        blastdbcmd -db {params.db} -entry all > {output.fna} 2> {log}
-        blastdbcmd -db {params.db} -entry all -outfmt "%a %T" > {output.taxidmapping} 2>> {log}
+        blastdbcmd -db {params.db} -entry all > {output.fna} 2> {log} || true
+        blastdbcmd -db {params.db} -entry all -outfmt "%a %T" > {output.taxidmapping} 2>> {log} || true
         """
 
 rule createdb_seqTax:
@@ -116,7 +118,7 @@ def get_seqTaxDB(blastdb_alias, db):
         dbname = "customDB"
     return expand(DATABASE_DIR + "/mmseqs2/"+ dbname + "/" + dbname + "{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
-                "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
+                "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"])
 
 rule taxonomy:
     input:
