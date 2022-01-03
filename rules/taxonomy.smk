@@ -38,13 +38,13 @@ rule update_blastdb:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
     params:
-        ftp = "ftp://ftp.ncbi.nlm.nih.gov/blast/db/" + config["mmseqs"]["blastdb_alias"] + "*.tar.gz",
-    log: OUTPUT_DIR + "/logs/taxonomy/download_blastdb.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_blastdb.txt"
+        blastdb_alias = config["mmseqs"]["blastdb_alias"],
+    log: OUTPUT_DIR + "/logs/taxonomy/update_blastdb.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/update_blastdb.txt"
     shell:
         """
-        wget {params.ftp} -P {output} 1> {log} 2>&1
-        for file in {output}/*.tar.gz; do tar -xzvf $file -C {output} 1>> {log} 2>&1; done
+        wget "ftp://ftp.ncbi.nlm.nih.gov/blast/db/{params.blastdb_alias}*.tar.gz" -P {output} 1> {log} 2>&1
+        for file in {output}/{params.blastdb_alias}*.tar.gz; do tar -xzvf $file -C {output} 1>> {log} 2>&1; done
         """
 
 rule blastdbcmd:
