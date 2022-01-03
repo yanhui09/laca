@@ -1,0 +1,6 @@
+name: rsync
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - rsync

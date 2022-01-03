@@ -37,13 +37,14 @@ rule download_taxdump:
 rule update_blastdb:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
+    conda: "../envs/rsync.yaml"
     params:
         blastdb_alias = config["mmseqs"]["blastdb_alias"],
     log: OUTPUT_DIR + "/logs/taxonomy/update_blastdb.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/update_blastdb.txt"
     shell:
         """
-        wget "ftp://ftp.ncbi.nlm.nih.gov/blast/db/{params.blastdb_alias}*.tar.gz" -P {output} 1> {log} 2>&1
+        rsync -rv --include="{params.blastdb_alias}*.tar.gz" --exclude="*" rsync://ftp.ncbi.nlm.nih.gov/blast/db/ {output} 1> {log} 2>&1
         for file in {output}/{params.blastdb_alias}*.tar.gz; do tar -xzvf $file -C {output} 1>> {log} 2>&1; done
         """
 
