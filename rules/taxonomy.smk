@@ -122,9 +122,9 @@ def get_seqTaxDB(blastdb_alias, db):
 
 rule taxonomy_mmseqs2:
     input:
-        get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[-0],
+        ancient(get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[-0]),
         queryDB = rules.createdb_query.output[0],
-        targetDB = get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[0],
+        targetDB = ancient(get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[0]),
     output:
         resultDB = multiext(OUTPUT_DIR + "/taxonomy/mmseqs2/resultDB",
          ".0", ".1", ".2", ".3", ".4", ".5", ".dbtype", ".index"),
@@ -168,7 +168,7 @@ rule build_database:
         #temp(directory(DATABASE_DIR + "/kraken2/taxonomy")),
         #temp(DATABASE_DIR + "/kraken2/seqid2taxid.map"),
         k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
-        dbloc = ancient(directory(DATABASE_DIR + "/kraken2")),
+        dbloc = directory(DATABASE_DIR + "/kraken2"),
     conda: "../envs/kraken2.yaml"
     params:
         buildb_cmd = config["kraken2"]["buildb_cmd"],
@@ -180,24 +180,24 @@ rule build_database:
 
 rule classify_kraken2:
     input:
-        rules.build_database.output.k2d, 
+        ancient(rules.build_database.output.k2d), 
+        dbloc = ancient(DATABASE_DIR + "/kraken2"),
         fna = OUTPUT_DIR + "/rep_seqs.fasta",
     output: OUTPUT_DIR  + "/taxonomy/kraken2/classified.tsv",
     conda: "../envs/kraken2.yaml"
     params:
-        dbloc = DATABASE_DIR + "/kraken2",
         classify_cmd = config["kraken2"]["classify_cmd"],
     log: OUTPUT_DIR + "/logs/taxonomy/kraken2/classify.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/classify.txt"
     threads: config["threads"]["large"]
     shell:
-        "kraken2 --db {params.dbloc} --threads {threads} --output {output} {input.fna}"
+        "kraken2 --db {input.dbloc} --threads {threads} --output {output} {input.fna}"
         " {params.classify_cmd} 1> {log} 2>&1"
 
 # use taxonkit to get NCBI taxonomy
 rule lineage_taxonkit:
     input:
-        taxdump = rules.update_taxdump.output,
+        taxdump = ancient(rules.update_taxdump.output),
         tsv = rules.classify_kraken2.output,
     output: OUTPUT_DIR + "/taxonomy/kraken2/lineage.tsv",
     conda: "../envs/taxonkit.yaml"
