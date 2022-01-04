@@ -82,7 +82,7 @@ rule quant:
 
 rule taxa: 
     input:
-        [OUTPUT_DIR + "/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
+        [OUTPUT_DIR + "/taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
         OUTPUT_DIR + "/taxonomy.tsv",
     output: temp(touch(OUTPUT_DIR + "/.taxa_DONE"))
 

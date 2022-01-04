@@ -4,7 +4,7 @@ check_list_ele("classifier", config["classifier"], ["kraken2", "mmseqs2"])
 # LCA taxonomy with MMseqs2
 TaxDB = config["mmseqs"]["taxdb"]
 # use predefined MMseqs2 database
-rule databases_mmseq:
+rule databases_mmseqs2:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: 
         taxdb = expand(DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB + "{ext}",
@@ -16,18 +16,18 @@ rule databases_mmseq:
     params:
         taxdb = TaxDB,
         targetDB = DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB,
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/databases_mmseqs.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/databases_mmseqs.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/databases_mmseqs2.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/databases_mmseqs2.txt"
     shell: 
         "mmseqs databases {params.taxdb} {params.targetDB} {output.tmp} 1> {log} 2>&1"
 
 # create seqTaxDB manually
 # the predefined one do not have taxonomy information
-rule download_taxdump:
+rule update_taxdump:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
     output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/taxdump")),
-    log: OUTPUT_DIR + "/logs/taxonomy/download_taxdump.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/download_taxdump.txt"
+    log: OUTPUT_DIR + "/logs/taxonomy/update_taxdump.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/update_taxdump.txt"
     shell:
         """
         wget ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz -P {output} 1> {log} 2>&1
@@ -83,7 +83,7 @@ rule createdb_seqTax:
 rule createtaxdb_seqTax:
     input:
         rules.createdb_seqTax.output,
-        taxdump = rules.download_taxdump.output,
+        taxdump = rules.update_taxdump.output,
         taxidmapping = rules.blastdbcmd.output.taxidmapping,
     output: 
         taxdb = expand(DATABASE_DIR + "/mmseqs2/customDB/customDB{ext}",
@@ -120,7 +120,7 @@ def get_seqTaxDB(blastdb_alias, db):
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
                 "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"])
 
-rule taxonomy:
+rule taxonomy_mmseqs2:
     input:
         get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[-0],
         queryDB = rules.createdb_query.output[0],
@@ -146,7 +146,7 @@ rule taxonomy:
 rule createtsv:
     input:
         queryDB = rules.createdb_query.output[0],
-        resultDB = rules.taxonomy.output.resultDB,
+        resultDB = rules.taxonomy_mmseqs2.output.resultDB,
     output: OUTPUT_DIR + "/taxonomy/mmseqs2/taxonomy.tsv",
     message: "Creating tsv file for taxonomy"
     conda: "../envs/mmseqs2.yaml"
@@ -168,7 +168,7 @@ rule build_database:
         #temp(directory(DATABASE_DIR + "/kraken2/taxonomy")),
         #temp(DATABASE_DIR + "/kraken2/seqid2taxid.map"),
         k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
-        dbloc = directory(DATABASE_DIR + "/kraken2"),
+        dbloc = ancient(directory(DATABASE_DIR + "/kraken2")),
     conda: "../envs/kraken2.yaml"
     params:
         buildb_cmd = config["kraken2"]["buildb_cmd"],
@@ -197,7 +197,7 @@ rule classify_kraken2:
 # use taxonkit to get NCBI taxonomy
 rule lineage_taxonkit:
     input:
-        taxdump = rules.download_taxdump.output,
+        taxdump = rules.update_taxdump.output,
         tsv = rules.classify_kraken2.output,
     output: OUTPUT_DIR + "/taxonomy/kraken2/lineage.tsv",
     conda: "../envs/taxonkit.yaml"
