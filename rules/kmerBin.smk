@@ -78,3 +78,17 @@ def get_kmerBin(wildcards, pooling = True):
         for j in cs:
             fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.fastq".format(barcode=i, c=j))
     return fqs
+
+rule skip_bin:
+    input: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
+    output: OUTPUT_DIR + "/kmerBin/{barcode}/all.fastq"
+    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/skip_bin.log"
+    shell: "cp -p {input} {output} 2> {log}"
+
+def get_fq4Con(kmerbin = True):
+    check_val("kmerbin", kmerbin, bool)
+    if kmerbin == True:
+        out = rules.split_by_cluster.output
+    else:
+        out = rules.skip_bin.output
+    return out

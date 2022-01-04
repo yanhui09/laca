@@ -1,5 +1,5 @@
 checkpoint NGSpeciesID:
-    input: rules.split_by_cluster.output
+    input: get_fq4Con(config["kmerbin"])
     output: directory(OUTPUT_DIR + "/isONclustCon/{barcode}/{c}")
     conda: "../envs/NGSpeciesID.yaml"
     params:
@@ -36,7 +36,7 @@ rule medaka:
         """
 
 # get {barcode} {c} {id} from chekckpoint
-def get_isONclustCon(wildcards, pooling = True):
+def get_isONclustCon(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
@@ -45,7 +45,10 @@ def get_isONclustCon(wildcards, pooling = True):
 
     fnas = []
     for i in barcodes:
-        cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+        if kmerbin == True:
+            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+        else:
+            cs = ["all"]
         for j in cs:
             ids = glob_wildcards(checkpoints.NGSpeciesID.get(barcode=i, c=j).output[0] + "/reads_to_consensus_{id}.fastq").id
             for k in ids:
@@ -53,7 +56,7 @@ def get_isONclustCon(wildcards, pooling = True):
     return fnas
 
 rule collect_isONclustCon:
-    input: lambda wc: get_isONclustCon(wc, pooling = config["pooling"]),
+    input: lambda wc: get_isONclustCon(wc, pooling = config["pooling"], kmerbin = config["kmerbin"]),
     output: OUTPUT_DIR + "/isONclustCon.fna"
     run: 
         with open(output[0], "w") as out:

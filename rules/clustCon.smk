@@ -1,6 +1,6 @@
 # draw draft with max average score from pairwise alignments
 rule minimap2clust:
-    input: rules.split_by_cluster.output
+    input: get_fq4Con(config["kmerbin"])
     output: OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/minimap2clust.paf"
     conda: '../envs/polish.yaml'
     log: OUTPUT_DIR + "/logs/clustCon/{barcode}/minimap2clust/{c}.log"
@@ -26,7 +26,7 @@ rule bin2clustering:
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
-def get_clust(wildcards, pooling = True):
+def get_clust(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
@@ -35,13 +35,16 @@ def get_clust(wildcards, pooling = True):
 
     bin2clusters = []
     for i in barcodes:
-        cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+        if kmerbin == True:
+            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+        else:
+            cs = ["all"]
         for c in cs:
             bin2clusters.append(OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.csv".format(barcode=i, c=c))
     return bin2clusters
  
 checkpoint clusters_cleanup:
-    input: lambda wc: get_clust(wc, pooling = config["pooling"])
+    input: lambda wc: get_clust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/clustCon/clusters")
     run:
         import shutil

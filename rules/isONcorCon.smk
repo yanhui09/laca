@@ -1,5 +1,5 @@
 rule isONclust:
-    input: rules.split_by_cluster.output
+    input: get_fq4Con(config["kmerbin"])
     output:
         _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONclust"),
         tsv = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONclust/final_clusters.tsv"
@@ -14,8 +14,8 @@ rule isONclust:
 rule isONclust_write:
     input:
         tsv = rules.isONclust.output.tsv,
-        fqs = rules.split_by_cluster.output,
-    output: directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONclust/fastq_files")
+        fqs = get_fq4Con(config["kmerbin"]),
+    output: directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/clust_fastqs")
     conda: "../envs/isONcorCon.yaml"
     log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/isONclust/write.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/isONclust/write.txt"
@@ -28,7 +28,7 @@ rule isONclust_write:
 # https://github.com/ksahlin/isONcorrect/blob/master/run_isoncorrect#L153
 rule clean_timestamp:
     input: rules.isONclust_write.output
-    output: OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONclust/.timestamp_removed"
+    output: OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/.writefq_timestamp"
     shell:
         """
         rm -f {input}/.snakemake_timestamp
@@ -63,7 +63,7 @@ rule IsoCon:
     shell:
         "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
     
-def get_isONcorCon(wildcards, pooling = True):
+def get_isONcorCon(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
@@ -72,7 +72,10 @@ def get_isONcorCon(wildcards, pooling = True):
 
     fnas = []
     for i in barcodes:
-        cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+        if kmerbin == True:
+            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+        else:
+            cs = ["all"]
         for j in cs:
             cids = glob_wildcards(checkpoints.isONcorrect.get(barcode=i, c=j).output[0] + "/{cid}/corrected_reads.fastq").cid
             for k in cids:
@@ -80,7 +83,7 @@ def get_isONcorCon(wildcards, pooling = True):
     return fnas
 
 rule collect_isONcorCon:
-    input: lambda wc: get_isONcorCon(wc, pooling = config["pooling"]),
+    input: lambda wc: get_isONcorCon(wc, pooling = config["pooling"], kmerbin = config["kmerbin"]),
     output: OUTPUT_DIR + "/isONcorCon.fna"
     run: 
         with open(output[0], "w") as out:
