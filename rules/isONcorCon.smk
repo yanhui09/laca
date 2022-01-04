@@ -24,15 +24,32 @@ rule isONclust_write:
         "--clusters {input.tsv} --fastq {input.fqs} "
         "--outfolder  {output} > {log} 2>&1"
 
+# rm snakemake_timestamp as the run_isoncorrect take ids through str.split(".")
+# https://github.com/ksahlin/isONcorrect/blob/master/run_isoncorrect#L153
+rule clean_timestamp:
+    input: rules.isONclust_write.output
+    output: OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONclust/.timestamp_removed"
+    shell:
+        """
+        rm -f {input}/.snakemake_timestamp
+        touch {output}
+        """
+
+# run_isoncorrect provide multithread processing for isONcorrect in batches
+# racon seems not to be supported in batch mode
 checkpoint isONcorrect:
-    input: rules.isONclust_write.output,
+    input:
+        rules.clean_timestamp.output,
+        fqs = rules.isONclust_write.output,
     output: directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONcorrect"),
     conda: "../envs/isONcorCon.yaml"
     log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/isONcorrect.log"
     benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/isONcorrect.txt"
     threads: config["threads"]["normal"]
     shell:
-        "run_isoncorrect --t {threads} --fastq_folder {input}  --outfolder {output} > {log} 2>&1"
+        "run_isoncorrect --t {threads} --fastq_folder {input.fqs} --outfolder {output} "
+        "--set_w_dynamically --split_wrt_batches "
+        "> {log} 2>&1"
 
 rule IsoCon:
     input: OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONcorrect/{cid}/corrected_reads.fastq"
