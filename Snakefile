@@ -44,7 +44,7 @@ include: "rules/isONcorCon.smk"
 include: "rules/quant.smk"
 include: "rules/taxonomy.smk"
 include: "rules/tree.smk"
-#include: "rules/umi.smk"
+include: "rules/umi.smk"
 
 rule demultiplex:
     input: lambda wc: expand(OUTPUT_DIR + "/raw/{barcode}.fastq", barcode=get_demultiplexed(wc))

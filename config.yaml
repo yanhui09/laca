@@ -1,6 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
-results_dir: "/mnt/md0/UMI16S/zymock_res_subsampled"
+results_dir: "/mnt/md0/UMI16S/zymock_res"
 database_dir: "/mnt/md0/Database/Kamp"
 guppy: "resources/ont-guppy/bin" # guppy bin
 
@@ -17,7 +17,7 @@ barcode_kits: "SQK16S-GXO"
 ##############################################################
 # Quality control
 # Subsampling raw reads if with inadequate memory
-subsample: TRUE
+subsample: FALSE
 
 seqkit:
   min-qual: 7
@@ -45,7 +45,7 @@ cutadapt:
 
 ##############################################################
 # kmer binning
-kmerbin: TRUE
+kmerbin: FALSE
 # Bool, whether to bin or not; TRUE is highly recommened in clustCon mode, considering the massive pairwise alignments inside.
 kmer_size: 5
 # umap reduction and hdbscan cluster
@@ -139,15 +139,18 @@ q2-phylogen:
   raxml: ""
 
 ##############################################################
-# umi setttings
 # umi extraction with seqkit and cutadapt
-umi_loc: 100 # robust location of umi, i.e. within 100 bp in the start/end of the sequence
-umi_len: 15 # base length of umi design
-umi_flexible: 2 # flexible base length for umi
-max_err: 0.2 # cutadapt -e, high error tolerance for nanopore 
-min_overlap: 5 # cutadapt -O, recommened: 0.25*length
+umi:
+  seqkit:
+    min-qual: 7
+    min-len: 1000
+    max-len: 1600
+  loc: 150 # robust location of umi, i.e., within 150 bp in the start/end of the sequence
+  len: 15 # base length of umi design
+  base_flex: 2 # flexible base length for umi
+  max_err: 0.4 # cutadapt -e, high error tolerance for nanopore 
+  min_overlap: 5 # cutadapt -O
+  cl_identity: 0.9 # umi cluster similarity
 # linker and primer for umi extraction
 flinker: "GTCTCGTGGGCTCGG"
 rlinker: "GTCTCGTGGGCTCGG"
-# umi cluster
-umi_id: 0.9
