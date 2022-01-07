@@ -199,100 +199,39 @@ rule concat_umip:
     shell: "seqkit concat {input.umi1} {input.umi2} -o {output} 2> {log}"
 
 # calculate the UMI cluster size through mapping
-# create abundance matrix with minimap
-rule index_umi_centriod:
-    input: rules.rename_umi_centroid.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_alignment/umi_centoid.mmi"
-    params:
-        index_size = config["minimap"]["index_size"],
-    conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_alignment/index.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_alignment/index.txt"
-    shell: "minimap2 -I {params.index_size} -d {output} {input} 2> {log}"
-
-rule dict_umi_centroid:
-    input: rules.rename_umi_centroid.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_alignment/umi_centoid.dict"
-    conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_alignment/dict.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_alignment/dict.txt"
-    shell: "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
-
-rule minimap_umi:
+# use bwa aln to map the potential UMI reads to the UMI ref, considering the limited length and sensitivity
+rule bwa_index:
     input:
-        fq = rules.concat_umip.output,
-        mmi = rules.index_umi_centriod.output,
-        dict = rules.dict_umi_centroid.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_alignment/minimap.bam"
-    params:
-        x = "sr",
-    conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_alignment/minimap.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_alignment/minimap.txt"
-    threads: config["threads"]["normal"]
-    shell:
-        """
-        minimap2 -t {threads} -ax {params.x} --secondary=no {input.mmi} {input.fq} 2> {log} | \
-        grep -v "^@" | cat {input.dict} - | \
-        samtools view -F 3584 -b - > {output} 2>> {log}
-        """
+        ref = rules.rename_umi_centroid.output,
+    output:
+        multiext(OUTPUT_DIR + "/umi/{barcode}/umi_centroid.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+    conda: "../envs/bwa.yaml"
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/bwa_index.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bwa_index.txt"
+    shell: "bwa index {input.ref} 2> {log}"
 
-rule sort_umi:
-    input: rules.minimap_umi.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_alignment/minimap.sorted.bam"
-    params:
-        prefix = OUTPUT_DIR + "/umi/{barcode}/umi_alignment/tmp",
-        m = config["samtools"]["m"],
-    conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_alignment/sort.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_alignment/sort.txt"
-    shell:
-        "samtools sort {input} -T {params.prefix} --threads 1 -m {params.m} -o {output} 2>{log}"
-
-rule samtools_index_umi:        
-    input: rules.sort_umi.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_alignment/minimap.sorted.bam.bai"
-    params:
-        m = config["samtools"]["m"],
-    conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_alignment/samtool_index_umi.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_alignment/samtool_index_umi.txt"
-    shell:
-        "samtools index -m {params.m} -@ 1 {input} {output} 2>{log}"
-
-# biom format header
-rule rowname_umi:
+rule bwa_aln:
     input:
-        bam = rules.sort_umi.output,
-        bai = rules.samtools_index_umi.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_alignment/rowname_umi.txt"
-    conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_alignment/rowname_umi.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_alignment/rowname_umi.txt"
+        rules.bwa_index.output,
+        umip = rules.concat_umip.output,
+        ref = rules.rename_umi_centroid.output,
+    output: OUTPUT_DIR + "/umi/{barcode}/umip.sai",
+    conda: "../envs/bwa.yaml"
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/bwa_aln.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bwa_aln.txt"
+    threads: config["threads"]["large"]
     shell:
-        """
-        echo 'umiID' > {output}
-        samtools idxstats $(ls {input.bam} | head -n 1) | grep -v "*" | cut -f1 >> {output}
-        """
-       
-rule count_umi:
-    input:
-        bam = rules.sort_umi.output,
-        bai = rules.samtools_index_umi.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_alignment/count_umi.txt"
-    conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_alignment/count_umi.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_alignment/count_umi.txt"
-    shell:
-        """
-        echo '{wildcards.barcode}' > {output}
-        samtools idxstats {input.bam} | grep -v "*" | cut -f3 >> {output}
-        """
+        "bwa aln -n 6 -t {threads} -N {input.ref} {input.umip} > {output} 2> {log}"
 
-rule umi_stat:
+rule bwa_samse:
     input:
-        rowname_umi = rules.rowname_umi.output,
-        count_umi = rules.count_umi.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/umi_stat.txt"
+        umip = rules.concat_umip.output,
+        ref = rules.rename_umi_centroid.output,
+        sai = rules.bwa_aln.output,
+    output: OUTPUT_DIR + "/umi/{barcode}/umip.sam",
+    conda: "../envs/bwa.yaml"
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/bwa_samse.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bwa_samse.txt"
     shell:
-        "paste {input.rowname_umi} {input.count_umi} > {output}"
+        "bwa samse -n 10000000 {input.ref} {input.sai} {input.umip} 2> {log} | "
+        "samtools view -F 4 - > {output} 2>> {log}"
