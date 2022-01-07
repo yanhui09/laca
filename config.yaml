@@ -147,8 +147,8 @@ umi:
     max-len: 1600
   loc: 150 # robust location of umi, i.e., within 150 bp in the start/end of the sequence
   len: 15 # base length of umi design
-  base_flex: 2 # flexible base length for umi
-  max_err: 0.4 # cutadapt -e, high error tolerance for nanopore 
+  base_flex: 0 # flexible base length for umi
+  max_err: 0.2 # cutadapt -e, high error tolerance for nanopore 
   min_overlap: 10 # cutadapt -O
   cl_identity: 0.9 # umi cluster similarity
 # linker and primer for umi extraction
