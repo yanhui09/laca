@@ -145,12 +145,16 @@ umi:
     min-qual: 7
     min-len: 1000
     max-len: 1600
-  loc: 150 # robust location of umi, i.e., within 150 bp in the start/end of the sequence
+  # keep it loose for putative UMIs in tolerated error
+  loc: 200 # robust location containing the adaptor-UMI-primer pattern, leaving only the start/end regions to find UMIs
   len: 15 # base length of umi design
   base_flex: 0 # flexible base length for umi
-  max_err: 0.3 # cutadapt -e, high error tolerance for nanopore 
+  max_err: 0.4 # cutadapt -e, high error tolerance for nanopore 
   min_overlap: 10 # cutadapt -O
   cl_identity: 0.9 # umi cluster similarity
+  # keep it conservative for trusted UMI bins
+  s: 90 # Check start of read up to s bp for validated UMIs.
+  e: 90 # Check end of read up to f bp for validated UMIs.
 # linker and primer for umi extraction
 flinker: "GTCTCGTGGGCTCGG"
 rlinker: "GTCTCGTGGGCTCGG"

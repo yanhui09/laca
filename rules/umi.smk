@@ -217,11 +217,13 @@ rule bwa_aln:
         ref = rules.rename_umi_centroid.output,
     output: OUTPUT_DIR + "/umi/{barcode}/umip.sai",
     conda: "../envs/bwa.yaml"
+    params:
+        n = 6,
     log: OUTPUT_DIR + "/logs/umi/{barcode}/bwa_aln.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bwa_aln.txt"
     threads: config["threads"]["large"]
     shell:
-        "bwa aln -n 6 -t {threads} -N {input.ref} {input.umip} > {output} 2> {log}"
+        "bwa aln -n {params.n} -t {threads} -N {input.ref} {input.umip} > {output} 2> {log}"
 
 rule bwa_samse:
     input:
@@ -230,8 +232,229 @@ rule bwa_samse:
         sai = rules.bwa_aln.output,
     output: OUTPUT_DIR + "/umi/{barcode}/umip.sam",
     conda: "../envs/bwa.yaml"
+    params:
+        F = 4,
     log: OUTPUT_DIR + "/logs/umi/{barcode}/bwa_samse.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bwa_samse.txt"
     shell:
         "bwa samse -n 10000000 {input.ref} {input.sai} {input.umip} 2> {log} | "
-        "samtools view -F 4 - > {output} 2>> {log}"
+        "samtools view -F {params.F} - > {output} 2>> {log}"
+
+rule umi_filter:
+    input:
+        sam = rules.bwa_samse.output,
+        ref = rules.rename_umi_centroid.output,
+    output: OUTPUT_DIR + "/umi/{barcode}/umicf.fa",
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_filter.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_filter.txt"
+    shell:
+        """
+        awk \
+        -v UMS={input.sam} \
+        -v UC={input.ref} \
+        '
+        (FILENAME == UMS){{
+            CLUSTER[$3]++
+        }}
+        (FILENAME == UC && FNR%2==1){{
+          NAME=substr($1,2)
+          if (NAME in CLUSTER){{
+            if (CLUSTER[NAME]+0 > 2){{
+              SIZE=CLUSTER[NAME]
+              gsub(";.*", "", NAME)
+              print ">" NAME ";size=" SIZE ";"
+              getline; print
+            }}
+          }}
+        }}
+        ' \
+        {input.sam} \
+        {input.ref} \
+        > {output} 2> {log} 
+        """
+
+# rm potential chimera
+rule rm_chimera:
+    input: rules.umi_filter.output
+    output:
+        ref = OUTPUT_DIR + "/umi/{barcode}/umi_ref.txt",
+        fa = OUTPUT_DIR + "/umi/{barcode}/umi_ref.fa",
+    params:
+        umip_len = config["umi"]["len"] + config["umi"]["base_flex"],
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/rm_chimera.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/rm_chimera.txt"
+    shell:
+        """
+        paste <(cat {input} | paste - - ) \
+          <(awk '!/^>/{{print}}' {input} | rev | tr ATCG TAGC) |\
+          awk 'NR==FNR {{
+              #Format columns
+              split($1, a, /[>;]/);
+              sub("size=", "", a[3]);
+              # Extract UMI1 and UMI2 in both orientations
+              s1 = substr($2, 1, {params.umip_len});
+              s2 = substr($2, {params.umip_len}+1, 2*{params.umip_len});
+              s1rc= substr($3, 1, {params.umip_len});
+              s2rc= substr($3, {params.umip_len}+1, 2*{params.umip_len});
+              # Register UMI1 size if larger than current highest or if empty
+              if ((g1n[s1]+0) <= (a[3]+0) || g1n[s1] == ""){{
+                g1n[s1] = a[3];
+                g1[s1] = a[2];
+              }}
+              # Register UMI2 size if larger than current highest or if empty
+              if ((g2n[s2]+0) <= (a[3]+0) || g2n[s2] == ""){{
+                g2n[s2] = a[3];
+                g2[s2] = a[2];
+              }}
+              # Register UMI1rc size if larger than current highest or if empty
+              if ((g1n[s1rc]+0) <= (a[3]+0) || g1n[s1rc] == ""){{
+                g1n[s1rc] = a[3];
+                g1[s1rc] = a[2];
+              }}
+              # Register UMI2rc size if larger than current highest or if empty
+              if ((g2n[s2rc]+0) <= (a[3]+0) || g2n[s2rc] == ""){{
+                g2n[s2rc] = a[3];
+                g2[s2rc] = a[2];
+              }}
+              # Register UMI1 and UMI matches for current UMI
+              u[a[2]] = a[3];
+              s1a[a[2]] = s1;
+              s2a[a[2]] = s2;
+              s1arc[a[2]] = s1rc;
+              s2arc[a[2]] = s2rc;
+            }} END {{
+              for (i in u){{
+                keep="no";
+                if (g1[s1a[i]] == i && g2[s2a[i]] == i && g1[s1arc[i]] == i && g2[s2arc[i]] == i && s1a[i] != s1arc[i]){{
+                  keep="yes";
+                  print ">"i";"u[i]"\\n"s1a[i]s2a[i] > "{output.fa}";
+                }} else if (s1a[i] == s1arc[i]){{
+                  keep="tandem"
+                  print ">"i";"u[i]"\\n"s1a[i]s2a[i] > "{output.fa}";
+                }}
+                print i, n[i], s1a[i], s2a[i], keep, g1[s1a[i]]"/"g2[s2a[i]]"/"g1[s1arc[i]]"/"g2[s2arc[i]], u[i]
+              }}  
+            }}' > {output.ref}
+        """
+
+# UMI binning
+# extract strict UMI region
+rule umi_loc2:
+    input:
+        start = rules.umi_loc.output.start,
+        end = rules.umi_loc.output.end,
+    output:
+        start = OUTPUT_DIR + "/umi/{barcode}/bin/start.fastq",
+        end = OUTPUT_DIR + "/umi/{barcode}/bin/end.fastq",
+    conda: "../envs/seqkit.yaml"
+    params:
+        s = config["umi"]["s"],
+        e = config["umi"]["e"],
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/bin/umi_loc2.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/umi_loc2.txt"
+    shell:
+        """
+        seqkit subseq -r 1:{params.s} {input.start} 2> {log} 1> {output.start}
+        seqkit subseq -r -{params.e}:-1 {input.end} 2>> {log} 1> {output.end}
+        """
+
+# split UMI ref to capture UMI in correct orientation
+use rule umi_loc as split_umi_ref with:
+    input:
+        ref = rules.rm_chimera.output.fa
+    output:
+        start=OUTPUT_DIR + "/umi/{barcode}/bin/umi_ref_b1.fa",
+        end=OUTPUT_DIR + "/umi/{barcode}/bin/umi_ref_b2.fa",
+    params:
+        umi_loc = config["umi"]["len"] + config["umi"]["base_flex"],
+    log:
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/split_umi_ref.log"
+    benchmark:
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/split_umi_ref.txt"
+
+# Map UMIs to UMI references
+## Important settings:
+## -N : diasble iterative search. All possible hits are found.
+## -F 20 : Removes unmapped and reverse read matches. Keeps UMIs
+##         in correct orientations.
+use rule bwa_index as index_umi1 with:
+    input:
+        ref = rules.split_umi_ref.output.start,
+    output:
+        multiext(OUTPUT_DIR + "/umi/{barcode}/bin/umi_ref_b1.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+    log:
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/index_umi1.log"
+    benchmark:
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/index_umi1.txt"
+
+use rule bwa_index as index_umi2 with:
+    input:
+        ref = rules.split_umi_ref.output.end,
+    output:
+        multiext(OUTPUT_DIR + "/umi/{barcode}/bin/umi_ref_b2.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+    log:
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/index_umi2.log"
+    benchmark:
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/index_umi2.txt"
+
+use rule bwa_aln as aln_umi1 with:
+    input:
+        rules.index_umi1.output,
+        umip = rules.umi_loc2.output.start,
+        ref = rules.split_umi_ref.output.start,
+    output:
+        OUTPUT_DIR + "/umi/{barcode}/bin/umi1_map.sai",
+    params:
+        n = 3,
+    log:
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/aln_umi1.log"
+    benchmark:
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/aln_umi1.txt"
+
+use rule bwa_aln as aln_umi2 with:
+    input:
+        rules.index_umi2.output,
+        umip = rules.umi_loc2.output.end,
+        ref = rules.split_umi_ref.output.end,
+    output:
+        OUTPUT_DIR + "/umi/{barcode}/bin/umi2_map.sai",
+    params:
+        n = 3,
+    log:
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/aln_umi2.log"
+    benchmark:
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/aln_umi2.txt"
+
+use rule bwa_samse as samse_umi1 with:
+    input:
+        umip = rules.umi_loc2.output.start,
+        ref = rules.split_umi_ref.output.start,
+        sai = rules.aln_umi1.output,
+    output:
+        OUTPUT_DIR + "/umi/{barcode}/bin/umi1_map.sam",
+    params:
+        F = 20,
+    log: 
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/samse_umi1.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/samse_umi1.txt"
+
+use rule bwa_samse as samse_umi2 with:
+    input:
+        umip = rules.umi_loc2.output.end,
+        ref = rules.split_umi_ref.output.end,
+        sai = rules.aln_umi2.output,
+    output:
+        OUTPUT_DIR + "/umi/{barcode}/bin/umi2_map.sam",
+    params:
+        F = 20,
+    log: 
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/samse_umi2.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/samse_umi2.txt"
+
+
+
+
+   
+
