@@ -245,6 +245,7 @@ rule umi_filter:
         sam = rules.bwa_samse.output,
         ref = rules.rename_umi_centroid.output,
     output: OUTPUT_DIR + "/umi/{barcode}/umicf.fa",
+    conda: "../envs/umi.yaml"
     log: OUTPUT_DIR + "/logs/umi/{barcode}/umi_filter.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/umi_filter.txt"
     shell:
@@ -279,6 +280,7 @@ rule rm_chimera:
     output:
         ref = OUTPUT_DIR + "/umi/{barcode}/umi_ref.txt",
         fa = OUTPUT_DIR + "/umi/{barcode}/umi_ref.fa",
+    conda: "../envs/umi.yaml"
     params:
         umip_len = config["umi"]["len"] + config["umi"]["base_flex"],
     log: OUTPUT_DIR + "/logs/umi/{barcode}/rm_chimera.log"
@@ -334,7 +336,7 @@ rule rm_chimera:
                 }}
                 print i, n[i], s1a[i], s2a[i], keep, g1[s1a[i]]"/"g2[s2a[i]]"/"g1[s1arc[i]]"/"g2[s2arc[i]], u[i]
               }}  
-            }}' > {output.ref}
+            }}' > {output.ref} 2> {log}
         """
 
 # UMI binning
@@ -358,20 +360,32 @@ rule umi_loc2:
         seqkit subseq -r -{params.e}:-1 {input.end} 2> {log} | seqkit fq2fa -o {output.end} 2>> {log}
         """
 
-# split UMI ref to capture UMI in correct orientation
-use rule umi_loc as split_umi_ref with:
-    input:
-        ref = rules.rm_chimera.output.fa
+# split UMI ref to capture UMI in both orientations
+rule split_umi_ref:
+    input: rules.rm_chimera.output.fa
     output:
-        start=OUTPUT_DIR + "/umi/{barcode}/bin/barcodes_umi1.fa",
-        end=OUTPUT_DIR + "/umi/{barcode}/bin/barcodes_umi2.fa",
+        umi1=OUTPUT_DIR + "/umi/{barcode}/bin/barcodes_umi1.fa",
+        umi2=OUTPUT_DIR + "/umi/{barcode}/bin/barcodes_umi2.fa",
+    conda: "../envs/umi.yaml"
     params:
-        umi_loc = config["umi"]["len"] + config["umi"]["base_flex"],
-    log:
-        OUTPUT_DIR + "/logs/umi/{barcode}/bin/split_umi_ref.log"
-    benchmark:
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/split_umi_ref.txt"
+        umi_len = config["umi"]["len"] + config["umi"]["base_flex"],
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/bin/split_umi_ref.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/split_umi_ref.txt"
+    shell:
+        """
+        cat {input} <(seqtk seq -r {input} |\
+          awk 'NR%2==1{{print $0 "_rc"; getline; print}};') |\
+          awk 'NR%2==1{{
+               print $0 > "{output.umi1}";
+               print $0 > "{output.umi2}";  
+             }}
+             NR%2==0{{
+               print substr($0, 1, {params.umi_len}) > "{output.umi1}";
+               print substr($0, length($0) - {params.umi_len} + 1, {params.umi_len})  > "{output.umi2}";  
+             }}'
+        """
 
+shell: "seqkit replace -p '^(.+)$' -r 'umi{{nr}}' {input} -o {output} 2> {log}"
 # Map UMI barcode to regions containing UMI
 ## Important settings:
 ## -N : diasble iterative search. All possible hits are found.
@@ -401,7 +415,7 @@ use rule bwa_aln as aln_umi with:
     benchmark:
         OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/aln_{umi}.txt"
 
-use rule bwa_samse as samse_umi1 with:
+use rule bwa_samse as samse_umi with:
     input:
         umip = OUTPUT_DIR + "/umi/{barcode}/bin/barcodes_{umi}.fa",
         ref = OUTPUT_DIR + "/umi/{barcode}/bin/reads_{umi}.fa",
@@ -415,6 +429,217 @@ use rule bwa_samse as samse_umi1 with:
     benchmark: 
         OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/samse_{umi}.txt"
 
-
-   
+rule umi_binning:
+    input:
+        umi1 = OUTPUT_DIR + "/umi/{barcode}/bin/umi1_map.sam",
+        umi2 = OUTPUT_DIR + "/umi/{barcode}/bin/umi2_map.sam",
+    output:
+        bin_map = OUTPUT_DIR + "/umi/{barcode}/bin/umi_bin_map.txt",
+        stats = OUTPUT_DIR + "/umi/{barcode}/bin/umi_stats.txt",
+    conda: "../envs/umi.yaml"
+    params:
+        u = config["umi"]["u"],
+        U = config["umi"]["U"],
+        O = config["umi"]["O"],
+        N = config["umi"]["N"],
+        S = config["umi"]["S"],
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/bin/umi_binning.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/umi_binning.txt"
+    shell:
+        """
+        awk \
+        -v UME_MATCH_ERROR="{params.u}" \
+        -v UME_MATCH_ERROR_SD="{params.U}" \
+        -v RO_FRAC="{params.O}" \
+        -v MAX_BIN_SIZE="{params.N}"  \
+        -v BIN_CLUSTER_RATIO="{params.S}" \
+        '
+        NR==1 {{
+          print "[" strftime("%T") "] ### Read-UMI match filtering ###" > "/dev/stderr";
+          print "[" strftime("%T") "] Reading UMI1 match file..." > "/dev/stderr";
+        }}
+        # Read UMI match file
+        NR==FNR {{
+          # Extract data from optional fields
+          for (i=12; i <= NF; i++){{
+            # Find NM field and remove prefix (primary hit err)
+            if($i ~ /^NM:i:/){{sub("NM:i:", "", $i); perr = $i}};
+            # Find secondary hit field, remove prefix and split hits
+            if($i ~ /^XA:Z:/){{sub("XA:Z:", "", $i); split($i, shits, ";")}};
+          }}
+          # Add primary mapping to hit list
+          err1[$1][$3]=perr;
+          # Add secondary mapping to hit list
+          #Iterate over each hit
+          for (i in shits){{
+            # Split hit in subdata (read, pos, cigar, err)  
+            split(shits[i], tmp, ",");
+            # Add hit if non-empty, not seen before and not target reverse strand
+            if (tmp[1] != "" && !(tmp[1] in err1[$1]) && tmp[2] ~ "+"){{
+              err1[$1][tmp[1]] = tmp[4];
+            }}
+          }}
+          next;
+        }}
+        FNR==1 {{
+         print "[" strftime("%T") "] Reading UMI2 match file..." > "/dev/stderr";
+        }}
+        # Read UMI match file
+        {{
+          # Extract data from optional fields
+          for (i=12; i <= NF; i++){{
+            # Find NM field and remove prefix (primary hit err)
+            if($i ~ /^NM:i:/){{sub("NM:i:", "", $i); perr = $i}};
+            # Find secondary hit field and remove prefix
+            if($i ~ /^XA:Z:/){{sub("XA:Z:", "", $i); split($i, shits, ";")}};
+          }}
+          # Add primary mapping to hit list
+          err2[$1][$3]=perr;
+          # Add secondary mapping to hit list
+          # Split list of hits 
+          #Iterate over each hit
+          for (i in shits){{
+            # Split hit in subdata (read, pos, cigar, err)
+            split(shits[i], tmp, ",");
+            # Add hit if non-empty, not seen before and not target reverse strand
+            if (tmp[1] != "" && !(tmp[1] in err2[$1]) && tmp[2] ~ "+"){{
+              err2[$1][tmp[1]] = tmp[4];
+            }}
+          }}
+        }} END {{
+          print "[" strftime("%T") "] UMI match filtering..." > "/dev/stderr"; 
+          # Filter reads based on UMI match error
+          for (umi in err1){{    
+            for (read in err1[umi]){{
+              # Define vars
+              e1 = err1[umi][read];
+              e2 = err2[umi][read];
+              # Filter reads not matching both UMIs
+              if (e1 != "" && e2 != ""){{
+                # Filter based on mapping error 
+                if (e1 + e2 <= 6 && e1 <= 3 && e2 <= 3){{
+                  # Add read to bin list or replace bin assignment if error is lower
+                  if (!(read in match_err)){{
+                    match_umi[read] = umi;
+                    match_err[read] = e1 + e2;
+                  }} else if (match_err[read] > e1 + e2 ){{
+                    match_umi[read] = umi;
+                    match_err[read] = e1 + e2;
+                  }} 
+                }}
+              }}
+            }}
+          }}
+          print "[" strftime("%T") "] Read orientation filtering..." > "/dev/stderr";
+          # Count +/- strand reads
+          for (s in match_umi){{
+            UM=match_umi[s]
+            sub("_rc", "", UM)
+            # Read orientation stats
+            ROC=match(match_umi[s], /_rc/)
+            if (ROC != 0){{
+              umi_ro_plus[UM]++
+              roc[s]="+"
+            }} else {{
+              umi_ro_neg[UM]++
+              roc[s]="-"
+            }}
+            # Count reads per UMI bin
+            umi_n_raw[UM]++;
+          }}
+          
+          # Calculate read orientation fraction
+          for (u in umi_ro_plus){{
+            # Check read orientation fraction
+            if (umi_ro_plus[u] > 1 && umi_ro_neg[u] > 1){{
+              if (umi_ro_plus[u]/(umi_ro_neg[u]+umi_ro_plus[u]) < RO_FRAC ){{
+                rof_check[u]="rof_subset"
+                rof_sub_neg_n[u] = umi_ro_plus[u]*(1/RO_FRAC-1)
+                rof_sub_pos_n[u] = rof_sub_neg_n[u]
+              }} else if (umi_ro_neg[u]/(umi_ro_neg[u]+umi_ro_plus[u]) < RO_FRAC ){{
+                rof_check[u]="rof_subset"
+                rof_sub_neg_n[u]=umi_ro_neg[u]*(1/RO_FRAC-1)
+                rof_sub_pos_n[u]=rof_sub_neg_n[u]
+              }} else {{
+                rof_check[u]="rof_ok"
+                rof_sub_neg_n[u]=MAX_BIN_SIZE
+                rof_sub_pos_n[u]=MAX_BIN_SIZE
+              }}
+            }} else {{
+              rof_check[u]="rof_fail"
+            }}
+          }}
+          
+          # Subset reads
+          for (s in match_umi){{
+            UMI_NAME=match_umi[s]
+            sub("_rc", "", UMI_NAME)
+            if(roc[s] == "+"){{
+              if(rof_sub_pos_n[UMI_NAME]-- > 0){{
+                ror_filt[s]=UMI_NAME
+              }}
+            }} else if (roc[s] == "-"){{
+              if(rof_sub_neg_n[UMI_NAME]-- > 0){{
+                ror_filt[s]=UMI_NAME
+              }}
+            }}
+          }}
+          print "[" strftime("%T") "] UMI match error filtering..." > "/dev/stderr";
+          # Calculate UME stats
+          for (s in ror_filt){{
+            UM=ror_filt[s]
+            # Count matching reads
+            umi_n[UM]++;
+            # UMI match error stats
+            umi_me_sum[UM] += match_err[s]
+            umi_me_sq[UM] += (match_err[s])^2
+          }}
+          # Check UMI match error
+          for (u in umi_n){{
+            UME_MEAN[u] = umi_me_sum[u]/umi_n[u]
+            UME_SD[u] = sqrt((umi_me_sq[u]-umi_me_sum[u]^2/umi_n[u])/umi_n[u])
+            if (UME_MEAN[u] > UME_MATCH_ERROR || UME_SD[u] > UME_MATCH_ERROR_SD){{
+              ume_check[u] = "ume_fail"
+            }} else {{
+              ume_check[u] = "ume_ok"
+            }}
+          }}
+          print "[" strftime("%T") "] UMI bin/cluster size ratio filtering..." > "/dev/stderr";
+          for (u in umi_n){{
+            CLUSTER_SIZE=u
+            sub(".*;", "", CLUSTER_SIZE)
+            bcr[u]=umi_n_raw[u]/CLUSTER_SIZE
+            if (bcr[u] > BIN_CLUSTER_RATIO){{
+              bcr_check[u] = "bcr_fail"
+            }} else {{
+              bcr_check[u] = "bcr_ok"
+            }}
+          }}
+          # Print filtering stats
+          print "umi_name", "read_n_raw", "read_n_filt", "read_n_plus", "read_n_neg", \
+            "read_max_plus", "read_max_neg", "read_orientation_ratio", "ror_filter", \
+            "umi_match_error_mean", "umi_match_error_sd", "ume_filter", "bin_cluster_ratio", \
+            "bcr_filter" > "{output.stats}"
+          for (u in umi_n){{
+            print u, umi_n_raw[u], umi_n[u], umi_ro_plus[u], umi_ro_neg[u], \
+              rof_sub_pos_n[u] + umi_ro_plus[u], rof_sub_neg_n[u] + umi_ro_neg[u], rof_check[u], \
+              UME_MEAN[u], UME_SD[u], ume_check[u], bcr[u], bcr_check[u]\
+              > "{output.stats}"
+          }}
+        
+          print "[" strftime("%T") "] Print UMI matches..." > "/dev/stderr"; 
+          for (s in ror_filt){{
+            UMI_NAME=ror_filt[s]
+            if( \
+                ume_check[UMI_NAME] == "ume_ok" && \
+                rof_check[UMI_NAME] == "rof_ok" && \
+                bcr_check[UMI_NAME] == "bcr_ok" \
+            ){{print UMI_NAME, s, match_err[s]}}
+          }}
+          # Print to terminal
+          print "[" strftime("%T") "] Done." > "/dev/stderr"; 
+        }}
+        ' {input.umi1} {input.umi2} > {output.bin_map} 2> {log}
+        """
+ 
 

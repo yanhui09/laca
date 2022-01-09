@@ -1,0 +1,7 @@
+name: umi
+channels:
+  - bioconda
+  - anaconda
+dependencies:
+  - seqtk
+  - gawk
