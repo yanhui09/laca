@@ -7,7 +7,7 @@ checkpoint guppy_demultiplex:
         guppy=config["guppy"],
         barcode_kits=config["barcode_kits"],
     shell:
-        "{params.guppy}/guppy_barcoder -i {input} -s {output} -t {threads} --barcode_kits {params.barcode_kits} 2>{log}"
+        "{params.guppy}/guppy_barcoder -i {input} -s {output} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}"
 
 # collect demultiplexed files
 rule collect_fastq:
