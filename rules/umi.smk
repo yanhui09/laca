@@ -642,4 +642,30 @@ rule umi_binning:
         ' {input.umi1} {input.umi2} > {output.bin_map} 2> {log}
         """
  
+# split reads by umi bins
+checkpoint bin_info:
+    input: rules.umi_binning.output.bin_map
+    output: directory(OUTPUT_DIR + "/umi/{barcode}/bin/binned")
+    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/bin/bin_info.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/bin/bin_info.txt"
+    run:
+        import pandas as pd
+        df = pd.read_csv(input[0], sep=" ", header=None, usecols=[0,1], names=["umi","read"])
+        df.umi = [x.split(";")[0] for x in df.umi]
+        os.makedirs(output[0])
+        for umi in set(df.umi):
+            df.loc[df.umi == umi, "read"].to_csv(output[0] + "/" + str(umi) + ".txt", sep="\t", header=False, index=False)
+        
+use rule split_by_cluster as split_by_umi_bin with:
+    input: 
+        clusters = OUTPUT_DIR + "/umi/{barcode}/bin/binned/{umi_id}.txt",
+        fastq = rules.qfilter_umi.output,
+    output:
+        OUTPUT_DIR + "/umi/{barcode}/bin/binned/{umi_id}.fastq"
+    log:
+        OUTPUT_DIR + "/logs/kmerBin/{barcode}/bin/split_by_{umi_id}.log"
+    benchmark:
+        OUTPUT_DIR + "/benchmarks/kmerBi/{barcode}/bin/split_by_{umi_id}.txt"
+
+
 
