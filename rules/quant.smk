@@ -76,9 +76,9 @@ rule minimap_rep_seqs:
     threads: config["threads"]["normal"]
     shell:
         """
-        minimap2 -t {threads} -ax {params.x} --secondary=no {input.mmi} {input.fq} | \
+        minimap2 -t {threads} -ax {params.x} --secondary=no {input.mmi} {input.fq} 2> {log} | \
         grep -v "^@" | cat {input.dict} - | \
-        samtools view -F 3584 -b - > {output} 2>{log}
+        samtools view -F 3584 -b - > {output} 2>> {log}
         """
 
 rule sort:
