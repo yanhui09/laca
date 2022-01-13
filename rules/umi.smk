@@ -115,7 +115,6 @@ rule cluster_umi:
     input: rules.concat_umi.output
     output:
         centroid=OUTPUT_DIR + "/umi/{barcode}/centroid.fasta",
-        consensus=OUTPUT_DIR + "/umi/{barcode}/consensus.fasta",
         uc=OUTPUT_DIR + "/umi/{barcode}/uc.txt"  
     log: OUTPUT_DIR + "/logs/umi/{barcode}/cluster_umi.log"
     threads: config["threads"]["normal"]
@@ -128,8 +127,7 @@ rule cluster_umi:
         "vsearch "
         "--cluster_fast {input} --clusterout_sort -id {params.cl_identity} "
         "--clusterout_id --sizeout -uc {output.uc} "
-        "--centroids {output.centroid} --consout {output.consensus} "
-        "--minseqlength {params.min_len} --maxseqlength {params.max_len} "
+        "--centroids {output.centroid} --minseqlength {params.min_len} --maxseqlength {params.max_len} "
         "--qmask none --threads {threads} "
         "--strand both > {log} 2>&1"
 
@@ -667,5 +665,120 @@ use rule split_by_cluster as split_by_umi_bin with:
     benchmark:
         OUTPUT_DIR + "/benchmarks/kmerBi/{barcode}/bin/split_by_{umi_id}.txt"
 
+# find the seed read
+rule fq2fa_umi:
+    input: rules.split_by_umi_bin.output
+    output: OUTPUT_DIR + "/umi/{barcode}/bin/binned/{umi_id}.fna"
+    conda: "../envs/seqkit.yaml"
+    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/bin/fq2fa_{umi_id}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/bin/fq2fa_{umi_id}.txt"
+    shell: "seqkit fq2fa {input} -o {output} 2> {log}"
 
+rule get_centroids_umifa:
+    input: rules.fq2fa_umi.output
+    output: OUTPUT_DIR + "/umi/{barcode}/bin/binned/{umi_id}_centroid.fna",
+    conda: "../envs/vsearch.yaml"
+    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/bin/get_centroids_{umi_id}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/bin/get_centroids_{umi_id}.txt"
+    threads: config["threads"]["normal"]
+    shell:
+        """
+        vsearch --cluster_fast {input} --clusterout_sort -id 0.75 --clusterout_id --sizeout \
+        --centroids {output} --qmask none --threads {threads} --strand both > {log} 2>&1
+        """
 
+rule take_seedfa:
+    input: rules.get_centroids_umifa.output
+    output: OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/draft/raw.fna"
+    conda: "../envs/seqkit.yaml"
+    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/bin/polish/{umi_id}/take_seedfa.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/bin/polish/{umi_id}/take_seedfa.txt"
+    shell: "seqkit head -n 1 {input} 2> {log} | seqkit replace -p '^(.+)$' -r 'seed' -o {output} 2>> {log}"  
+
+# align seed with raw reads
+# reused in racon iterations
+use rule minimap2polish as minimap2polish_umi with:
+    input: 
+        ref = OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/draft/{assembly}.fna",
+        fastq = OUTPUT_DIR + "/umi/{barcode}/bin/binned/{umi_id}.fastq",
+    output: 
+        OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/draft/{assembly}.paf",
+    message: 
+        "Polish umi [id={wildcards.umi_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
+    log: 
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/polish/{umi_id}/minimap2polish/{assembly}.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/polish/{umi_id}/minimap2polish/{assembly}.txt"
+
+def get_racon_input_umi(wildcards):
+    # adjust input based on racon iteritions
+    if int(wildcards.iter) == 1:
+        prefix = OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/draft/raw"
+        return(prefix + ".paf", prefix + ".fna")
+    else:
+        prefix = OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/draft/racon_{iter}".format(barcode=wildcards.barcode,
+         umi_id=wildcards.umi_id, iter=str(int(wildcards.iter) - 1))
+        return(prefix + ".paf", prefix + ".fna")
+
+use rule racon as racon_umi with:
+    input:
+        OUTPUT_DIR + "/umi/{barcode}/bin/binned/{umi_id}.fastq",
+        get_racon_input_umi,
+    output: 
+        OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/draft/racon_{iter}.fna"
+    message: 
+        "Polish umi draft [id={wildcards.umi_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
+    log: 
+        OUTPUT_DIR +"/logs/umi/{barcode}/bin/polish/{umi_id}/racon/round{iter}.log"
+    benchmark: 
+        OUTPUT_DIR +"/benchmarks/umi/{barcode}/bin/polish/{umi_id}/racon/round{iter}.txt"
+
+use rule medaka_consensus as medaka_consensus_umi with:
+    input:
+        fna = expand(OUTPUT_DIR + "/umi/{{barcode}}/bin/polish/{{umi_id}}/draft/racon_{iter}.fna", 
+        iter = config["racon"]["iter"]),
+        fastq = OUTPUT_DIR + "/umi/{barcode}/bin/binned/{umi_id}.fastq",
+    output: 
+        fasta = OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/medaka/consensus.fasta",
+        _dir = directory(OUTPUT_DIR + "/umi/{barcode}/bin/polish/{umi_id}/medaka"),
+    message: 
+        "Generate umi consensus [id={wildcards.umi_id}] with medaka [{wildcards.barcode}]"
+    log: 
+        OUTPUT_DIR + "/logs/umi/{barcode}/bin/polish/{umi_id}/medaka.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/umi/{barcode}/bin/polish/{umi_id}/medaka.txt"
+
+def get_umiCon(wildcards):
+    barcodes = get_demultiplexed(wildcards)
+
+    fnas = []
+    for i in barcodes:
+          uids = glob_wildcards(checkpoints.bin_info.get(barcode=i).output[0] + "/{uid}.txt").uid
+          for k in uids:
+              fnas.append(OUTPUT_DIR + "/umi/{barcode}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=i, uid=k))
+    return fnas
+
+rule collect_umiCon:
+    input: lambda wc: get_umiCon(wc),
+    output: OUTPUT_DIR + "/umi/umiCon_full.fna"
+    run: 
+        with open(output[0], "w") as out:
+            for i in input:
+                barcode_i, uid_i = [ i.split("/")[index] for index in [-5, -2] ]
+                with open(i, "r") as inp:
+                    for line in inp:
+                        if line.startswith(">"):
+                            line = ">" + barcode_i + "_" + uid_i + "\n"
+                        out.write(line)
+
+# trim primers 
+use rule trim_primers as trim_umiCon with:
+    input: 
+        rules.collect_umiCon.output
+    output: 
+        OUTPUT_DIR + "/umiCon.fna"
+    log: 
+        OUTPUT_DIR + "/logs/umi/trim_umiCon.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/umi/trim_umiCon.txt"
+    
