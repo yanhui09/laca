@@ -28,12 +28,12 @@ rule all:
     input:
         OUTPUT_DIR + "/.demultiplex_DONE",
         OUTPUT_DIR + "/.qc_DONE",
-        OUTPUT_DIR + "/.kmerClust_DONE",
+        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/.clustCon_DONE",
         OUTPUT_DIR + "/.isONclustCon_DONE",
         OUTPUT_DIR + "/.isONcorCon_DONE",
         OUTPUT_DIR + "/.quant_DONE",
-        OUTPUT_DIR + "/.taxonomy_DONE",
+        OUTPUT_DIR + "/.taxa_DONE",
 
 include: "rules/demultiplex.smk"
 include: "rules/qc.smk"
@@ -47,7 +47,7 @@ include: "rules/tree.smk"
 include: "rules/umi.smk"
 
 rule demultiplex:
-    input: lambda wc: expand(OUTPUT_DIR + "/raw/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    input: lambda wc: expand(OUTPUT_DIR + "/qc/{barcode}.fastq", barcode=get_demultiplexed(wc))
     output: temp(touch(OUTPUT_DIR + "/.demultiplex_DONE"))
 
 rule qc:

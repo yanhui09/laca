@@ -25,7 +25,7 @@ rule databases_mmseqs2:
 # the predefined one do not have taxonomy information
 rule update_taxdump:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
-    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/taxdump")),
+    output: directory(DATABASE_DIR + "/mmseqs2/customDB/taxdump"),
     log: OUTPUT_DIR + "/logs/taxonomy/update_taxdump.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/update_taxdump.txt"
     shell:
@@ -36,7 +36,7 @@ rule update_taxdump:
 
 rule update_blastdb:
     input: OUTPUT_DIR + "/rep_seqs.fasta"
-    output: temp(directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb")),
+    output: directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb"),
     conda: "../envs/rsync.yaml"
     params:
         blastdb_alias = config["mmseqs"]["blastdb_alias"],
@@ -51,8 +51,8 @@ rule update_blastdb:
 rule blastdbcmd:
     input: rules.update_blastdb.output
     output:
-        fna = temp(DATABASE_DIR + "/mmseqs2/customDB/custom.fna"),
-        taxidmapping = temp(DATABASE_DIR + "/mmseqs2/customDB/custom.taxidmapping"),
+        fna = DATABASE_DIR + "/mmseqs2/customDB/custom.fna",
+        taxidmapping = DATABASE_DIR + "/mmseqs2/customDB/custom.taxidmapping",
     conda: "../envs/blast.yaml"
     params:
         db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs"]["blastdb_alias"],
@@ -120,7 +120,7 @@ def get_seqTaxDB(blastdb_alias, db):
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
                 "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"])
 
-rule taxonomy_mmseqs2:
+rule classify_mmseqs2:
     input:
         ancient(get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[-0]),
         queryDB = rules.createdb_query.output[0],
@@ -139,15 +139,14 @@ rule taxonomy_mmseqs2:
     threads: config["threads"]["large"]
     shell:
         "mmseqs taxonomy {input.queryDB} {input.targetDB} {params.resultDB} {output.tmp}"
-       # " --lca-ranks species,genus,family,order,class,phylum,superkingdom"
         " --search-type 3 --lca-mode {params.lca_mode} --tax-lineage 1"
         " --threads {threads} 1> {log} 2>&1"
 
 rule createtsv:
     input:
         queryDB = rules.createdb_query.output[0],
-        resultDB = rules.taxonomy_mmseqs2.output.resultDB,
-    output: OUTPUT_DIR + "/taxonomy/mmseqs2/taxonomy.tsv",
+        resultDB = rules.classify_mmseqs2.output.resultDB,
+    output: temp(OUTPUT_DIR + "/taxonomy/mmseqs2/output.tsv"),
     message: "Creating tsv file for taxonomy"
     conda: "../envs/mmseqs2.yaml"
     params: 
@@ -159,6 +158,39 @@ rule createtsv:
         "mmseqs createtsv  {input.queryDB} {params.resultDB} {output}"
         " --full-header --threads {threads}"
         " 1> {log} 2>&1"
+
+# use taxonkit to get NCBI taxonomy
+rule lineage_taxonkit_mmseqs2:
+    input:
+        taxdump = ancient(rules.update_taxdump.output),
+        tsv = rules.createtsv.output,
+    output: OUTPUT_DIR + "/taxonomy/mmseqs2/lineage.tsv",
+    conda: "../envs/taxonkit.yaml"
+    params:
+        f = 2,
+    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/lineage_taxonkit.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/lineage_taxonkit.txt"
+    threads: config["threads"]["normal"]
+    shell:
+        "cut -f {params.f} {input.tsv} | sort -u | taxonkit reformat -I 1 -P -j {threads}"
+        " --data-dir {input.taxdump} -o {output} 1> {log} 2>&1"
+
+rule taxonomy_mmseqs2:
+    input:
+        rules.createtsv.output,
+        rules.lineage_taxonkit_mmseqs2.output,
+    output: OUTPUT_DIR + "/taxonomy/mmseqs2/taxonomy.tsv"
+    run:
+        import pandas as pd
+        df = pd.read_csv(input[0], sep = "\t", header = None)
+        df = df.iloc[:, 0:2]
+        df.columns = ['kOTUid', 'taxid']
+        tax = pd.read_csv(input[1], sep = "\t", header = None)
+        tax.columns = ['taxid', 'lineage']
+        df = df.merge(tax, how = "left",  on = 'taxid')
+        df = df[['kOTUid', 'lineage']]
+        df.rename(columns={'kOTUid': 'kOTU_ID', 'lineage': 'taxonomy'}, inplace=True)
+        df.to_csv(output[0], sep = "\t", index = False, header = False)
 
 # add kraken classifier
 rule build_database:
@@ -195,23 +227,23 @@ rule classify_kraken2:
         " {params.classify_cmd} 1> {log} 2>&1"
 
 # use taxonkit to get NCBI taxonomy
-rule lineage_taxonkit:
+use rule lineage_taxonkit_mmseqs2 as lineage_taxonkit_kraken2 with:
     input:
         taxdump = ancient(rules.update_taxdump.output),
         tsv = rules.classify_kraken2.output,
-    output: OUTPUT_DIR + "/taxonomy/kraken2/lineage.tsv",
-    conda: "../envs/taxonkit.yaml"
-    log: OUTPUT_DIR + "/logs/taxonomy/kraken2/lineage_taxonkit.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/lineage_taxonkit.txt"
-    threads: config["threads"]["normal"]
-    shell:
-        "cut -f 3 {input.tsv} | sort -u | taxonkit reformat -I 1 -P -j {threads}"
-        " --data-dir {input.taxdump} -o {output} 1> {log} 2>&1"
+    output: 
+        OUTPUT_DIR + "/taxonomy/kraken2/lineage.tsv",
+    params:
+        f = 3,
+    log: 
+        OUTPUT_DIR + "/logs/taxonomy/kraken2/lineage_taxonkit.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/lineage_taxonkit.txt"
 
 rule taxonomy_kraken2:
     input:
         rules.classify_kraken2.output,
-        rules.lineage_taxonkit.output,
+        rules.lineage_taxonkit_kraken2.output,
     output: OUTPUT_DIR + "/taxonomy/kraken2/taxonomy.tsv"
     run:
         import pandas as pd

@@ -1,10 +1,11 @@
 name: q2_phylogen
 channels:
   - qiime2
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - q2-alignment
   - q2-phylogeny
   - q2cli
+  - h5py<3.2
