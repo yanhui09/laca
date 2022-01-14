@@ -117,7 +117,7 @@ def get_fq4Con_umi(kmerbin = True):
 
 # trim umi region
 rule umi_loc:
-    input: get_fq4Con(config["kmerbin"])
+    input: get_fq4Con_umi(config["kmerbin"])
     output:
         start = OUTPUT_DIR + "/umi/{barcode}/{c}/start.fastq",
         end = OUTPUT_DIR + "/umi/{barcode}/{c}/end.fastq",
