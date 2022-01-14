@@ -775,7 +775,7 @@ def get_racon_input_umi(wildcards):
         return(prefix + ".paf", prefix + ".fna")
     else:
         prefix = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}".format(barcode=wildcards.barcode,
-         umi_id=wildcards.umi_id, iter=str(int(wildcards.iter) - 1))
+         c=wildcards.c, umi_id=wildcards.umi_id, iter=str(int(wildcards.iter) - 1))
         return(prefix + ".paf", prefix + ".fna")
 
 use rule racon as racon_umi with:
@@ -819,7 +819,7 @@ def get_umiCon(wildcards, kmerbin = True):
         for j in cs:
             uids = glob_wildcards(checkpoints.bin_info.get(barcode=i, c=j).output[0] + "/{uid}.txt").uid
             for k in uids:
-                fnas.append(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=i, uid=k))
+                fnas.append(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=i, c=j, uid=k))
     return fnas
 
 rule collect_umiCon:
