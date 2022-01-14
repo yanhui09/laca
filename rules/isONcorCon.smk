@@ -65,6 +65,7 @@ rule IsoCon:
     
 def get_isONcorCon(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
+    check_val("kmerbin", kmerbin, bool)
     if pooling == True:
         barcodes = ["pooled"]
     else:
