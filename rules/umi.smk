@@ -817,13 +817,13 @@ def get_umiCon(wildcards, kmerbin = True):
         else:
             cs = ["all"]
         for j in cs:
-            uids = glob_wildcards(checkpoints.bin_info.get(barcode=i).output[0] + "/{uid}.txt").uid
+            uids = glob_wildcards(checkpoints.bin_info.get(barcode=i, c=j).output[0] + "/{uid}.txt").uid
             for k in uids:
                 fnas.append(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=i, uid=k))
     return fnas
 
 rule collect_umiCon:
-    input: lambda wc: get_umiCon(wc),
+    input: lambda wc: get_umiCon(wc, kmerbin = config["kmerbin"]),
     output: OUTPUT_DIR + "/umi/umiCon_full.fna"
     run: 
         with open(output[0], "w") as out:
