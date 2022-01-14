@@ -45,7 +45,7 @@ cutadapt:
 
 ##############################################################
 # kmer binning
-kmerbin: FALSE
+kmerbin: TRUE
 # Bool, whether to bin or not; TRUE is highly recommened in clustCon mode, considering the massive pairwise alignments inside.
 kmer_size: 5
 # umap reduction and hdbscan cluster

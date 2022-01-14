@@ -331,9 +331,36 @@ rule umi_filter:
         > {output} 2> {log} 
         """
 
+def get_umifile(wildcards, kmerbin = True):
+    check_val("kmerbin", kmerbin, bool)
+    barcodes = get_demultiplexed(wildcards)
+
+    bin2clusters = []
+    for i in barcodes:
+        if kmerbin == True:
+            cs = glob_wildcards(checkpoints.cluster_info_umi.get(barcode=i).output[0] + "/{c}.txt").c
+        else:
+            cs = ["all"]
+        for c in cs:
+            bin2clusters.append(OUTPUT_DIR + "/umi/{barcode}/{c}/umicf.fa".format(barcode=i, c=c))
+    return bin2clusters
+ 
+checkpoint umi_check1:
+    input: lambda wc: get_umifile(wc, kmerbin = config["kmerbin"])
+    output: directory(OUTPUT_DIR + "/umi/check1")
+    run:
+        import shutil
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input):
+            num_lines = sum(1 for line in open(i))
+            if num_lines > 1:
+                barcode, c = [ i.split("/")[index] for index in [-3, -2] ]
+                shutil.copy(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
+
 # rm potential chimera
 rule rm_chimera:
-    input: rules.umi_filter.output
+    input: OUTPUT_DIR + "/umi/check1/{barcode}_{c}.fa",
     output:
         ref = OUTPUT_DIR + "/umi/{barcode}/{c}/umi_ref.txt",
         fa = OUTPUT_DIR + "/umi/{barcode}/{c}/umi_ref.fa",
@@ -785,7 +812,7 @@ use rule racon as racon_umi with:
     output: 
         OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}.fna"
     message: 
-        "Polish umi draft [id={wildcards.umi_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
+        "Polish {wildcards.c} draft [id={wildcards.umi_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
     log: 
         OUTPUT_DIR +"/logs/umi/{barcode}/{c}/bin/polish/{umi_id}/racon/round{iter}.log"
     benchmark: 
@@ -800,30 +827,25 @@ use rule medaka_consensus as medaka_consensus_umi with:
         fasta = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka/consensus.fasta",
         _dir = directory(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka"),
     message: 
-        "Generate umi consensus [id={wildcards.umi_id}] with medaka [{wildcards.barcode}]"
+        "Generate umi consensus [id={wildcards.umi_id}] in {wildcards.c} with medaka [{wildcards.barcode}]"
     log: 
         OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.log"
     benchmark: 
         OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.txt"
 
-def get_umiCon(wildcards, kmerbin = True):
-    check_val("kmerbin", kmerbin, bool)
-    barcodes = get_demultiplexed(wildcards)
-
+def get_umiCon(wildcards):
+    b_cs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{b_c}.fa").b_c
+    
     fnas = []
-    for i in barcodes:
-        if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cluster_info_umi.get(barcode=i).output[0] + "/{c}.txt").c
-        else:
-            cs = ["all"]
-        for j in cs:
-            uids = glob_wildcards(checkpoints.bin_info.get(barcode=i, c=j).output[0] + "/{uid}.txt").uid
-            for k in uids:
-                fnas.append(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=i, c=j, uid=k))
+    for i in b_cs:
+        b, c = i.split("_")
+        uids = glob_wildcards(checkpoints.bin_info.get(barcode=b, c=c).output[0] + "/{uid}.txt").uid
+        for j in uids:
+            fnas.append(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=b, c=c, uid=j))
     return fnas
 
 rule collect_umiCon:
-    input: lambda wc: get_umiCon(wc, kmerbin = config["kmerbin"]),
+    input: lambda wc: get_umiCon(wc),
     output: OUTPUT_DIR + "/umi/umiCon_full.fna"
     run: 
         with open(output[0], "w") as out:
