@@ -828,11 +828,11 @@ rule collect_umiCon:
     run: 
         with open(output[0], "w") as out:
             for i in input:
-                barcode_i, uid_i = [ i.split("/")[index] for index in [-5, -2] ]
+                barcode_i, c_i, uid_i = [ i.split("/")[index] for index in [-7, -6, -3] ]
                 with open(i, "r") as inp:
                     for line in inp:
                         if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + uid_i + "\n"
+                            line = ">" + barcode_i + "_" + c_i + "_" + uid_i + "\n"
                         out.write(line)
 
 # trim primers 
