@@ -175,9 +175,93 @@ rule concat_umi:
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/concat_umi.txt"
     shell: "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -o {output} 2>> {log}"
 
+def get_umifile1(wildcards, kmerbin = True):
+    check_val("kmerbin", kmerbin, bool)
+    barcodes = get_demultiplexed(wildcards)
+
+    bin2clusters = []
+    for i in barcodes:
+        if kmerbin == True:
+            cs = glob_wildcards(checkpoints.cluster_info_umi.get(barcode=i).output[0] + "/{c}.txt").c
+        else:
+            cs = ["all"]
+        for c in cs:
+            bin2clusters.append(OUTPUT_DIR + "/umi/{barcode}/{c}/umi.fasta".format(barcode=i, c=c))
+    return bin2clusters
+ 
+checkpoint umi_check1:
+    input: lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"])
+    output: directory(OUTPUT_DIR + "/umi/check1")
+    run:
+        import shutil
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input):
+            num_lines = sum(1 for line in open(i))
+            if num_lines > 1:
+                barcode, c = [ i.split("/")[index] for index in [-3, -2] ]
+                shutil.copy(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
+
+# check UMI pattern
+# generate grep pattern for UMI regions
+def get_umi_pattern(umi_pattern, length):
+    # build a hash table for IUPAC codes
+    iupac = {
+        "A": "A",
+        "C": "C",
+        "G": "G",
+        "T": "T",
+        "R": "AG",
+        "Y": "CT",
+        "S": "GC",
+        "W": "AT",
+        "K": "GT",
+        "M": "AC",
+        "B": "CGT",
+        "D": "AGT",
+        "H": "ACT",
+        "V": "ACG",
+        "N": "ACGT"
+    }
+    # rm whitespaces
+    umi_pattern = umi_pattern.replace(" ", "")
+
+    # check the length of umi pattern
+    n = len(umi_pattern)
+    if n != 2*length:
+        raise ValueError("UMI pattern length is not equal to your input.\t\nPlease check your `len` and `umi_pattern` in config.yaml .")
+    
+    grep_pattern = ""
+    iloc = 1
+    count = 1
+    while iloc < n:
+        if umi_pattern[iloc] != umi_pattern[iloc-1]:
+            # check if the IUPAC code
+            if umi_pattern[iloc] not in iupac or umi_pattern[iloc-1] not in iupac:
+                raise ValueError("UMI pattern contains non-IUPAC code.\t\nPlease check your `umi_pattern` in config.yaml .")
+            grep_pattern += "[" + iupac[umi_pattern[iloc-1]] + "]{" + str(count) + "}" 
+            count = 1
+        else:
+            count += 1
+
+        if iloc == n-1:
+            grep_pattern += "[" + iupac[umi_pattern[iloc]] + "]{" + str(count) + "}"
+        iloc += 1
+    grep_pattern = "'" + grep_pattern + "'" # escape `{}` with `'{}'` 
+    return grep_pattern
+
+rule check_umi:
+    input: OUTPUT_DIR + "/umi/check1/{barcode}_{c}.fa"
+    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umif.fasta"
+    params:
+        pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
+    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/check_umi.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/check_umi.txt"
+    shell: "grep -B1 -E {params.pattern} {input} > {output} 2> {log}"
+
 # cluster UMIs
 rule cluster_umi:
-    input: rules.concat_umi.output
+    input: rules.check_umi.output
     output: OUTPUT_DIR + "/umi/{barcode}/{c}/centroid.fasta"
     conda: "../envs/vsearch.yaml"
     params:
@@ -331,23 +415,17 @@ rule umi_filter:
         > {output} 2> {log} 
         """
 
-def get_umifile(wildcards, kmerbin = True):
-    check_val("kmerbin", kmerbin, bool)
-    barcodes = get_demultiplexed(wildcards)
-
+def get_umifile2(wildcards, kmerbin = True):
+    b_cs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{b_c}.fa").b_c
     bin2clusters = []
-    for i in barcodes:
-        if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cluster_info_umi.get(barcode=i).output[0] + "/{c}.txt").c
-        else:
-            cs = ["all"]
-        for c in cs:
-            bin2clusters.append(OUTPUT_DIR + "/umi/{barcode}/{c}/umicf.fa".format(barcode=i, c=c))
+    for i in b_cs:
+        b, c = i.split("_")
+        bin2clusters.append(OUTPUT_DIR + "/umi/{barcode}/{c}/umicf.fa".format(barcode=b, c=c))
     return bin2clusters
  
-checkpoint umi_check1:
-    input: lambda wc: get_umifile(wc, kmerbin = config["kmerbin"])
-    output: directory(OUTPUT_DIR + "/umi/check1")
+checkpoint umi_check2:
+    input: lambda wc: get_umifile2(wc, kmerbin = config["kmerbin"])
+    output: directory(OUTPUT_DIR + "/umi/check2")
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -360,7 +438,7 @@ checkpoint umi_check1:
 
 # rm potential chimera
 rule rm_chimera:
-    input: OUTPUT_DIR + "/umi/check1/{barcode}_{c}.fa",
+    input: OUTPUT_DIR + "/umi/check2/{barcode}_{c}.fa",
     output:
         ref = OUTPUT_DIR + "/umi/{barcode}/{c}/umi_ref.txt",
         fa = OUTPUT_DIR + "/umi/{barcode}/{c}/umi_ref.fa",
@@ -834,7 +912,7 @@ use rule medaka_consensus as medaka_consensus_umi with:
         OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.txt"
 
 def get_umiCon(wildcards):
-    b_cs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{b_c}.fa").b_c
+    b_cs = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{b_c}.fa").b_c
     
     fnas = []
     for i in b_cs:
