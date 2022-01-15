@@ -138,19 +138,19 @@ rule umi_loc:
 # https://github.com/SorenKarst/longread_umi/blob/00302fd34cdf7a5b8722965f3f6c581acbafd70c/scripts/umi_binning.sh#L193
 rule extract_umi:
     input:
-        start=rules.umi_loc.output.start,
-        end=rules.umi_loc.output.end,
+        start = rules.umi_loc.output.start,
+        end = rules.umi_loc.output.end,
     output:
-        umi1=OUTPUT_DIR + "/umi/{barcode}/{c}/umi1.fastq",
-        umi2=OUTPUT_DIR + "/umi/{barcode}/{c}/umi2.fastq",
+        umi1 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi1.fastq",
+        umi2 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi2.fastq",
     conda: "../envs/cutadapt.yaml"
     params:
-        f=f_pattern,
-        r=r_pattern,
-        max_err=config["umi"]["max_err"],
-        min_overlap=config["umi"]["min_overlap"],
-        min_len=config["umi"]["len"] - config["umi"]["base_flex"],
-        max_len=config["umi"]["len"] + config["umi"]["base_flex"],
+        f = f_pattern,
+        r = r_pattern,
+        max_err = config["umi"]["max_err"],
+        min_overlap = config["umi"]["min_overlap"],
+        min_len = config["umi"]["len"],
+        max_len = config["umi"]["len"],
     log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/extract_umi.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/extract_umi.txt"
     threads: config["threads"]["normal"]
@@ -167,8 +167,8 @@ rule extract_umi:
 # combine UMI sequences
 rule concat_umi:
     input:
-        umi1=rules.extract_umi.output.umi1,
-        umi2=rules.extract_umi.output.umi2,
+        umi1 = rules.extract_umi.output.umi1,
+        umi2 = rules.extract_umi.output.umi2,
     output: OUTPUT_DIR + "/umi/{barcode}/{c}/umi.fasta"
     conda: "../envs/seqkit.yaml"
     log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/concat_umi.log"
@@ -266,8 +266,8 @@ rule cluster_umi:
     conda: "../envs/vsearch.yaml"
     params:
         cl_identity = config["umi"]["cl_identity"],
-        min_len = 2*(config["umi"]["len"] - config["umi"]["base_flex"]),
-        max_len = 2*(config["umi"]["len"] + config["umi"]["base_flex"]),
+        min_len = 2*config["umi"]["len"],
+        max_len = 2*config["umi"]["len"],
     log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/cluster_umi.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/cluster_umi.txt"
     threads: config["threads"]["normal"]
@@ -306,18 +306,18 @@ rprimers_trim = rprimer1_trim + ' ' + rprimer2_trim
 
 rule extract_umip:
     input:
-        start=rules.umi_loc.output.start,
-        end=rules.umi_loc.output.end,
+        start = rules.umi_loc.output.start,
+        end = rules.umi_loc.output.end,
     output:
-        umi1=OUTPUT_DIR + "/umi/{barcode}/{c}/umi1p.fastq",
-        umi2=OUTPUT_DIR + "/umi/{barcode}/{c}/umi2p.fastq",
+        umi1 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi1p.fastq",
+        umi2 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi2p.fastq",
     params:
-        f=fprimers_trim,
-        r=rprimers_trim,
-        max_err=config["umi"]["max_err"],
-        min_overlap=config["umi"]["min_overlap"],
-        min_len=config["umi"]["len"] - config["umi"]["base_flex"],
-        max_len=config["umi"]["len"] + config["umi"]["base_flex"],
+        f = fprimers_trim,
+        r = rprimers_trim,
+        max_err = config["umi"]["max_err"],
+        min_overlap = config["umi"]["min_overlap"],
+        min_len = config["umi"]["len"],
+        max_len = config["umi"]["len"],
     log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/extract_umip.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/extract_umip.txt"
     threads: config["threads"]["normal"]
@@ -444,7 +444,7 @@ rule rm_chimera:
         fa = OUTPUT_DIR + "/umi/{barcode}/{c}/umi_ref.fa",
     conda: "../envs/umi.yaml"
     params:
-        umip_len = config["umi"]["len"] + config["umi"]["base_flex"],
+        umip_len = config["umi"]["len"],
     log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/rm_chimera.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/rm_chimera.txt"
     shell:
@@ -526,11 +526,11 @@ rule umi_loc2:
 rule split_umi_ref:
     input: rules.rm_chimera.output.fa
     output:
-        umi1=OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_umi1.fa",
-        umi2=OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_umi2.fa",
+        umi1 = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_umi1.fa",
+        umi2 = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_umi2.fa",
     conda: "../envs/umi.yaml"
     params:
-        umi_len = config["umi"]["len"] + config["umi"]["base_flex"],
+        umi_len = config["umi"]["len"],
     log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/split_umi_ref.log"
     benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/split_umi_ref.txt"
     shell:

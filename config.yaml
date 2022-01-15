@@ -147,11 +147,10 @@ umi:
     max-len: 1600
   # keep it loose for putative UMIs in tolerated error
   loc: 200 # robust location containing the adaptor-UMI-primer pattern, leaving only the start/end regions to find UMIs
-  len: 15 # base length of umi design on each side
+  len: 15 # base length of umi on 5' and 3' side. Their length shall be the same.
   # concatenated UMI regions on both sides, whitespaces will be trimmed automatically in Kamp
   # use IUPAC code https://www.bioinformatics.org/sms/iupac.html
   pattern: "NNNNN NNNNN NNNNN NNNNN NNNNN NNNNN" 
-  base_flex: 0 # flexible base length for umi
   max_err: 0.4 # cutadapt -e, high error tolerance for nanopore 
   min_overlap: 10 # cutadapt -O
   cl_identity: 0.9 # umi cluster similarity
