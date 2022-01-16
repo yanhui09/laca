@@ -19,17 +19,17 @@ def seqs_join(linker, primer, reverse=False):
     if reverse:
         joined = '-G ' + primer + '...' + linker
     return joined
-def linked_pattern(linker, primers,reverse=False):
+def linked_pattern_umi(linker, primers,reverse=False):
     linked = {k: seqs_join(linker, v, reverse) for k, v in primers.items()}        
     return ' '.join(v for v in linked.values())
 
 # forward
-f_pattern1 = linked_pattern(flinker, fprimers)
-f_pattern2 = linked_pattern(rlinker, rprimers)
+f_pattern1 = linked_pattern_umi(flinker, fprimers)
+f_pattern2 = linked_pattern_umi(rlinker, rprimers)
 f_pattern = f_pattern1 + ' ' + f_pattern2
 # reverse
-r_pattern1 = linked_pattern(flinkerR, fprimersR, reverse=True)
-r_pattern2 = linked_pattern(rlinkerR, rprimersR, reverse=True)
+r_pattern1 = linked_pattern_umi(flinkerR, fprimersR, reverse=True)
+r_pattern2 = linked_pattern_umi(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
@@ -188,7 +188,7 @@ def get_umifile1(wildcards, kmerbin = True):
         for c in cs:
             bin2clusters.append(OUTPUT_DIR + "/umi/{barcode}/{c}/umi.fasta".format(barcode=i, c=c))
     return bin2clusters
- 
+
 checkpoint umi_check1:
     input: lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/umi/check1")
@@ -196,7 +196,10 @@ checkpoint umi_check1:
         import shutil
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
-        for i in list(input):
+        # {input} couldn't be evaluted correctly in `run`, re-evaluating it as walkround solution
+        # possibly related to https://github.com/snakemake/snakemake/issues/55
+        fs = get_umifile1(wildcards, kmerbin = config["kmerbin"])
+        for i in list(fs):
             num_lines = sum(1 for line in open(i))
             if num_lines > 1:
                 barcode, c = [ i.split("/")[index] for index in [-3, -2] ]

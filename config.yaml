@@ -8,8 +8,8 @@ threads:
     normal: 2 # short request for threads
     large: 6 # threads dependent e.g., canu
 
-# Pooling samples for denoise [True|False]
-pooling: True
+# Pooling samples for denoise [TRUE|FALSE]
+pooling: FALSE
 
 ##############################################################
 # Demultiplex with guppy
@@ -65,9 +65,10 @@ hdbscan:
 # isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
 # isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
 cluster:
-  - clustCon # the first for the final kOTUs
+  #- clustCon # the first for the final kOTUs
   - isONclustCon
-  - isONcorCon
+  #- isONcorCon
+  #- umiCon
 
 clustCon:
   min_score_frac: 0.8

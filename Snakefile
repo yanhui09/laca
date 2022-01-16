@@ -28,12 +28,13 @@ rule all:
     input:
         OUTPUT_DIR + "/.demultiplex_DONE",
         OUTPUT_DIR + "/.qc_DONE",
-        OUTPUT_DIR + "/.kmerBin_DONE",
-        OUTPUT_DIR + "/.clustCon_DONE",
-        OUTPUT_DIR + "/.isONclustCon_DONE",
-        OUTPUT_DIR + "/.isONcorCon_DONE",
+        #OUTPUT_DIR + "/.kmerBin_DONE",
+        #OUTPUT_DIR + "/.clustCon_DONE",
+        #OUTPUT_DIR + "/.isONclustCon_DONE",
+        #OUTPUT_DIR + "/.isONcorCon_DONE",
         OUTPUT_DIR + "/.quant_DONE",
         OUTPUT_DIR + "/.taxa_DONE",
+        OUTPUT_DIR + "/.tree_DONE",
 
 include: "rules/demultiplex.smk"
 include: "rules/qc.smk"
@@ -41,10 +42,10 @@ include: "rules/kmerBin.smk"
 include: "rules/clustCon.smk"
 include: "rules/isONclustCon.smk"
 include: "rules/isONcorCon.smk"
+include: "rules/umiCon.smk"
 include: "rules/quant.smk"
 include: "rules/taxonomy.smk"
 include: "rules/tree.smk"
-include: "rules/umi.smk"
 
 rule demultiplex:
     input: lambda wc: expand(OUTPUT_DIR + "/qc/{barcode}.fastq", barcode=get_demultiplexed(wc))
@@ -75,6 +76,11 @@ rule isONcorCon:
         OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/isONcorCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.isONcorCon_DONE"))
+
+rule umiCon:
+    input: 
+        OUTPUT_DIR + "/umiCon.fna"
+    output: temp(touch(OUTPUT_DIR + "/.umiCon_DONE"))
 
 rule quant:
     input: OUTPUT_DIR + "/count_matrix.tsv"
