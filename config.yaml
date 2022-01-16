@@ -1,6 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
-results_dir: "/mnt/md0/UMI16S/zymock_res"
+results_dir: "/mnt/md0/UMI16S/zymock_res_subsampled"
 database_dir: "/mnt/md0/Database/Kamp"
 guppy: "resources/ont-guppy/bin" # guppy bin
 
@@ -17,7 +17,7 @@ barcode_kits: "SQK16S-GXO"
 ##############################################################
 # Quality control
 # Subsampling raw reads if with inadequate memory
-subsample: FALSE
+subsample: TRUE
 
 seqkit:
   min-qual: 7
@@ -52,7 +52,7 @@ kmer_size: 5
 umap:
   n_neighbors: 15 # Increase this for global structure
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
-  n_components: 2
+  n_components: 2 # n reduced dimensions passed to hdbscan clustering
 hdbscan:
   min_cluster_size: 10 # Define the smallest size to cluster
   min_samples: 10 # Increase this for more conservative clustering - more points as noise
@@ -103,7 +103,7 @@ samtools:
 # Taxonomy assignment
 classifier:
   - kraken2 # the first to be final taxonomy
-  - mmseqs2
+  #- mmseqs2
 
 mmseqs:
   min-seq-id: 1

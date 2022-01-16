@@ -1,6 +1,6 @@
 # Snakemake workflow: Kamp
 
-[![Snakemake](https://img.shields.io/badge/snakemake-≥6.9.1-brightgreen.svg)](https://snakemake.bitbucket.io)
+[![Snakemake](https://img.shields.io/badge/snakemake-≥6.13.1-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![Build Status](https://travis-ci.org/snakemake-workflows/Kamp.svg?branch=master)](https://travis-ci.org/snakemake-workflows/Kamp)
 
 This is a kmer-based denoise pipeline for the nanopore amplicon sequencing, e.g., 16S rRNA gene. Along with the workflow, one minimized version of compiled `guppy` was provided for demultiplexing.
