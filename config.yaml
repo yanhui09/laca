@@ -9,7 +9,7 @@ threads:
     large: 6 # threads dependent e.g., canu
 
 # Pooling samples for denoise [TRUE|FALSE]
-pooling: FALSE
+pooling: TRUE
 
 ##############################################################
 # Demultiplex with guppy
