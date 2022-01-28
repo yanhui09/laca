@@ -28,10 +28,6 @@ rule all:
     input:
         OUTPUT_DIR + "/.demultiplex_DONE",
         OUTPUT_DIR + "/.qc_DONE",
-        #OUTPUT_DIR + "/.kmerBin_DONE",
-        #OUTPUT_DIR + "/.clustCon_DONE",
-        #OUTPUT_DIR + "/.isONclustCon_DONE",
-        #OUTPUT_DIR + "/.isONcorCon_DONE",
         OUTPUT_DIR + "/.quant_DONE",
         OUTPUT_DIR + "/.taxa_DONE",
         OUTPUT_DIR + "/.tree_DONE",
@@ -61,19 +57,16 @@ rule kmerBin:
 
 rule clustCon:
     input:
-        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/clustCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.clustCon_DONE"))
 
 rule isONclustCon:
     input:
-        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/isONclustCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.isONclustCon_DONE"))
 
 rule isONcorCon:
     input: 
-        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/isONcorCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.isONcorCon_DONE"))
 
