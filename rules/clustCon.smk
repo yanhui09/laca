@@ -17,7 +17,7 @@ rule bin2clustering:
     params:
         prefix = OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust",
         min_score_frac = config["clustCon"]["min_score_frac"],
-        min_reads = config["clustCon"]["min_reads"],
+        min_reads = config["min_cluster_size"],
         max_recurs = config["clustCon"]["max_recursion"],
     log: OUTPUT_DIR + "/logs/clustCon/{barcode}/bin2clust/{c}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/bin2clust/{c}.txt"
@@ -82,7 +82,7 @@ rule get_clust_reads:
     input:
         pool = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.csv",
         ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/ref.csv",
-        binned = rules.split_by_cluster.output,
+        binned = get_fq4Con(config["kmerbin"]),
     output:
         pool = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
         ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna",
@@ -103,7 +103,7 @@ rule minimap2polish:
       ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.fna",
       fastq = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
     output: OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.paf",
-    message: "Polish {wildcards.c} [id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
+    message: "Polish {wildcards.c} draft [id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
     params:
         x = config["minimap"]["x"]
     conda: "../envs/polish.yaml"
@@ -114,20 +114,20 @@ rule minimap2polish:
         "minimap2 -t {threads} -x {params.x}"
         " {input.ref} {input.fastq} > {output} 2> {log}"
 
-def get_racon_input(wildcards):
+def get_racon_input(wildcards, cluster):
     # adjust input based on racon iteritions
     if int(wildcards.iter) == 1:
-        prefix = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/raw"
+        prefix = OUTPUT_DIR + "/" + cluster + "/{barcode}/{c}/polish/{clust_id}/draft/raw"
         return(prefix + ".paf", prefix + ".fna")
     else:
-        prefix = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}".format(barcode=wildcards.barcode,
+        prefix = OUTPUT_DIR + "/" + cluster + "/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}".format(barcode=wildcards.barcode,
          c=wildcards.c, clust_id=wildcards.clust_id, iter=str(int(wildcards.iter) - 1))
         return(prefix + ".paf", prefix + ".fna")
 
 rule racon:
     input:
         OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
-        get_racon_input,
+        lambda wc: get_racon_input(wc, "clustCon"),
     output: OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}.fna"
     message: "Polish {wildcards.c} draft [id={wildcards.clust_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
     params:
@@ -138,7 +138,7 @@ rule racon:
     conda: "../envs/polish.yaml"
     log: OUTPUT_DIR +"/logs/clustCon/{barcode}/{c}/{clust_id}/racon/round{iter}.log"
     benchmark: OUTPUT_DIR +"/benchmarks/clustCon/{barcode}/{c}/{clust_id}/racon/round{iter}.txt"
-    threads: 1
+    threads: config["threads"]["normal"]
     shell:
         "racon -m {params.m} -x {params.x}"
         " -g {params.g} -w {params.w} -t {threads}"

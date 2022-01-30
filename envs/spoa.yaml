@@ -1,0 +1,5 @@
+name: spoa
+channels:
+  - bioconda
+dependencies:
+  - spoa

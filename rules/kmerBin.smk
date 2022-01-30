@@ -25,7 +25,7 @@ rule umap:
         n_neighbors = config["umap"]["n_neighbors"],
         min_dist = config["umap"]["min_dist"],
         n_components = config["umap"]["n_components"],
-	    min_cluster_size = config["hdbscan"]["min_cluster_size"],
+	    min_bin_size = config["hdbscan"]["min_bin_size"],
         min_samples = config["hdbscan"]["min_samples"],
 	    epsilon = config["hdbscan"]["epsilon"],
     log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/umap.log"
@@ -34,7 +34,7 @@ rule umap:
     shell:
        "NUMBA_NUM_THREADS={threads} python scripts/kmerBin.py -k {input}"
        " -n {params.n_neighbors} -d {params.min_dist} -t {params.n_components}"
-       " -s {params.min_cluster_size} -m {params.min_samples} -e {params.epsilon}"
+       " -s {params.min_bin_size} -m {params.min_samples} -e {params.epsilon}"
        " -c {output.cluster} -p"
        " > {log} 2>&1" 
 

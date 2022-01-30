@@ -54,7 +54,7 @@ umap:
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
   n_components: 2 # n reduced dimensions passed to hdbscan clustering
 hdbscan:
-  min_cluster_size: 10 # Define the smallest size to cluster
+  min_bin_size: 10 # Define the smallest size to bin
   min_samples: 10 # Increase this for more conservative clustering - more points as noise
   epsilon: 0 # Lower this for more micro-clusters
 
@@ -69,10 +69,10 @@ cluster:
   - isONclustCon
   #- isONcorCon
   #- umiCon
+min_cluster_size: 8
 
 clustCon:
   min_score_frac: 0.8
-  min_reads: 5
   max_recursion: -1 # set to non-zero value to override python's max recursion depth
 
 racon:
@@ -85,12 +85,10 @@ racon:
 medaka:
   m: r941_min_hac_g507
 
-NGSpeciesID:
-  racon_iter: 2
-  abundance_ratio: 0.8 
-  # Determine the final cluster size together with min_cluster_size in kmerBin
-  # Tunn it to discard small clusters, which may yield error in polishment;
-  # E.g., To keep cluster > 8 under min kmerBin > 10, take 0.8 (8/10) for abundance_ratio.
+spoa:
+  l: 0
+  r: 0
+  g: -2
 
 minimap:
   x: map-ont

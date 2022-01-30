@@ -91,7 +91,7 @@ rule q_filter:
     log: OUTPUT_DIR + "/logs/qc/{barcode}/q_filter.log"
     benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/q_filter.txt"
     threads: config["threads"]["normal"]
-    shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} {input} > {output} 2> {log}"
+    shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i {input} > {output} 2> {log}"
 
 #  pooling fqs for sensitivity 
 rule combine_fastq:
