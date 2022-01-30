@@ -1,4 +1,4 @@
-rule isONclust1:
+rule isONclust:
     input: get_fq4Con(config["kmerbin"])
     output:
         _dir = directory(OUTPUT_DIR + "/isONclustCon/{barcode}/{c}"),

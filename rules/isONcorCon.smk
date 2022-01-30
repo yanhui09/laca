@@ -1,95 +1,57 @@
-rule isONclust:
-    input: get_fq4Con(config["kmerbin"])
-    output:
-        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONclust"),
-        tsv = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONclust/final_clusters.tsv"
-    conda: "../envs/isONcorCon.yaml"
-    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/isONclust/cluster.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/isONclust/cluster.txt"
-    threads: config["threads"]["normal"]
-    shell:
-        "isONclust --ont --fastq {input} "
-        "--outfolder {output._dir} --t {threads} > {log} 2>&1"
-
-rule isONclust_write:
-    input:
-        tsv = rules.isONclust.output.tsv,
-        fqs = get_fq4Con(config["kmerbin"]),
-    output: directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/clust_fastqs")
-    conda: "../envs/isONcorCon.yaml"
-    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/isONclust/write.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/isONclust/write.txt"
-    shell:
-        "isONclust write_fastq --N 1 "
-        "--clusters {input.tsv} --fastq {input.fqs} "
-        "--outfolder  {output} > {log} 2>&1"
-
-# rm snakemake_timestamp as the run_isoncorrect take ids through str.split(".")
-# https://github.com/ksahlin/isONcorrect/blob/master/run_isoncorrect#L153
-rule clean_timestamp:
-    input: rules.isONclust_write.output
-    output: OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/.writefq_timestamp"
-    shell:
-        """
-        rm -f {input}/.snakemake_timestamp
-        touch {output}
-        """
+# pseudo checkpoint for isONcorCon
+checkpoint clusters_isONcor:
+    input: OUTPUT_DIR + "/isONclustCon/clusters"
+    output: directory(OUTPUT_DIR + "/isONcorCon/clusters")
+    shell: "cp -rf {input} {output}"
 
 # run_isoncorrect provide multithread processing for isONcorrect in batches
 # racon seems not to be supported in batch mode
-checkpoint isONcorrect:
-    input:
-        rules.clean_timestamp.output,
-        fqs = rules.isONclust_write.output,
-    output: directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONcorrect"),
-    conda: "../envs/isONcorCon.yaml"
-    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/isONcorrect.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/isONcorrect.txt"
-    threads: config["threads"]["normal"]
-    shell:
-        "run_isoncorrect --t {threads} --fastq_folder {input.fqs} --outfolder {output} "
-        "--set_w_dynamically --split_wrt_batches "
-        "> {log} 2>&1"
-
-rule IsoCon:
-    input: OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/isONcorrect/{cid}/corrected_reads.fastq"
+rule isONcorrect:
+    input: rules.get_fqs_split.output,
     output:
-        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/IsoCon/id_{cid}"),
-        fna = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/IsoCon/id_{cid}/final_candidates.fa",
+        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor"), 
+        fq = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"
     conda: "../envs/isONcorCon.yaml"
-    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/IsoCon/id_{cid}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/IsoCon/id_{cid}.txt"
+    params:
+        _dir = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}",
+    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.txt"
     threads: config["threads"]["normal"]
     shell:
-        "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
-    
-def get_isONcorCon(wildcards, pooling = True, kmerbin = True):
-    check_val("pooling", pooling, bool)
-    check_val("kmerbin", kmerbin, bool)
-    if pooling == True:
-        barcodes = ["pooled"]
-    else:
-        barcodes = get_demultiplexed(wildcards)
+        """
+        mkdir -p {params._dir}/isONclust
+        cp {input} {params._dir}/isONclust
+        run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
+        --set_w_dynamically --split_wrt_batches > {log} 2>&1
+        rm -rf {params._dir}/isONclust
+        """
 
+rule isoCon:
+    input: rules.isONcorrect.output.fq
+    output:
+        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isoCon"),
+        fna = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isoCon/final_candidates.fa",
+    conda: "../envs/isONcorCon.yaml"
+    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.txt"
+    threads: config["threads"]["normal"]
+    shell: "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
+    
+def get_isONcorCon(wildcards):
+    bc_kb_cis = glob_wildcards(checkpoints.clusters_isONcor.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
-    for i in barcodes:
-        if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
-        else:
-            cs = ["all"]
-        for j in cs:
-            cids = glob_wildcards(checkpoints.isONcorrect.get(barcode=i, c=j).output[0] + "/{cid}/corrected_reads.fastq").cid
-            for k in cids:
-                fnas.append(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/IsoCon/id_{cid}/final_candidates.fa".format(barcode=i, c=j, cid=k))
+    for i in bc_kb_cis:
+        bc, kb, ci = i.split("_")
+        fnas.append(OUTPUT_DIR + "/isONcorCon/{bc}/{kb}/{ci}/isoCon/final_candidates.fa".format(bc=bc, kb=kb, ci=ci))
     return fnas
 
 rule collect_isONcorCon:
-    input: lambda wc: get_isONcorCon(wc, pooling = config["pooling"], kmerbin = config["kmerbin"]),
+    input: lambda wc: get_isONcorCon(wc)
     output: OUTPUT_DIR + "/isONcorCon.fna"
     run: 
         with open(output[0], "w") as out:
             for i in input:
-                barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-5, -4, -2] ]
+                barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-5, -4, -3] ]
                 with open(i, "r") as inp:
                     j = 0
                     for line in inp:
