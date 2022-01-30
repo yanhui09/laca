@@ -47,48 +47,38 @@ def get_clust(wildcards, pooling = True, kmerbin = True):
 checkpoint clusters_cleanup:
     input: lambda wc: get_clust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/clustCon/clusters")
+    params:
+        min_size = config["min_cluster_size"],
     run:
         import shutil
+        import pandas as pd
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input):
             num_lines = sum(1 for line in open(i))
-            if num_lines > 1:
+            if num_lines > params.min_size:
                 barcode, c = [ i.split("/")[index] for index in [-4, -2] ]
-                shutil.copy(i, output[0] + "/{barcode}_{c}.csv".format(barcode=barcode, c=c))
-
-checkpoint get_bin2clust:
-    input: OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}.csv"
-    output: directory(OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters")
-    run:
-        import pandas as pd
-        df = pd.read_csv(input[0])
-        for clust_id, df_clust in df.groupby('cluster'):
-            clust_id = f"id_{clust_id}"
-            clust_dir = output[0] + str("/{clust_id}").format(clust_id=clust_id)
-            os.makedirs(clust_dir, exist_ok=True)
-            
-            read_ref = clust_dir + "/ref.csv"
-            ref_idx  = df_clust['clust_read_score'].idxmax()
-            ref_read = df_clust.loc[ref_idx, ['read_id']]
-            ref_read.to_csv(read_ref, index=False, header=False)
-            
-            # include ref in pool
-            pool_read = df_clust['read_id']
-            read_pool = clust_dir + "/pool.csv"
-            pool_read.to_csv(read_pool, index=False, header=False)
-    
-rule get_clust_reads:
+                #shutil.copy(i, output[0] + "/{barcode}_{c}.csv".format(barcode=barcode, c=c))
+                df = pd.read_csv(i)
+                for clust_id, df_clust in df.groupby('cluster'):
+                    if len(df_clust) >= params.min_size:
+                        bc_kb_ci = "/{barcode}_{c}_id{clust_id}".format(barcode=barcode, c=c, clust_id=clust_id)
+                        df_clust['read_id'].to_csv(output[0] + bc_kb_ci + ".csv", header = False, index = False)
+                        ref_idx  = df_clust['clust_read_score'].idxmax()
+                        ref_read = df_clust.loc[ref_idx, ['read_id']]
+                        ref_read.to_csv(output[0] + bc_kb_ci + ".ref", header=False, index=False)
+   
+rule get_fqs_split2:
     input:
-        pool = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.csv",
-        ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/ref.csv",
+        pool = OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}_{clust_id}.csv",
+        ref = OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}_{clust_id}.ref",
         binned = get_fq4Con(config["kmerbin"]),
     output:
-        pool = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
+        pool = OUTPUT_DIR + "/clustCon/{barcode}/{c}/split/{clust_id}.fastq",
         ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna",
     conda: '../envs/seqkit.yaml'
-    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/{clust_id}/get_clust_reads.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/{clust_id}/get_clust_reads.txt"
+    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.txt"
     shell:
         """
         seqkit grep -f {input.pool} {input.binned} -o {output.pool} --quiet 2> {log}
@@ -101,7 +91,7 @@ rule get_clust_reads:
 rule minimap2polish:
     input: 
       ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.fna",
-      fastq = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
+      fastq = OUTPUT_DIR + "/clustCon/{barcode}/{c}/split/{clust_id}.fastq",
     output: OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.paf",
     message: "Polish {wildcards.c} draft [id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
     params:
@@ -126,7 +116,7 @@ def get_racon_input(wildcards, cluster):
 
 rule racon:
     input:
-        OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
+        OUTPUT_DIR + "/clustCon/{barcode}/{c}/split/{clust_id}.fastq",
         lambda wc: get_racon_input(wc, "clustCon"),
     output: OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}.fna"
     message: "Polish {wildcards.c} draft [id={wildcards.clust_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
@@ -148,7 +138,7 @@ rule medaka_consensus:
     input:
         fna = expand(OUTPUT_DIR + "/clustCon/{{barcode}}/{{c}}/polish/{{clust_id}}/draft/racon_{iter}.fna", 
         iter = config["racon"]["iter"]),
-        fastq = OUTPUT_DIR + "/clustCon/{barcode}/{c}/clusters/{clust_id}/pool.fastq",
+        fastq = OUTPUT_DIR + "/clustCon/{barcode}/{c}/split/{clust_id}.fastq",
     output: 
         fasta = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/medaka/consensus.fasta",
         _dir = directory(OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/medaka"),
@@ -168,14 +158,12 @@ rule medaka_consensus:
 
 # get {barcode} {c} from chekckpoint
 def get_clustCon(wildcards):
-    b_cs = glob_wildcards(checkpoints.clusters_cleanup.get(**wildcards).output[0] + "/{b_c}.csv").b_c
+    bc_kb_cis = glob_wildcards(checkpoints.clusters_cleanup.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     #b_cs = glob_wildcards(OUTPUT_DIR + "/clustCon/clusters/{b_c}.csv").b_c
     fnas = []
-    for i in b_cs:
-        b, c = i.split("_")
-        ids = glob_wildcards(checkpoints.get_bin2clust.get(barcode=b, c=c).output[0] + "/id_{clust_id}/pool.csv").clust_id
-        for j in ids:
-            fnas.append(OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/id_{id}/medaka/consensus.fasta".format(barcode=b, c=c, id=j))
+    for i in bc_kb_cis:
+        bc, kb, ci = i.split("_")
+        fnas.append(OUTPUT_DIR + "/clustCon/{bc}/{kb}/polish/{ci}/medaka/consensus.fasta".format(bc=bc, kb=kb, ci=ci))
     return fnas
 
 rule collect_clustCon:
