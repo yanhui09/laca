@@ -44,7 +44,7 @@ checkpoint validate_clusters:
             df_i.columns = ['cluster', 'seqid']
             for clust_id, df_clust in df_i.groupby('cluster'):
                 if len(df_clust) >= params.min_size:
-                    df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c}_id{clust_id}.csv".format(barcode=barcode, c=c, clust_id=clust_id),
+                    df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c}_{clust_id}.csv".format(barcode=barcode, c=c, clust_id=clust_id),
                      header = False, index = False)
 
 rule get_fqs_split:

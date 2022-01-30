@@ -62,7 +62,7 @@ checkpoint clusters_cleanup:
                 df = pd.read_csv(i)
                 for clust_id, df_clust in df.groupby('cluster'):
                     if len(df_clust) >= params.min_size:
-                        bc_kb_ci = "/{barcode}_{c}_id{clust_id}".format(barcode=barcode, c=c, clust_id=clust_id)
+                        bc_kb_ci = "/{barcode}_{c}_{clust_id}".format(barcode=barcode, c=c, clust_id=clust_id)
                         df_clust['read_id'].to_csv(output[0] + bc_kb_ci + ".csv", header = False, index = False)
                         ref_idx  = df_clust['clust_read_score'].idxmax()
                         ref_read = df_clust.loc[ref_idx, ['read_id']]
@@ -146,8 +146,8 @@ rule medaka_consensus:
     params:
         m = config["medaka"]["m"],
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/id_{clust_id}/medaka.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/id_{clust_id}/medaka.txt"
+    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/{clust_id}/medaka.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/{clust_id}/medaka.txt"
     threads: config["threads"]["normal"]
     shell:
         """
