@@ -44,7 +44,7 @@ def get_clust(wildcards, pooling = True, kmerbin = True):
             bin2clusters.append(OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.csv".format(barcode=i, c=c))
     return bin2clusters
  
-checkpoint clusters_cleanup:
+checkpoint cls_clustCon:
     input: lambda wc: get_clust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/clustCon/clusters")
     params:
@@ -158,8 +158,7 @@ rule medaka_consensus:
 
 # get {barcode} {c} from chekckpoint
 def get_clustCon(wildcards):
-    bc_kb_cis = glob_wildcards(checkpoints.clusters_cleanup.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    #b_cs = glob_wildcards(OUTPUT_DIR + "/clustCon/clusters/{b_c}.csv").b_c
+    bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
         bc, kb, ci = i.split("_")
@@ -210,7 +209,7 @@ def get_isONclust(wildcards, pooling = True, kmerbin = True):
             bin2clusters.append(OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/final_clusters.tsv".format(barcode=i, c=c))
     return bin2clusters
  
-checkpoint validate_clusters:
+checkpoint cls_isONclust:
     input: lambda wc: get_isONclust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/isONclustCon/clusters")
     params:
@@ -288,7 +287,7 @@ use rule medaka_consensus as medaka_consensus2 with:
 
 # get {barcode} {c} {id} from chekckpoint
 def get_isONclustCon(wildcards):
-    bc_kb_cis = glob_wildcards(checkpoints.validate_clusters.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
         bc, kb, ci = i.split("_")
@@ -309,7 +308,7 @@ rule collect_isONclustCon:
                         out.write(line)
 
 # pseudo checkpoint for isONcorCon
-checkpoint clusters_isONcor:
+checkpoint cls_isONcor:
     input: OUTPUT_DIR + "/isONclustCon/clusters"
     output: directory(OUTPUT_DIR + "/isONcorCon/clusters")
     shell: "cp -rf {input} {output}"
@@ -348,7 +347,7 @@ rule isoCon:
     shell: "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
     
 def get_isONcorCon(wildcards):
-    bc_kb_cis = glob_wildcards(checkpoints.clusters_isONcor.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    bc_kb_cis = glob_wildcards(checkpoints.cls_isONcor.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
         bc, kb, ci = i.split("_")
