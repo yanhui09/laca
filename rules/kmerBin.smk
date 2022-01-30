@@ -64,9 +64,16 @@ rule split_by_cluster:
     shell:
         "seqkit grep {input.fastq} -f {input.clusters} -o {output} 2> {log}"
 
+rule skip_bin:
+    input: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
+    output: OUTPUT_DIR + "/kmerBin/{barcode}/all.fastq"
+    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/skip_bin.log"
+    shell: "cp -p {input} {output} 2> {log}"
+
 # get {barcode} {c} from chekckpoint
-def get_kmerBin(wildcards, pooling = True):
+def get_kmerBin(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
+    check_val("kmerbin", kmerbin, bool)
     if pooling == True:
         barcodes = ["pooled"]
     else:
@@ -74,16 +81,13 @@ def get_kmerBin(wildcards, pooling = True):
 
     fqs = []
     for i in barcodes:
-        cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
-        for j in cs:
-            fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.fastq".format(barcode=i, c=j))
+        if kmerbin == True:
+            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+            for j in cs:
+                fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.fastq".format(barcode=i, c=j))
+        else:
+            fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/all.fastq".format(barcode=i))
     return fqs
-
-rule skip_bin:
-    input: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
-    output: OUTPUT_DIR + "/kmerBin/{barcode}/all.fastq"
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/skip_bin.log"
-    shell: "cp -p {input} {output} 2> {log}"
 
 def get_fq4Con(kmerbin = True):
     check_val("kmerbin", kmerbin, bool)

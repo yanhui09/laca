@@ -52,21 +52,24 @@ rule qc:
     output: temp(touch(OUTPUT_DIR + "/.qc_DONE"))
 
 rule kmerBin:
-    input: lambda wc: get_kmerBin(wc, pooling = config["pooling"]),
+    input: lambda wc: get_kmerBin(wc, pooling = config["pooling"], kmerbin = config["kmerbin"]),
     output: temp(touch(OUTPUT_DIR + "/.kmerBin_DONE"))
 
 rule clustCon:
     input:
+        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/clustCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.clustCon_DONE"))
 
 rule isONclustCon:
     input:
+        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/isONclustCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.isONclustCon_DONE"))
 
 rule isONcorCon:
     input: 
+        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/isONcorCon.fna"
     output: temp(touch(OUTPUT_DIR + "/.isONcorCon_DONE"))
 
