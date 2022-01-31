@@ -1,3 +1,7 @@
+# kmerCon
+
+# split kmerbins
+# clustCon
 # draw draft with max average score from pairwise alignments
 rule minimap2clust:
     input: get_fq4Con(config["kmerbin"])
@@ -86,6 +90,7 @@ rule get_fqs_split:
         seqkit replace -p '^(.+)$' -r '{wildcards.barcode}_{wildcards.c}_{wildcards.clust_id}' -o {output.ref} 2> {log}
         """
 
+# isONclust
 rule isONclust:
     input: get_fq4Con(config["kmerbin"])
     output:
@@ -157,7 +162,7 @@ rule spoa_consensus:
     benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/spoa_consensus.txt"
     shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} > {output} 2> {log}"
 
-# align assemblies with raw reads
+# polish with racon and medaka
 # reused in racon iterations
 rule minimap2polish:
     input: 
@@ -227,7 +232,49 @@ rule medaka_consensus:
         -t {threads} -m {params.m} > {log} 2>&1;
         """
 
-# get {barcode} {c} from chekckpoint
+# isONcorCon
+# pseudo checkpoint
+checkpoint cls_isONcor:
+    input: OUTPUT_DIR + "/isONclustCon/clusters"
+    output: directory(OUTPUT_DIR + "/isONcorCon/clusters")
+    shell: "cp -rf {input} {output}"
+
+# run_isoncorrect provide multithread processing for isONcorrect in batches
+# racon seems not to be supported in batch mode
+rule isONcorrect:
+    input: rules.get_fqs_split2.output,
+    output:
+        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor"), 
+        fq = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"
+    conda: "../envs/isONcorCon.yaml"
+    params:
+        _dir = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}",
+    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.txt"
+    threads: config["threads"]["normal"]
+    shell:
+        """
+        mkdir -p {params._dir}/isONclust
+        cp {input} {params._dir}/isONclust
+        run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
+        --set_w_dynamically --split_wrt_batches > {log} 2>&1
+        rm -rf {params._dir}/isONclust
+        """
+
+rule isoCon:
+    input: rules.isONcorrect.output.fq
+    output:
+        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isoCon"),
+        fna = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isoCon/final_candidates.fa",
+    conda: "../envs/isONcorCon.yaml"
+    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.txt"
+    threads: config["threads"]["normal"]
+    shell: "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
+ 
+# get polished asembly
+# kmerCon
+
 # clustCon
 def get_clustCon(wildcards):
     bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
@@ -272,46 +319,7 @@ rule collect_isONclustCon:
                             line = ">" + bc_i + "_" + kb_i + "_" + ci_i + "\n"
                         out.write(line)
 
-# isONcorCon
-# pseudo checkpoint
-checkpoint cls_isONcor:
-    input: OUTPUT_DIR + "/isONclustCon/clusters"
-    output: directory(OUTPUT_DIR + "/isONcorCon/clusters")
-    shell: "cp -rf {input} {output}"
-
-# run_isoncorrect provide multithread processing for isONcorrect in batches
-# racon seems not to be supported in batch mode
-rule isONcorrect:
-    input: rules.get_fqs_split2.output,
-    output:
-        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor"), 
-        fq = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"
-    conda: "../envs/isONcorCon.yaml"
-    params:
-        _dir = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}",
-    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.txt"
-    threads: config["threads"]["normal"]
-    shell:
-        """
-        mkdir -p {params._dir}/isONclust
-        cp {input} {params._dir}/isONclust
-        run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
-        --set_w_dynamically --split_wrt_batches > {log} 2>&1
-        rm -rf {params._dir}/isONclust
-        """
-
-rule isoCon:
-    input: rules.isONcorrect.output.fq
-    output:
-        _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isoCon"),
-        fna = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isoCon/final_candidates.fa",
-    conda: "../envs/isONcorCon.yaml"
-    log: OUTPUT_DIR + "/logs/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.txt"
-    threads: config["threads"]["normal"]
-    shell: "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
-    
+# isONcorCon   
 def get_isONcorCon(wildcards):
     bc_kb_cis = glob_wildcards(checkpoints.cls_isONcor.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
