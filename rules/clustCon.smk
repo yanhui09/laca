@@ -68,7 +68,7 @@ checkpoint cls_clustCon:
                         ref_read = df_clust.loc[ref_idx, ['read_id']]
                         ref_read.to_csv(output[0] + bc_kb_ci + ".ref", header=False, index=False)
    
-rule get_fqs_split2:
+rule get_fqs_split:
     input:
         pool = OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}_{clust_id}.csv",
         ref = OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}_{clust_id}.ref",
@@ -77,8 +77,8 @@ rule get_fqs_split2:
         pool = OUTPUT_DIR + "/clustCon/{barcode}/{c}/split/{clust_id}.fastq",
         ref = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna",
     conda: '../envs/seqkit.yaml'
-    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.txt"
+    log: OUTPUT_DIR + "/logs/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split.txt"
     shell:
         """
         seqkit grep -f {input.pool} {input.binned} -o {output.pool} --quiet 2> {log}
@@ -142,7 +142,7 @@ rule medaka_consensus:
     output: 
         fasta = OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/medaka/consensus.fasta",
         _dir = directory(OUTPUT_DIR + "/clustCon/{barcode}/{c}/polish/{clust_id}/medaka"),
-    message: "Generate Clust consensus [id={wildcards.clust_id}] in {wildcards.c} with medaka [{wildcards.barcode}]"
+    message: "Generate consensus [id={wildcards.clust_id}] in draft {wildcards.c} with medaka [{wildcards.barcode}]"
     params:
         m = config["medaka"]["m"],
     conda: "../envs/polish.yaml"
@@ -227,18 +227,18 @@ checkpoint cls_isONclust:
                     df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c}_{clust_id}.csv".format(barcode=barcode, c=c, clust_id=clust_id),
                      header = False, index = False)
 
-rule get_fqs_split:
+rule get_fqs_split2:
     input:
         bin2clust = OUTPUT_DIR + "/isONclustCon/clusters/{barcode}_{c}_{clust_id}.csv",
         binned = get_fq4Con(config["kmerbin"]),
     output: OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/split/{clust_id}.fastq",
     conda: '../envs/seqkit.yaml'
-    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split.txt"
+    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.txt"
     shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
 
 rule spoa_consensus:
-    input: rules.get_fqs_split.output
+    input: rules.get_fqs_split2.output
     output: OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna"
     conda: '../envs/spoa.yaml'
     params:
@@ -316,7 +316,7 @@ checkpoint cls_isONcor:
 # run_isoncorrect provide multithread processing for isONcorrect in batches
 # racon seems not to be supported in batch mode
 rule isONcorrect:
-    input: rules.get_fqs_split.output,
+    input: rules.get_fqs_split2.output,
     output:
         _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor"), 
         fq = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"
