@@ -32,7 +32,7 @@ rule rmdup_revcom:
     conda: "../envs/seqkit.yaml"
     log: OUTPUT_DIR + "/logs/quant/rmdup_revcom.log"
     benchmark: OUTPUT_DIR + "/benchmarks/quant/rmdup_revcom.txt"
-    shell: "seqkit rmdup -s {input} -o {output} > {log} 2>&1"
+    shell: "seqkit rmdup -s {input} -o {output} -w 0 > {log} 2>&1"
 
 # keep fasta header unique
 rule rename_fasta_header:
@@ -53,7 +53,7 @@ rule rename_fasta_header:
 # create abundance matrix with minimap
 rule index:
     input: rules.rename_fasta_header.output,
-    output: temp(OUTPUT_DIR + "/rep_seq.mmi")
+    output: temp(OUTPUT_DIR + "/rep_seqs.mmi")
     message: "Index denoised sequences [Generate abundance matrix]"
     params:
         index_size = config["minimap"]["index_size"],
@@ -64,7 +64,7 @@ rule index:
 
 rule dict:
     input: rules.rename_fasta_header.output,
-    output: temp(OUTPUT_DIR + "/rep_seq.dict")
+    output: temp(OUTPUT_DIR + "/rep_seqs.dict")
     message: "Dict denoised sequences [Generate abundance matrix]"
     conda: "../envs/polish.yaml"
     log: OUTPUT_DIR + "/logs/quant/dict.log"
