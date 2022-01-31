@@ -39,7 +39,7 @@ rule umap:
        " > {log} 2>&1" 
 
 # split reads by cluster
-checkpoint cluster_info:
+checkpoint cls_kmerbin:
     input: rules.umap.output.cluster,
     output: directory(OUTPUT_DIR + "/kmerBin/{barcode}/clusters"),
     log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/clusters.log"
@@ -53,16 +53,16 @@ checkpoint cluster_info:
         for cluster in range(0, clusters+1):
             df.loc[df.bin_id == cluster, "read"].to_csv(output[0] + "/c" + str(cluster) + ".txt", sep="\t", header=False, index=False)
         
-rule split_by_cluster:
+rule split_bin:
     input: 
-        clusters = OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.txt",
-        fastq = OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq",
-    output: OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.fastq",
+        cluster = OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.txt",
+        fqs = OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq",
+    output: OUTPUT_DIR + "/kmerBin/{barcode}/split/{c}.fastq",
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/clusters/{c}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/clusters/{c}.txt"
+    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/split/{c}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/split/{c}.txt"
     shell:
-        "seqkit grep {input.fastq} -f {input.clusters} -o {output} 2> {log}"
+        "seqkit grep {input.fqs} -f {input.cluster} -o {output} 2> {log}"
 
 rule skip_bin:
     input: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
@@ -82,9 +82,9 @@ def get_kmerBin(wildcards, pooling = True, kmerbin = True):
     fqs = []
     for i in barcodes:
         if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+            cs = glob_wildcards(checkpoints.cls_kmerbin.get(barcode=i).output[0] + "/{c}.txt").c
             for j in cs:
-                fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.fastq".format(barcode=i, c=j))
+                fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/split/{c}.fastq".format(barcode=i, c=j))
         else:
             fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/all.fastq".format(barcode=i))
     return fqs
@@ -92,7 +92,7 @@ def get_kmerBin(wildcards, pooling = True, kmerbin = True):
 def get_fq4Con(kmerbin = True):
     check_val("kmerbin", kmerbin, bool)
     if kmerbin == True:
-        out = rules.split_by_cluster.output
+        out = rules.split_bin.output
     else:
         out = rules.skip_bin.output
     return out

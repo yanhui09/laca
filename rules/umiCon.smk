@@ -74,7 +74,7 @@ use rule umap as umap_umi with:
         OUTPUT_DIR + "/benchmarks/umi/{barcode}/kmerBin/umap.txt"
     
 # split reads by cluster
-checkpoint cluster_info_umi:
+checkpoint cls_kmerbin_umi:
     input: rules.umap_umi.output.cluster,
     output: directory(OUTPUT_DIR + "/umi/{barcode}/kmerBin/clusters"),
     log: OUTPUT_DIR + "/logs/umi/{barcode}/kmerBin/clusters.log"
@@ -88,7 +88,7 @@ checkpoint cluster_info_umi:
         for cluster in range(0, clusters+1):
             df.loc[df.bin_id == cluster, "read"].to_csv(output[0] + "/c" + str(cluster) + ".txt", sep="\t", header=False, index=False)
         
-use rule split_by_cluster as split_by_cluster_umi with:
+use rule split_bin as split_bin_umi with:
     input: 
         clusters = OUTPUT_DIR + "/umi/{barcode}/kmerBin/clusters/{c}.txt",
         fastq = OUTPUT_DIR + "/umi/{barcode}/qfilt.fastq",
@@ -110,7 +110,7 @@ use rule skip_bin as skip_bin_umi with:
 def get_fq4Con_umi(kmerbin = True):
     check_val("kmerbin", kmerbin, bool)
     if kmerbin == True:
-        out = rules.split_by_cluster_umi.output
+        out = rules.split_bin_umi.output
     else:
         out = rules.skip_bin_umi.output
     return out
@@ -182,7 +182,7 @@ def get_umifile1(wildcards, kmerbin = True):
     bin2clusters = []
     for i in barcodes:
         if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cluster_info_umi.get(barcode=i).output[0] + "/{c}.txt").c
+            cs = glob_wildcards(checkpoints.cls_kmerbin_umi.get(barcode=i).output[0] + "/{c}.txt").c
         else:
             cs = ["all"]
         for c in cs:
@@ -820,7 +820,7 @@ checkpoint bin_info:
         for umi in set(df.umi):
             df.loc[df.umi == umi, "read"].to_csv(output[0] + "/" + str(umi) + ".txt", sep="\t", header=False, index=False)
         
-use rule split_by_cluster as split_by_umi_bin with:
+use rule split_bin as split_umibin with:
     input: 
         clusters = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.txt",
         fastq = rules.qfilter_umi.output,
@@ -833,7 +833,7 @@ use rule split_by_cluster as split_by_umi_bin with:
 
 # find the seed read
 rule fq2fa_umi:
-    input: rules.split_by_umi_bin.output
+    input: rules.split_umibin.output
     output: OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.fna"
     conda: "../envs/seqkit.yaml"
     log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/{c}/bin/fq2fa_{umi_id}.log"

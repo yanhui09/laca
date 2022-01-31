@@ -41,7 +41,7 @@ def get_clust(wildcards, pooling = True, kmerbin = True):
     bin2clusters = []
     for i in barcodes:
         if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+            cs = glob_wildcards(checkpoints.cls_kmerbin.get(barcode=i).output[0] + "/{c}.txt").c
         else:
             cs = ["all"]
         for c in cs:
@@ -115,7 +115,7 @@ def get_isONclust(wildcards, pooling = True, kmerbin = True):
     bin2clusters = []
     for i in barcodes:
         if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cluster_info.get(barcode=i).output[0] + "/{c}.txt").c
+            cs = glob_wildcards(checkpoints.cls_kmerbin.get(barcode=i).output[0] + "/{c}.txt").c
         else:
             cs = ["all"]
         for c in cs:
