@@ -33,20 +33,20 @@ rule bin2clustering:
 def get_clust(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
     check_val("kmerbin", kmerbin, bool)
-    if pooling == True:
-        barcodes = ["pooled"]
+        
+    if kmerbin == True:
+        bin2cls = []
+        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+        for i in bc_kbs:
+            bc, kb = i.split("_")
+            bin2cls.append(OUTPUT_DIR + "/clustCon/{bc}/avr_aln/{kb}/bin2clust.csv".format(bc=bc, kb=kb))
     else:
-        barcodes = get_demultiplexed(wildcards)
-
-    bin2clusters = []
-    for i in barcodes:
-        if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cls_kmerbin.get(barcode=i).output[0] + "/{c}.txt").c
+        if pooling == True:
+           bcs = ["pooled"]
         else:
-            cs = ["all"]
-        for c in cs:
-            bin2clusters.append(OUTPUT_DIR + "/clustCon/{barcode}/avr_aln/{c}/bin2clust.csv".format(barcode=i, c=c))
-    return bin2clusters
+           bcs = get_demultiplexed(wildcards)
+        bin2cls = expand(OUTPUT_DIR + "/clustCon/{bc}/avr_aln/all/bin2clust.csv", bc=bcs)
+    return bin2cls
  
 checkpoint cls_clustCon:
     input: lambda wc: get_clust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
@@ -62,7 +62,6 @@ checkpoint cls_clustCon:
             num_lines = sum(1 for line in open(i))
             if num_lines > params.min_size:
                 barcode, c = [ i.split("/")[index] for index in [-4, -2] ]
-                #shutil.copy(i, output[0] + "/{barcode}_{c}.csv".format(barcode=barcode, c=c))
                 df = pd.read_csv(i)
                 for clust_id, df_clust in df.groupby('cluster'):
                     if len(df_clust) >= params.min_size:
@@ -107,21 +106,21 @@ rule isONclust:
 def get_isONclust(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
     check_val("kmerbin", kmerbin, bool)
-    if pooling == True:
-        barcodes = ["pooled"]
+        
+    if kmerbin == True:
+        bin2cls = []
+        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+        for i in bc_kbs:
+            bc, kb = i.split("_")
+            bin2cls.append(OUTPUT_DIR + "/isONclustCon/{bc}/{kb}/final_clusters.tsv".format(bc=bc, kb=kb))
     else:
-        barcodes = get_demultiplexed(wildcards)
-
-    bin2clusters = []
-    for i in barcodes:
-        if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cls_kmerbin.get(barcode=i).output[0] + "/{c}.txt").c
+        if pooling == True:
+           bcs = ["pooled"]
         else:
-            cs = ["all"]
-        for c in cs:
-            bin2clusters.append(OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/final_clusters.tsv".format(barcode=i, c=c))
-    return bin2clusters
- 
+           bcs = get_demultiplexed(wildcards)
+        bin2cls = expand(OUTPUT_DIR + "/isONclustCon/{bc}/all/final_clusters.tsv", bc=bcs)
+    return bin2cls
+
 checkpoint cls_isONclust:
     input: lambda wc: get_isONclust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/isONclustCon/clusters")

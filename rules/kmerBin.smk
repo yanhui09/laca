@@ -38,24 +38,34 @@ rule umap:
        " -c {output.cluster} -p"
        " > {log} 2>&1" 
 
-# split reads by cluster
+def get_bin(wildcards, pooling = True):
+    check_val("pooling", pooling, bool)
+    if pooling == True:
+        barcodes = ["pooled"]
+    else:
+        barcodes = get_demultiplexed(wildcards)
+    return expand(OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv", barcode=barcodes)
+
+# split reads by kmerbin
 checkpoint cls_kmerbin:
-    input: rules.umap.output.cluster,
-    output: directory(OUTPUT_DIR + "/kmerBin/{barcode}/clusters"),
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/clusters.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/clusters.txt"
+    input: lambda wildcards: get_bin(wildcards, pooling = config["pooling"])
+    output: directory(OUTPUT_DIR + "/kmerBin/clusters"),
     run:
         import pandas as pd
-        df = pd.read_csv(input[0], sep="\t")
-        df = df[["read", "bin_id"]]
-        clusters = df.bin_id.max()
-        os.makedirs(output[0])
-        for cluster in range(0, clusters+1):
-            df.loc[df.bin_id == cluster, "read"].to_csv(output[0] + "/c" + str(cluster) + ".txt", sep="\t", header=False, index=False)
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input):
+            bc = i.split("/")[-2]
+            df = pd.read_csv(i, sep="\t")
+            df = df[["read", "bin_id"]]
+            kbs = df.bin_id.max()
+            for kb in range(0, kbs+1):
+                bc_kb = "/{bc}_c{kb}.csv".format(bc=bc, kb=kb)
+                df.loc[df.bin_id == kb, "read"].to_csv(output[0] + bc_kb, header=False, index=False)
         
 rule split_bin:
     input: 
-        cluster = OUTPUT_DIR + "/kmerBin/{barcode}/clusters/{c}.txt",
+        cluster = OUTPUT_DIR + "/kmerBin/clusters/{barcode}_{c}.csv",
         fqs = OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq",
     output: OUTPUT_DIR + "/kmerBin/{barcode}/split/{c}.fastq",
     conda: "../envs/seqkit.yaml"
@@ -74,19 +84,19 @@ rule skip_bin:
 def get_kmerBin(wildcards, pooling = True, kmerbin = True):
     check_val("pooling", pooling, bool)
     check_val("kmerbin", kmerbin, bool)
-    if pooling == True:
-        barcodes = ["pooled"]
+    
+    if kmerbin == True:
+        fqs = []
+        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+        for i in bc_kbs:
+            bc, kb = i.split("_")
+            fqs.append(OUTPUT_DIR + "/kmerBin/{bc}/split/{kb}.fastq".format(bc=bc, kb=kb))
     else:
-        barcodes = get_demultiplexed(wildcards)
-
-    fqs = []
-    for i in barcodes:
-        if kmerbin == True:
-            cs = glob_wildcards(checkpoints.cls_kmerbin.get(barcode=i).output[0] + "/{c}.txt").c
-            for j in cs:
-                fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/split/{c}.fastq".format(barcode=i, c=j))
+        if pooling == True:
+           bcs = ["pooled"]
         else:
-            fqs.append(OUTPUT_DIR + "/kmerBin/{barcode}/all.fastq".format(barcode=i))
+           bcs = get_demultiplexed(wildcards)
+        fqs = expand(OUTPUT_DIR + "/kmerBin/{bc}/all.fastq", bc=bcs)
     return fqs
 
 def get_fq4Con(kmerbin = True):
