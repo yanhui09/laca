@@ -43,7 +43,7 @@ def get_bin(wildcards, pooling = True):
     if pooling == True:
         barcodes = ["pooled"]
     else:
-        barcodes = get_demultiplexed(wildcards)
+        barcodes = get_qced(wildcards)
     return expand(OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv", barcode=barcodes)
 
 # split reads by kmerbin
@@ -95,7 +95,7 @@ def get_kmerBin(wildcards, pooling = True, kmerbin = True):
         if pooling == True:
            bcs = ["pooled"]
         else:
-           bcs = get_demultiplexed(wildcards)
+           bcs = get_qced(wildcards)
         fqs = expand(OUTPUT_DIR + "/kmerBin/{bc}/all.fastq", bc=bcs)
     return fqs
 

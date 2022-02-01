@@ -93,15 +93,35 @@ rule q_filter:
     threads: config["threads"]["normal"]
     shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i {input} > {output} 2> {log}"
 
+checkpoint exclude_empty_fqs:
+    input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    output: directory(OUTPUT_DIR + "/qc/qfilt/empty")
+    run:
+        import shutil
+        import pandas as pd
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input):
+            if os.stat(i).st_size == 0:
+                shutil.move(i, output[0])
+
+def get_qced(wildcards):
+    barcodes = get_demultiplexed(wildcards)
+    barcodes_empty = glob_wildcards(checkpoints.exclude_empty_fqs.get(**wildcards).output[0]
+     + "/{barcode, [a-zA-Z]+[0-9]+}.fastq").barcode
+    barcodes_empty = sorted(set(barcodes_empty))
+    barcodes = [b for b in barcodes if b not in barcodes_empty]
+    return barcodes
+
 #  pooling fqs for sensitivity 
 rule combine_fastq:
-    input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_qced(wc))
     output: temp(OUTPUT_DIR + "/qc/qfilt/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
 def get_filt(wildcards, pooling = True):
-    barcodes = get_demultiplexed(wildcards) 
+    barcodes = get_qced(wildcards) 
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes.append("pooled")

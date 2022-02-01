@@ -44,7 +44,7 @@ def get_clust(wildcards, pooling = True, kmerbin = True):
         if pooling == True:
            bcs = ["pooled"]
         else:
-           bcs = get_demultiplexed(wildcards)
+           bcs = get_qced(wildcards)
         bin2cls = expand(OUTPUT_DIR + "/clustCon/{bc}/avr_aln/all/bin2clust.csv", bc=bcs)
     return bin2cls
  
@@ -117,7 +117,7 @@ def get_isONclust(wildcards, pooling = True, kmerbin = True):
         if pooling == True:
            bcs = ["pooled"]
         else:
-           bcs = get_demultiplexed(wildcards)
+           bcs = get_qced(wildcards)
         bin2cls = expand(OUTPUT_DIR + "/isONclustCon/{bc}/all/final_clusters.tsv", bc=bcs)
     return bin2cls
 
