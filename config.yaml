@@ -25,7 +25,7 @@ seqkit:
   max-len: -1
   # subsampling params
   p: 0.9 # subsampling portion, upper it if with uneven library [float]
-  n: 5000 # subsampling number [int]
+  n: 50 # subsampling number [int]
 
 # order matters
 fprimer:

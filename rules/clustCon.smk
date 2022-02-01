@@ -168,7 +168,7 @@ rule minimap2polish:
       ref = OUTPUT_DIR + "/{cls}/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.fna",
       fastq = OUTPUT_DIR + "/{cls}/{barcode}/{c}/split/{clust_id}.fastq",
     output: OUTPUT_DIR + "/{cls}/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.paf",
-    message: "Polish {wildcards.c} draft [id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}] ({wildcards.cls})"
+    message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.cls}]"
     params:
         x = config["minimap"]["x"]
     conda: "../envs/polish.yaml"
@@ -194,7 +194,7 @@ rule racon:
         OUTPUT_DIR + "/{cls}/{barcode}/{c}/split/{clust_id}.fastq",
         lambda wc: get_racon_input(wc),
     output: OUTPUT_DIR + "/{cls}/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}.fna"
-    message: "Polish {wildcards.c} draft [id={wildcards.clust_id}] with racon, round={wildcards.iter} [{wildcards.barcode}] ({wildcards.cls})"
+    message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with racon, round={wildcards.iter} [{wildcards.cls}]"
     params:
         m = config["racon"]["m"],
         x = config["racon"]["x"],
@@ -217,7 +217,7 @@ rule medaka_consensus:
     output: 
         fasta = OUTPUT_DIR + "/{cls}/{barcode}/{c}/polish/{clust_id}/medaka/consensus.fasta",
         _dir = directory(OUTPUT_DIR + "/{cls}/{barcode}/{c}/polish/{clust_id}/medaka"),
-    message: "Generate consensus [id={wildcards.clust_id}] in draft {wildcards.c} with medaka [{wildcards.barcode}] ({wildcards.cls})"
+    message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka [{wildcards.cls}]"
     params:
         m = config["medaka"]["m"],
     conda: "../envs/polish.yaml"

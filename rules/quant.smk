@@ -77,7 +77,7 @@ rule minimap_rep_seqs:
         mmi = rules.index.output,
         dict = rules.dict.output,
     output: temp(OUTPUT_DIR + "/quant/mapped/{barcode}.bam")
-    message: "Re-map trimmed fastq files [Generate abundance matrix]"
+    message: "Re-map {barcode}.fastq files [Generate abundance matrix]"
     params:
         x = config["minimap"]["x"]
     conda: "../envs/polish.yaml"
