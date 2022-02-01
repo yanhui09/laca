@@ -55,13 +55,12 @@ checkpoint cls_kmerbin:
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input):
-            bc = i.split("/")[-2]
-            df = pd.read_csv(i, sep="\t")
-            df = df[["read", "bin_id"]]
-            kbs = df.bin_id.max()
-            for kb in range(0, kbs+1):
-                bc_kb = "/{bc}_c{kb}.csv".format(bc=bc, kb=kb)
-                df.loc[df.bin_id == kb, "read"].to_csv(output[0] + bc_kb, header=False, index=False)
+            barcode = i.split("/")[-2]
+            df_i = pd.read_csv(i, sep="\t")
+            df_i = df_i[["read", "bin_id"]]
+            for clust_id, df_clust in df_i.groupby('bin_id'):
+                df_clust['read'].to_csv(output[0] + "/{barcode}_c{c}.csv".format(barcode=barcode, c=clust_id),
+                 header = False, index = False)
         
 rule split_bin:
     input: 
@@ -98,11 +97,3 @@ def get_kmerBin(wildcards, pooling = True, kmerbin = True):
            bcs = get_qced(wildcards)
         fqs = expand(OUTPUT_DIR + "/kmerBin/{bc}/all.fastq", bc=bcs)
     return fqs
-
-def get_fq4Con(kmerbin = True):
-    check_val("kmerbin", kmerbin, bool)
-    if kmerbin == True:
-        out = rules.split_bin.output
-    else:
-        out = rules.skip_bin.output
-    return out

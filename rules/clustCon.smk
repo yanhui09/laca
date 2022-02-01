@@ -1,3 +1,11 @@
+def get_fq4Con(kmerbin = True):
+    check_val("kmerbin", kmerbin, bool)
+    if kmerbin == True:
+        out = rules.split_bin.output
+    else:
+        out = rules.skip_bin.output
+    return out
+
 # kmerCon
 
 # split kmerbins

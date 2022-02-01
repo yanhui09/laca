@@ -28,6 +28,7 @@ rule all:
     input:
         OUTPUT_DIR + "/.demultiplex_DONE",
         OUTPUT_DIR + "/.qc_DONE",
+        OUTPUT_DIR + "/.kmerBin_DONE",
         OUTPUT_DIR + "/.quant_DONE",
         OUTPUT_DIR + "/.taxa_DONE",
         OUTPUT_DIR + "/.tree_DONE",
