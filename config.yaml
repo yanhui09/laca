@@ -65,7 +65,8 @@ hdbscan:
 # isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
 # isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
 cluster:
-  #- clustCon # the first for the final kOTUs
+  #- kmerCon # the first for the final kOTUs
+  #- clustCon 
   - isONclustCon
   #- isONcorCon
   #- umiCon

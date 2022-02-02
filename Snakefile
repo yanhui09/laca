@@ -54,6 +54,12 @@ rule kmerBin:
     input: lambda wc: get_kmerBin(wc, pooling = config["pooling"], kmerbin = config["kmerbin"]),
     output: temp(touch(OUTPUT_DIR + "/.kmerBin_DONE"))
 
+rule kmerCon:
+    input:
+        OUTPUT_DIR + "/.kmerBin_DONE",
+        OUTPUT_DIR + "/kmerCon.fna"
+    output: temp(touch(OUTPUT_DIR + "/.kmerCon_DONE"))
+
 rule clustCon:
     input:
         OUTPUT_DIR + "/.kmerBin_DONE",

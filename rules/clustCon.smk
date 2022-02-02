@@ -7,6 +7,24 @@ def get_fq4Con(kmerbin = True):
     return out
 
 # kmerCon
+rule get_fqs_split:
+    input: get_fq4Con(config["kmerbin"]),
+    output: OUTPUT_DIR + "/kmerCon/{barcode}/{c}/split/0.fastq",
+    log: OUTPUT_DIR + "/logs/kmerCon/{barcode}/{c}/0/get_fqs_split.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/kmerCon/{barcode}/{c}/0/get_fqs_split.txt"
+    shell: "cp -f {input} {output} 2> {log}"
+
+rule spoa:
+    input: rules.get_fqs_split.output
+    output: OUTPUT_DIR + "/kmerCon/{barcode}/{c}/polish/0/draft/raw.fna"
+    conda: '../envs/spoa.yaml'
+    params:
+        l = config["spoa"]["l"],
+        r = config["spoa"]["r"],
+        g = config["spoa"]["g"],
+    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/0/spoa_consensus.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/0/spoa_consensus.txt"
+    shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} > {output} 2> {log}"
 
 # split kmerbins
 # clustCon
@@ -79,7 +97,7 @@ checkpoint cls_clustCon:
                         ref_read = df_clust.loc[ref_idx, ['read_id']]
                         ref_read.to_csv(output[0] + bc_kb_ci + ".ref", header=False, index=False)
    
-rule get_fqs_split:
+rule get_fqs_split2:
     input:
         pool = OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}_{clust_id}.csv",
         ref = OUTPUT_DIR + "/clustCon/clusters/{barcode}_{c}_{clust_id}.ref",
@@ -147,27 +165,25 @@ checkpoint cls_isONclust:
                     df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c}_{clust_id}.csv".format(barcode=barcode, c=c, clust_id=clust_id),
                      header = False, index = False)
 
-rule get_fqs_split2:
+rule get_fqs_split3:
     input:
         bin2clust = OUTPUT_DIR + "/isONclustCon/clusters/{barcode}_{c}_{clust_id}.csv",
         binned = get_fq4Con(config["kmerbin"]),
     output: OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/split/{clust_id}.fastq",
     conda: '../envs/seqkit.yaml'
-    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split2.txt"
+    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split.txt"
     shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
 
-rule spoa_consensus:
-    input: rules.get_fqs_split2.output
-    output: OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna"
-    conda: '../envs/spoa.yaml'
-    params:
-        l = config["spoa"]["l"],
-        r = config["spoa"]["r"],
-        g = config["spoa"]["g"],
-    log: OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/{clust_id}/spoa_consensus.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/spoa_consensus.txt"
-    shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} > {output} 2> {log}"
+use rule spoa as spoa2 with:
+    input:
+        rules.get_fqs_split3.output
+    output: 
+        OUTPUT_DIR + "/isONclustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna"
+    log: 
+        OUTPUT_DIR + "/logs/isONclustCon/{barcode}/{c}/{clust_id}/spoa.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/spoa.txt"
 
 # polish with racon and medaka
 # reused in racon iterations
@@ -249,7 +265,7 @@ checkpoint cls_isONcor:
 # run_isoncorrect provide multithread processing for isONcorrect in batches
 # racon seems not to be supported in batch mode
 rule isONcorrect:
-    input: rules.get_fqs_split2.output,
+    input: rules.get_fqs_split3.output,
     output:
         _dir = directory(OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor"), 
         fq = OUTPUT_DIR + "/isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"
@@ -281,6 +297,26 @@ rule isoCon:
  
 # get polished asembly
 # kmerCon
+def get_kmerCon(wildcards):
+    bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+    fnas = []
+    for i in bc_kbs:
+        bc, kb, = i.split("_")
+        fnas.append(OUTPUT_DIR + "/kmerCon/{bc}/{kb}/polish/0/medaka/consensus.fasta".format(bc=bc, kb=kb))
+    return fnas
+
+rule collect_kmerCon:
+    input: lambda wc: get_kmerCon(wc),
+    output: OUTPUT_DIR + "/kmerCon.fna"
+    run: 
+        with open(output[0], "w") as out:
+            for i in input:
+                barcode_i, c_i = [ i.split("/")[index] for index in [-6, -5] ]
+                with open(i, "r") as inp:
+                    for line in inp:
+                        if line.startswith(">"):
+                            line = ">" + barcode_i + "_" + c_i + "\n"
+                        out.write(line)
 
 # clustCon
 def get_clustCon(wildcards):
