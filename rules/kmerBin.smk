@@ -59,8 +59,10 @@ checkpoint cls_kmerbin:
             df_i = pd.read_csv(i, sep="\t")
             df_i = df_i[["read", "bin_id"]]
             for clust_id, df_clust in df_i.groupby('bin_id'):
-                df_clust['read'].to_csv(output[0] + "/{barcode}_c{c}.csv".format(barcode=barcode, c=clust_id),
-                 header = False, index = False)
+                # unclustered reads are assigned to bin -1
+                if clust_id >= 0:
+                    df_clust['read'].to_csv(output[0] + "/{barcode}_{c}.csv".format(barcode=barcode, c=clust_id),
+                     header = False, index = False)
         
 rule split_bin:
     input: 
