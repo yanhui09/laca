@@ -6,7 +6,7 @@ def check_val(var, val, class_type):
 
 OUTPUT_DIR = "/mnt/md0/UMI16S/primer_test"
 # subsample
-subs = True
+subs = False
 P = 0.9
 N = 1000
 
@@ -108,7 +108,9 @@ def get_raw(subsample, p, n):
 # trim primers 
 rule trim_primers:
     input: get_raw(subs, P, N)
-    output: OUTPUT_DIR + "/{db}/primers_trimmed.fna"
+    output: 
+        fna = OUTPUT_DIR + "/{db}/primers_trimmed.fna",
+        json = OUTPUT_DIR + "/{db}/cutadapt.json",
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5_patterns,
@@ -121,8 +123,9 @@ rule trim_primers:
             -j {threads} \
             --discard-untrimmed \
             {params.f} \
-            -o {output} \
+            -o {output.fna} \
             {input} \
+            --json={output.json} \
             > {log} 2>&1
         """
 
