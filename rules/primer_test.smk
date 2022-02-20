@@ -16,6 +16,9 @@ dict_db = {
     "silva": "https://www.arb-silva.de/fileadmin/silva_databases/release_138_1/Exports/SILVA_138.1_SSURef_NR99_tax_silva_trunc.fasta.gz"
 }
 
+# Possible sets of primers
+SETS = ["11", "12", "21", "22", "31", "32", "41", "42", "all"]
+
 # linker and primer info
 fprimers = config["fprimer"]
 rprimers = config["rprimer"]
@@ -142,6 +145,22 @@ rule trim_primers:
             > {log} 2>&1
         """
 
+rule jq_summary:
+    input: expand(OUTPUT_DIR + "/{{db}}/{sets}/cutadapt.json", sets = SETS)
+    output: OUTPUT_DIR + "/{db}/cutadapt_summary.txt"
+    conda: "../envs/jq.yaml"
+    shell: 
+        """
+        echo "Primer sets\tPercentage" > {output}
+        for i in {input}
+        do
+            pc=$(jq '.read_counts.output / .read_counts.input * 100' $i)
+            dir="${{i%/*}}" 
+            ps="${{dir##*/}}"
+            echo -e "$ps\t$pc" >> {output}
+        done    
+        """
+
 rule primer_check:
-    input: expand(OUTPUT_DIR + "/{db}/{sets}/cutadapt.json", db = [k for k in dict_db.keys()], sets = ["11", "12", "21", "22", "31", "32", "41", "42", "all"])
+    input: expand(OUTPUT_DIR + "/{db}/cutadapt_summary.txt", db = [k for k in dict_db.keys()])
     output: touch(OUTPUT_DIR + "/.primerCHK_DONE")
