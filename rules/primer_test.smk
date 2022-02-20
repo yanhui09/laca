@@ -151,13 +151,14 @@ rule jq_summary:
     conda: "../envs/jq.yaml"
     shell: 
         """
-        echo "Primer sets\tPercentage" > {output}
+        echo "Sets\tPercentage\tPrimer patterns" > {output}
         for i in {input}
         do
             pc=$(jq '.read_counts.output / .read_counts.input * 100' $i)
+            cml=$(jq '.command_line_arguments' $i | grep '\.\.\.' | tr -d '\n')
             dir="${{i%/*}}" 
             ps="${{dir##*/}}"
-            echo -e "$ps\t$pc" >> {output}
+            echo -e "$ps\t$pc\t$cml" >> {output}
         done    
         """
 
