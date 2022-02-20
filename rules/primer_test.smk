@@ -36,12 +36,25 @@ def linked_pattern(primers1, primers2):
     primers2_values = list(primers2.values())
     linked = [seqs_join(primer1, primer2) for primer1 in primers1_values for primer2 in primers2_values]
     return ' '.join(linked)
+# generate pattern directory
+def pattern_dict(fprimers, rprimers):
+    f5_dict = {}
+    f5_all = ''
+    for i in range(len(fprimers.items())):
+        for j in range(len(rprimers.items())):
+            f5_pattern1 = linked_pattern(dict(list(fprimers.items())[i:i+1]), dict(list(rprimers.items())[j:j+1]))
+            f5_pattern2 = linked_pattern(dict(list(rprimers.items())[j:j+1]), dict(list(fprimers.items())[i:i+1]))
+            f5_patterns = f5_pattern1 + ' ' + f5_pattern2
+            # update dict
+            f5_ij = {str(i+1)+str(j+1): f5_patterns}
+            f5_dict.update(f5_ij)
+            # include combinations in all
+            f5_all += f5_patterns + ' '
+    f5_alldict = {'all': f5_all}
+    f5_dict.update(f5_alldict)
+    return f5_dict
 
-# pattern
-f5_pattern1 = linked_pattern(fprimers, rprimers)
-f5_pattern2 = linked_pattern(rprimers, fprimers)
-f5_patterns = f5_pattern1 + ' ' + f5_pattern2
-#-----------
+f5_dict = pattern_dict(fprimers, rprimers)
 
 def get_val(key, dict_i):
     return dict_i[key]
@@ -109,13 +122,13 @@ def get_raw(subsample, p, n):
 rule trim_primers:
     input: get_raw(subs, P, N)
     output: 
-        fna = OUTPUT_DIR + "/{db}/primers_trimmed.fna",
-        json = OUTPUT_DIR + "/{db}/cutadapt.json",
+        fna = OUTPUT_DIR + "/{db}/{sets}/primers_trimmed.fna",
+        json = OUTPUT_DIR + "/{db}/{sets}/cutadapt.json",
     conda: "../envs/cutadapt.yaml"
     params:
-        f = f5_patterns,
-    log: OUTPUT_DIR + "/logs/{db}/trim_primers.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/{db}/trim_primers.txt"
+        f = lambda wc: get_val(wc.sets, f5_dict),
+    log: OUTPUT_DIR + "/logs/{db}/trim_{sets}.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/{db}/trim_{sets}.txt"
     threads: config["threads"]["large"]
     shell:
         """
@@ -130,5 +143,5 @@ rule trim_primers:
         """
 
 rule primer_check:
-    input: expand(OUTPUT_DIR + "/{db}/primers_trimmed.fna", db = [k for k in dict_db.keys()])
+    input: expand(OUTPUT_DIR + "/{db}/{sets}/cutadapt.json", db = [k for k in dict_db.keys()], sets = ["11", "12", "21", "22", "31", "32", "41", "42", "all"])
     output: touch(OUTPUT_DIR + "/.primerCHK_DONE")
