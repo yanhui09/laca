@@ -18,10 +18,16 @@ conda activate snakemake
 # Usage
 
 You can edit the path to `basecalled_dir` and `results_dir` in the `config.yaml`, and start snakemake workflow in the console.
-
-    snakemake -p --use-conda -j 8 --resources mem_mb=50000
+```
+snakemake -p --use-conda -j 8 --resources mem_mb=50000
+```
 
 Or pass the arguments in the console.
+```
+snakemake -p --use-conda -j 8 --resources mem_mb=50000 --config basecalled_dir=/path/to/basecalled_fqs results_dir=/path/to/results threads_taxa=8
+```
 
-    snakemake -p --use-conda -j 8 --resources mem_mb=50000 --config basecalled_dir=/path/to/basecalled_fqs results_dir=/path/to/results threads_taxa=8
-
+In silico primer test
+```
+snakemake -j6 --use-conda primer_check --snakefile rules/primer_test.smk --configfile config.yaml
+```
