@@ -14,7 +14,7 @@ def get_classifier(c):
     return out 
 
 rule init_database:
-    input: get_classifier(config["classifier"])
+    input: get_classifier(config["classifier"][0])
     output: touch(DATABASE_DIR + "/.initDB_DONE")
 
 # use predefined MMseqs2 database
@@ -110,16 +110,16 @@ rule createtaxdb_seqTax:
         "--ncbi-tax-dump {input.taxdump} --tax-mapping-file {input.taxidmapping} 1> {log} 2>&1"
 
 # add kraken classifier
-rule database_kraken:
+rule database_kraken2:
     output: 
         k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
-        dbloc = directory(DATABASE_DIR + "/kraken2"),
     conda: "../envs/kraken2.yaml"
     params:
         buildb_cmd = config["kraken2"]["buildb_cmd"],
+        dbloc = directory(DATABASE_DIR + "/kraken2"),
     log: OUTPUT_DIR + "/logs/taxonomy/kraken2/build_database.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/build_database.txt"
     threads: config["threads"]["large"]
     shell:
-        "kraken2-build --db {output.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"
+        "kraken2-build --db {params.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"
 
