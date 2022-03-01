@@ -1,0 +1,5 @@
+name: nanosim
+channels:
+  - bioconda
+dependencies:
+  - nanosim
