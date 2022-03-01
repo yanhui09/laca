@@ -13,7 +13,7 @@ pooling: TRUE
 
 ##############################################################
 # Demultiplex with guppy
-barcode_kits: "SQK16S-GXO"
+barcode_kits: "SQK16S-GXO192"
 ##############################################################
 # Quality control
 # Subsampling raw reads if with inadequate memory
