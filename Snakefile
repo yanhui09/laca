@@ -34,6 +34,7 @@ rule all:
         OUTPUT_DIR + "/.tree_DONE",
 
 include: "rules/init.smk"
+include: "rules/nanosim.smk"
 include: "rules/demultiplex.smk"
 include: "rules/qc.smk"
 include: "rules/kmerBin.smk"

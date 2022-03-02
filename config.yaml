@@ -170,3 +170,19 @@ umi:
 # linker and primer for umi extraction
 flinker: "GTCTCGTGGGCTCGG"
 rlinker: "GTCTCGTGGGCTCGG"
+
+#########################################################################################
+# in silico test with NanoSim
+nanosim:
+  threads: 6
+  ref: "/mnt/md0/UMI16S/primer_test/silva/repDNA.fna"
+  id: 90,95,97,98,99
+  subsample: 100
+  read_analysis:
+    read: "/mnt/md0/UMI16S/nanosim/ampmock/raw.fastq"
+    rg: "/mnt/md0/UMI16S/nanosim/ampmock/zymock_16s.fna"
+    a: minimap2
+  simulator: 
+    n: 500,1000,2000,5000,10000
+    dna_type: linear
+        
