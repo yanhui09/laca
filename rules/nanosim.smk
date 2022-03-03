@@ -14,12 +14,16 @@ rule read_analysis:
     input: 
       read = NREAD,
       ref = RG,
-    output: directory(OUTPUT_DIR + "/nanosim/")
+    output: OUTPUT_DIR + "/nanosim/model/nanosim_model_profile"
     conda: "../envs/nanosim.yaml"
     params:
         a = config["nanosim"]["read_analysis"]["a"],
+        prefix = OUTPUT_DIR + "/nanosim/model/nanosim",
     log: OUTPUT_DIR + "/logs/nanosim/read_analysis.log"
     benchmark: OUTPUT_DIR + "/benchmarks/nanosim/read_analysis.txt"
     threads: config["nanosim"]["threads"]
     shell: "read_analysis.py genome -i {input.read} -rg {input.ref} -o {output} -a {params.a} -t {threads} > {log} 2>&1"
+
+# cluster ref by identity
+# simulate reads by number of reads
 
