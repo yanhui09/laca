@@ -21,8 +21,8 @@ subsample: TRUE
 
 seqkit:
   min-qual: 7
-  min-len: 500
-  max-len: -1
+  min-len: 800
+  max-len: 1500
   # subsampling params
   p: 0.9 # subsampling portion, upper it if with uneven library [float]
   n: 50 # subsampling number [int]
