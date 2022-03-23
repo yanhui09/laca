@@ -39,7 +39,7 @@ def umap_reduction(kmer_freqs, n_neighbors, metric, low_memory, min_dist, n_comp
     X = df.loc[:,motifs]
     X_embedded = umap.UMAP(
         random_state=123, n_neighbors=n_neighbors, metric=str(metric), low_memory=low_memory,
-        min_dist=min_dist, n_components=n_components, verbose=2).fit_transform(X)
+        min_dist=min_dist, n_components=n_components, verbose=True).fit_transform(X)
     df_umap = pd.DataFrame(X_embedded, columns=["D" + str(x) for x in range(1, n_components + 1)])
     umap_out = pd.concat([df["read"], df["length"], df_umap], axis=1)
     return X_embedded, umap_out
