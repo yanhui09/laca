@@ -52,6 +52,7 @@ kmer_size: 5
 umap:
   n_neighbors: 15 # Increase this for global structure
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
+  metric: cosine
   n_components: 2 # n reduced dimensions passed to hdbscan clustering
 hdbscan:
   min_bin_size: 10 # Define the smallest size to bin
