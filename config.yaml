@@ -47,6 +47,14 @@ cutadapt:
 # kmer binning
 kmerbin: TRUE
 # Bool, whether to bin or not; TRUE is highly recommened in clustCon mode, considering the massive pairwise alignments inside.
+
+# To mitagate the memory bottleneck of umap in pooling mode,
+# batch mode is induced. kmer binning is done in batches and
+# all unbinned reads will be re-collected for re-binning. 
+# It's an alternative for users with limited computing resources.
+batch_size: -1 
+# zero or negative values to bin all reads together; 
+# use postive value to bin in batches due to limited rams 
 kmer_size: 5
 # umap reduction and hdbscan cluster
 umap:
