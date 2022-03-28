@@ -14,14 +14,38 @@ rule kmer_freqs:
         " -r {input} -t {threads}"
         " 2> {log} > {output}"
 
-# barch mode
-# shuffle the kmer freqs in batches
+def get_batch_size(batch_size, ram, kmer_file):
+    # necessary in dry run
+    if not os.path.exists(kmer_file):
+        return -1 # pesduo
+    # total input read size
+    with open(kmer_file) as f:
+        total = sum(1 for line in f) -1
+    
+    # zero and negtive values to use all reads
+    try: 
+        batch_size = int(batch_size)
+        if batch_size <= 0:
+            batch_size = total
+        # auto estimation of batch size base on RAM
+    except:
+        if batch_size == "auto":
+            # estimated constan m from 333 reads with max RAM of 241.26 MB
+            m = 241.26 * 2 / 333 ** 2
+            est_size = int((2 * 1024 * ram / m) ** 0.5)
+            if est_size > total:
+                batch_size = total
+            else:
+                batch_size = est_size
+    return batch_size
+
+# check whether to split the kmer freqs in batches
 checkpoint shuffle_batch:
     input: rules.kmer_freqs.output
-    output: directory(OUTPUT_DIR + "/kmerBin/{barcode}/batch")
+    output: directory(OUTPUT_DIR + "/kmerBin/{barcode}/batch_check")
     conda: "../envs/coreutils.yaml"
     params:
-        batch_size = config["batch_size"],
+        batch_size = lambda wc, input: get_batch_size(config["batch_size"], config["bin_mem"], input[0]),
     log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/shuffle_batch.log"
     benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/shuffle_batch.txt"
     threads: config["threads"]["normal"]
@@ -35,11 +59,39 @@ checkpoint shuffle_batch:
         """
 
 # kmer binning
+#rule umap:
+#    input: rules.kmer_freqs.output
+#    output: 
+#        cluster=OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv",
+#	    plot=OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.png",
+#    conda: "../envs/kmerBin.yaml"
+#    params:
+#        n_neighbors = config["umap"]["n_neighbors"],
+#        min_dist = config["umap"]["min_dist"],
+#        metric = config["umap"]["metric"],
+#        n_components = config["umap"]["n_components"],
+#	    min_bin_size = config["hdbscan"]["min_bin_size"],
+#        min_samples = config["hdbscan"]["min_samples"],
+#	    epsilon = config["hdbscan"]["epsilon"],
+#    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/umap.log"
+#    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/umap.txt"
+#    threads: config["threads"]["large"]
+#    resources:
+#        mem_mb = config["bin_mem"] * 1024
+#    shell:
+#       "NUMBA_NUM_THREADS={threads} python scripts/kmerBin.py -k {input}"
+#       " -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components}"
+#       " -s {params.min_bin_size} -m {params.min_samples} -e {params.epsilon}"
+#       " -c {output.cluster} -p"
+#       " > {log} 2>&1" 
+
+# batch binning
 rule umap:
-    input: rules.kmer_freqs.output
+    input: 
+        OUTPUT_DIR + "/kmerBin/{barcode}/batch_check/{batch}.tsv",
     output: 
-        cluster=OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv",
-	    plot=OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.png",
+        cluster=OUTPUT_DIR + "/kmerBin/{barcode}/{batch}/hdbscan.tsv",
+	    plot=OUTPUT_DIR + "/kmerBin/{barcode}/{batch}/hdbscan.png",
     conda: "../envs/kmerBin.yaml"
     params:
         n_neighbors = config["umap"]["n_neighbors"],
@@ -49,9 +101,13 @@ rule umap:
 	    min_bin_size = config["hdbscan"]["min_bin_size"],
         min_samples = config["hdbscan"]["min_samples"],
 	    epsilon = config["hdbscan"]["epsilon"],
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/umap.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/umap.txt"
+    log: 
+        OUTPUT_DIR + "/logs/kmerBin/{barcode}/{batch}/umap.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/{batch}/umap.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem_mb = config["bin_mem"] * 1024
     shell:
        "NUMBA_NUM_THREADS={threads} python scripts/kmerBin.py -k {input}"
        " -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components}"
@@ -59,50 +115,34 @@ rule umap:
        " -c {output.cluster} -p"
        " > {log} 2>&1" 
 
-# batch binning
-use rule umap as umap_batch with:
-    input: 
-        OUTPUT_DIR + "/kmerBin/{barcode}/batch/{batch}.tsv",
-    output: 
-        cluster=OUTPUT_DIR + "/kmerBin/{barcode}/{batch}/hdbscan.tsv",
-	    plot=OUTPUT_DIR + "/kmerBin/{barcode}/{batch}/hdbscan.png",
-    log: 
-        OUTPUT_DIR + "/logs/kmerBin/{barcode}/{batch}/umap.log"
-    benchmark: 
-        OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/{batch}/umap.txt"
- 
 def get_kmerbatch(wildcards):
     batches = glob_wildcards(checkpoints.shuffle_batch.get(**wildcards).output[0] + "/{batch}.tsv").batch
     return expand(OUTPUT_DIR + "/kmerBin/{{barcode}}/{batch}/hdbscan.tsv", batch=batches)
 
 rule col_kmerbatch:
     input: get_kmerbatch
-    output: OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan_inbatch.tsv"
+    output: OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv"
     run:
         with open(output[0], "w") as out:
             out.write("read\tlength\tD1\tD2\tbin_id\tbatch_id\n")
             for i in input:
-                batch = i.split("/")[-2]
+                batch = i.split("/")[-2].replace('batch', 'b')
                 with open(i) as f:
                     next(f)
                     for line in f:
                         out.write(line.rstrip() + "\t" + batch + "\n") 
 
-def get_bin(wildcards, pooling = True, batch_size = -1):
+def get_bin(wildcards, pooling = True):
     check_val("pooling", pooling, bool)
     if pooling == True:
         barcodes = ["pooled"]
     else:
         barcodes = get_qced(wildcards)
-    
-    out = ""
-    if batch_size > 0:
-        out = "_inbatch"
-    return expand(OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan" + out + ".tsv", barcode=barcodes)
+    return expand(OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv", barcode=barcodes)
 
 # split reads by kmerbin
 checkpoint cls_kmerbin:
-    input: lambda wildcards: get_bin(wildcards, pooling = config["pooling"], batch_size = config["batch_size"])
+    input: lambda wildcards: get_bin(wildcards, pooling = config["pooling"])
     output: directory(OUTPUT_DIR + "/kmerBin/clusters"),
     run:
         import pandas as pd
