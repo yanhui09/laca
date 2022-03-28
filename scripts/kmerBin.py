@@ -17,6 +17,8 @@ def parse_arguments():
     parser.add_argument("-k", "--kmer", help='kmer file from kmer_freqs.py')
     parser.add_argument("-n", "--n_neighbors", help='n_neighbors for UMAP', default=50)
     parser.add_argument("-d", "--min_dist", help='min_dist for UMAP', default=0.1)
+    parser.add_argument("-r", "--metric", help='metric for UMAP', default='euclidean')
+    parser.add_argument("-l", "--low_memory", help='low_memory for UMAP', action="store_true", default=False)
     parser.add_argument("-t", "--n_components", help='n_components for UMAP', default=2)
     parser.add_argument("-s", "--min_cluster_size", help='min_cluster_size for HDBSCAN', default=10)
     parser.add_argument("-m", "--min_samples", help='min_samples for HDBSCAN', default=10)
@@ -27,7 +29,7 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
-def umap_reduction(kmer_freqs, n_neighbors, min_dist, n_components):
+def umap_reduction(kmer_freqs, n_neighbors, metric, low_memory, min_dist, n_components):
     df = pd.read_csv(kmer_freqs, delimiter="\t")
     n_neighbors = int(n_neighbors)
     min_dist = float(min_dist)
@@ -36,8 +38,8 @@ def umap_reduction(kmer_freqs, n_neighbors, min_dist, n_components):
     motifs = [x for x in df.columns.values if x not in ["read", "length"]]
     X = df.loc[:,motifs]
     X_embedded = umap.UMAP(
-        random_state=123, n_neighbors=n_neighbors,
-        min_dist=min_dist, n_components=n_components, verbose=2).fit_transform(X)
+        random_state=123, n_neighbors=n_neighbors, metric=str(metric), low_memory=low_memory,
+        min_dist=min_dist, n_components=n_components, verbose=True).fit_transform(X)
     df_umap = pd.DataFrame(X_embedded, columns=["D" + str(x) for x in range(1, n_components + 1)])
     umap_out = pd.concat([df["read"], df["length"], df_umap], axis=1)
     return X_embedded, umap_out
@@ -71,7 +73,7 @@ def plot_cluster(X_embedded, umap_out, plot_out):
 
 def main():
     args = parse_arguments()
-    X_embedded, umap_out1 = umap_reduction(args.kmer, args.n_neighbors, args.min_dist, args.n_components)
+    X_embedded, umap_out1 = umap_reduction(args.kmer, args.n_neighbors, args.metric, args.low_memory, args.min_dist, args.n_components)
     hdbscan_out = hdbscan_cluster(umap_out1, args.min_cluster_size, args.min_samples, args.epsilon, args.n_components)
     if args.plot:
         plot_cluster(X_embedded, hdbscan_out, plot_out=os.path.splitext(args.cluster)[0] + ".png")

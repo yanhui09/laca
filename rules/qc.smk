@@ -22,7 +22,6 @@ def linked_pattern(primers1, primers2):
 # pattern
 f5_pattern1 = linked_pattern(fprimers, rprimers)
 f5_pattern2 = linked_pattern(rprimers, fprimers)
-f5_patterns = f5_pattern1 + ' ' + f5_pattern2
 #---------
 
 rule subsample:
@@ -55,33 +54,64 @@ def get_raw(subsample, p, n):
         return rules.collect_fastq.output
 
 # trim primers 
+# process two strands differently
 rule trim_primers:
     input: get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
-    output: temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}.fastq")
+    output: 
+        trimmed = temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}F.fastq"),
+        untrimmed = temp(OUTPUT_DIR + "/qc/primers_untrimmed/{barcode}F.fastq"),
     conda: "../envs/cutadapt.yaml"
     params:
-        f = f5_patterns,
+        f = f5_pattern1,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
         m = config["cutadapt"]["minimum-length"],
-    log: OUTPUT_DIR + "/logs/qc/{barcode}/trim_primers.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/trim_primers.txt"
+    log: OUTPUT_DIR + "/logs/qc/{barcode}/trim_primersF.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/trim_primersF.txt"
     threads: config["threads"]["large"]
     shell:
         """
         cutadapt \
             -j {threads} \
             -e {params.e} -O {params.O} -m {params.m}\
-            --discard-untrimmed \
             {params.f} \
-            -o {output} \
+            --untrimmed-output {output.untrimmed} \
+            -o {output.trimmed} \
             {input} \
             > {log} 2>&1
         """
 
+use rule trim_primers as trim_primersR with:
+    input: 
+        rules.trim_primers.output.untrimmed
+    output:
+        trimmed = temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}R.fastq"),
+        untrimmed = OUTPUT_DIR + "/qc/primers_untrimmed/{barcode}.fastq",
+    params:
+        f = f5_pattern2,
+        e = config["cutadapt"]["max_errors"],
+        O = config["cutadapt"]["min_overlap"],
+        m = config["cutadapt"]["minimum-length"],
+    log: 
+        OUTPUT_DIR + "/logs/qc/{barcode}/trim_primersR.log"
+    benchmark: 
+        OUTPUT_DIR + "/benchmarks/qc/{barcode}/trim_primersR.txt"
+
+# reverse complement for reverse strand
+rule revcomp_fq:
+    input: rules.trim_primersR.output.trimmed
+    output: temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}R_revcomp.fastq")
+    conda: "../envs/seqkit.yaml"
+    log: OUTPUT_DIR + "/logs/qc/{barcode}/revcomp_fq.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/revcomp_fq.txt"
+    threads: config["threads"]["normal"]
+    shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
+
 # quality filter
 rule q_filter:
-    input:  rules.trim_primers.output,
+    input:  
+        rules.trim_primers.output.trimmed,
+        rules.revcomp_fq.output,
     output: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
     conda: "../envs/seqkit.yaml"
     params:
@@ -91,7 +121,7 @@ rule q_filter:
     log: OUTPUT_DIR + "/logs/qc/{barcode}/q_filter.log"
     benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/q_filter.txt"
     threads: config["threads"]["normal"]
-    shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i {input} > {output} 2> {log}"
+    shell: "cat {input} | seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i > {output} 2> {log}"
 
 checkpoint exclude_empty_fqs:
     input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))

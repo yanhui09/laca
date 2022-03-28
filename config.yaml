@@ -46,12 +46,23 @@ cutadapt:
 ##############################################################
 # kmer binning
 kmerbin: TRUE
+bin_mem: 50 # GB
 # Bool, whether to bin or not; TRUE is highly recommened in clustCon mode, considering the massive pairwise alignments inside.
+
+# To mitagate the memory bottleneck of umap in pooling mode,
+# batch mode is induced. kmer binning is done in batches and
+# all unbinned reads will be re-collected for re-binning. 
+# It's an alternative for users with limited computing resources.
+batch_size: auto
+# zero or negative values to bin all reads together; 
+# use manual postive value to bin in batches due to limited rams 
+# or choose auto estimation with "auto"
 kmer_size: 5
 # umap reduction and hdbscan cluster
 umap:
   n_neighbors: 15 # Increase this for global structure
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
+  metric: cosine
   n_components: 2 # n reduced dimensions passed to hdbscan clustering
 hdbscan:
   min_bin_size: 10 # Define the smallest size to bin

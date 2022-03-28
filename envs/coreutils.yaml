@@ -1,0 +1,5 @@
+name: coreutils
+channels:
+  - conda-forge
+dependencies:
+  - coreutils
