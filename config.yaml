@@ -187,8 +187,8 @@ rlinker: "GTCTCGTGGGCTCGG"
 nanosim:
   threads: 6
   ref: "/mnt/md0/UMI16S/primer_test/silva/repDNA.fna"
-  id: 90,95,97,98,99
-  subsample: 100
+  id: 90,95,97,98,99,100
+  subsample_n: 1000
   read_analysis:
     read: "/mnt/md0/UMI16S/nanosim/ampmock/raw.fastq"
     rg: "/mnt/md0/UMI16S/nanosim/ampmock/zymock_16s.fna"
