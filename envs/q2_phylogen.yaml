@@ -7,5 +7,8 @@ channels:
 dependencies:
   - q2-alignment
   - q2-phylogeny
+  - q2-vsearch
+  - q2-feature-table
+  - biom-format
   - q2cli
   - h5py<3.2

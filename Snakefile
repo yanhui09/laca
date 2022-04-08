@@ -85,7 +85,7 @@ rule umiCon:
     output: temp(touch(OUTPUT_DIR + "/.umiCon_DONE"))
 
 rule quant:
-    input: OUTPUT_DIR + "/count_matrix.tsv"
+    input: chimeraF(config["chimeraF"])
     output: temp(touch(OUTPUT_DIR + "/.quant_DONE"))
 
 rule taxa: 

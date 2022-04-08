@@ -109,6 +109,8 @@ minimap:
 samtools:
   m: 3G
 
+# chimera identification 
+chimeraF: TRUE
 ##############################################################
 # Taxonomy assignment
 classifier:

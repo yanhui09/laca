@@ -11,7 +11,7 @@ f5al_pattern2 = linked_pattern(rprimers_min, fprimers_max)
 f5al_patterns = f5al_pattern1 + ' ' + f5al_pattern2
 
 rule trim_repseqs:
-    input: OUTPUT_DIR + "/rep_seqs.fasta"
+    input: chimeraF(config["chimeraF"])[1]
     output: OUTPUT_DIR + "/tree/rep_seqs_trimmed.fasta"
     conda: "../envs/cutadapt.yaml"
     params:

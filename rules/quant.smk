@@ -162,3 +162,131 @@ rule count_matrix:
     output: OUTPUT_DIR + "/count_matrix.tsv"
     shell:
         "paste {input.rowname_seqs} {input.seqs_count} > {output}"
+
+rule q2_repseqs_import:
+    input: rules.rename_fasta_header.output
+    output: temp(OUTPUT_DIR + "/rep_seqs.qza")
+    conda: "../envs/q2_phylogen.yaml"
+    log: OUTPUT_DIR + "/logs/chimeraF/q2_repseqs_import.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/q2_repseqs_import.txt"
+    shell:
+        """
+        qiime tools import \
+        --type 'FeatureData[Sequence]' \
+        --input-path {input} \
+        --output-path {output} \
+        > {log} 2>&1
+        """
+
+rule q2_ftable_import:
+    input: rules.count_matrix.output
+    output: 
+        biom = temp(OUTPUT_DIR + "/table.biom"),
+        qza = temp(OUTPUT_DIR + "/table.qza")
+    conda: "../envs/q2_phylogen.yaml"
+    log: OUTPUT_DIR + "/logs/chimeraF/q2_ftable_import.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/q2_ftable_import.txt"
+    shell:
+        """
+        biom convert -i {input} -o {output.biom} --table-type="OTU table" --to-hdf5 > {log} 2>&1
+        qiime tools import \
+        --input-path {output.biom} \
+        --type 'FeatureTable[Frequency]' \
+        --input-format BIOMV210Format \
+        --output-path {output.qza} \
+        >> {log} 2>&1
+        """
+
+rule q2_uchime_denovo:
+    input:
+        ftable = rules.q2_ftable_import.output.qza,
+        repseqs = rules.q2_repseqs_import.output,
+    output: 
+        nonchimeras = OUTPUT_DIR + "/chimeraF/nonchimeras.qza",
+        chimeras = OUTPUT_DIR + "/chimeraF/chimeras.qza",
+        stats = OUTPUT_DIR + "/chimeraF/stats.qza",
+    conda: "../envs/q2_phylogen.yaml"
+    log: OUTPUT_DIR + "/logs/chimeraF/uchime_denovo.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/uchime_denovo.txt"
+    shell:
+        """
+        qiime vsearch uchime-denovo \
+        --i-table {input.ftable} \
+        --i-sequences {input.repseqs} \
+        --o-nonchimeras {output.nonchimeras} \
+        --o-chimeras {output.chimeras} \
+        --o-stats {output.stats} \
+        > {log} 2>&1
+        """
+
+rule q2_filter_features:
+    input:
+        ftable = rules.q2_ftable_import.output.qza,
+        nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
+    output: OUTPUT_DIR + "/chimeraF/table_nonchimeras.qza"
+    conda: "../envs/q2_phylogen.yaml"
+    log: OUTPUT_DIR + "/logs/chimeraF/filter_features.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/filter_features.txt"
+    shell:
+        """
+        qiime feature-table filter-features \
+        --i-table {input.ftable} \
+        --m-metadata-file {input.nonchimeras} \
+        --o-filtered-table {output} \
+        > {log} 2>&1
+        """
+
+rule q2_filter_seqs:
+    input:
+        repseqs = rules.q2_repseqs_import.output,
+        nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
+    output: OUTPUT_DIR + "/chimeraF/rep_seqs_nonchimeras.qza"
+    conda: "../envs/q2_phylogen.yaml"
+    log: OUTPUT_DIR + "/logs/chimeraF/filter_seqs.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/filter_seqs.txt"
+    shell:
+        """
+        qiime feature-table filter-seqs \
+        --i-data {input.repseqs} \
+        --m-metadata-file {input.nonchimeras} \
+        --o-filtered-data {output} \
+        > {log} 2>&1
+        """
+
+rule q2_ftable_export:
+    input: rules.q2_filter_features.output
+    output:
+        biom = OUTPUT_DIR + "/chimeraF/table_nonchimeras.biom", 
+        tsv = OUTPUT_DIR + "/chimeraF/table_nonchimeras.tsv"
+    conda: "../envs/q2_phylogen.yaml"
+    log: OUTPUT_DIR + "/logs/chimeraF/ftable_export.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/ftable_export.txt"
+    shell:
+        """
+        qiime tools export \
+        --input-path {input} \
+        --output-path {output.biom} \
+        > {log} 2>&1
+        biom convert -i {output.biom} -o {output.tsv} --to-tsv >> {log} 2>&1
+        """
+
+rule q2_repseqs_export:
+    input: rules.q2_filter_seqs.output
+    output: OUTPUT_DIR + "/chimeraF/rep_seqs_nonchimeras.fasta"
+    conda: "../envs/q2_phylogen.yaml"
+    log: OUTPUT_DIR + "/logs/chimeraF/repseqs_export.log"
+    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/repseqs_export.txt"
+    shell:
+        """
+        qiime tools export \
+        --input-path {input} \
+        --output-path {output} \
+        > {log} 2>&1
+        """
+
+def chimeraF(chimera_check = True):
+    check_val("chimeraF", chimera_check, bool)
+    if chimera_check == False:
+        fs = ["count_matrix.tsv", "rep_seqs.fasta"]
+    fs = ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]
+    return expand(OUTPUT_DIR + "/{f}", f = fs)
