@@ -186,7 +186,7 @@ rlinker: "GTCTCGTGGGCTCGG"
 # in silico test with NanoSim
 nanosim:
   threads: 6
-  ref: "/mnt/md0/UMI16S/primer_test/silva/repDNA.fna"
+  ref: "/mnt/md0/UMI16S/primer_test/silva/id_100/subsampled.fasta"
   id: 90,95,97,98,99,100
   subsample_n: 1000
   read_analysis:
