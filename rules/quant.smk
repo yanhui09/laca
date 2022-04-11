@@ -223,7 +223,7 @@ rule q2_filter_features:
     input:
         ftable = rules.q2_ftable_import.output.qza,
         nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
-    output: OUTPUT_DIR + "/chimeraF/table_nonchimeras.qza"
+    output: temp(OUTPUT_DIR + "/chimeraF/table_nonchimeras.qza")
     conda: "../envs/q2_phylogen.yaml"
     log: OUTPUT_DIR + "/logs/chimeraF/filter_features.log"
     benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/filter_features.txt"
@@ -240,7 +240,7 @@ rule q2_filter_seqs:
     input:
         repseqs = rules.q2_repseqs_import.output,
         nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
-    output: OUTPUT_DIR + "/chimeraF/rep_seqs_nonchimeras.qza"
+    output: temp(OUTPUT_DIR + "/chimeraF/rep_seqs_nonchimeras.qza")
     conda: "../envs/q2_phylogen.yaml"
     log: OUTPUT_DIR + "/logs/chimeraF/filter_seqs.log"
     benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/filter_seqs.txt"
@@ -256,8 +256,10 @@ rule q2_filter_seqs:
 rule q2_ftable_export:
     input: rules.q2_filter_features.output
     output:
-        biom = OUTPUT_DIR + "/chimeraF/table_nonchimeras.biom", 
+        biom = temp(OUTPUT_DIR + "/chimeraF/table_nonchimeras.biom"), 
         tsv = OUTPUT_DIR + "/chimeraF/table_nonchimeras.tsv"
+    params:
+        _dir = OUTPUT_DIR + "/chimeraF"
     conda: "../envs/q2_phylogen.yaml"
     log: OUTPUT_DIR + "/logs/chimeraF/ftable_export.log"
     benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/ftable_export.txt"
@@ -265,8 +267,9 @@ rule q2_ftable_export:
         """
         qiime tools export \
         --input-path {input} \
-        --output-path {output.biom} \
+        --output-path {params._dir} \
         > {log} 2>&1
+        mv {params._dir}/feature-table.biom {output.biom}
         biom convert -i {output.biom} -o {output.tsv} --to-tsv >> {log} 2>&1
         """
 
@@ -274,14 +277,17 @@ rule q2_repseqs_export:
     input: rules.q2_filter_seqs.output
     output: OUTPUT_DIR + "/chimeraF/rep_seqs_nonchimeras.fasta"
     conda: "../envs/q2_phylogen.yaml"
+    params:
+        _dir = OUTPUT_DIR + "/chimeraF"
     log: OUTPUT_DIR + "/logs/chimeraF/repseqs_export.log"
     benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/repseqs_export.txt"
     shell:
         """
         qiime tools export \
         --input-path {input} \
-        --output-path {output} \
+        --output-path {params._dir} \
         > {log} 2>&1
+        mv {params._dir}/dna-sequences.fasta {output}
         """
 
 def chimeraF(chimera_check = True):

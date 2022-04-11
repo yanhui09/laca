@@ -102,7 +102,7 @@ rule classify_kraken2:
     input:
         ancient(rules.database_kraken2.output.k2d), 
         dbloc = ancient(DATABASE_DIR + "/kraken2"),
-        fna = OUTPUT_DIR + "/rep_seqs.fasta",
+        fna = chimeraF(config["chimeraF"])[1],
     output: OUTPUT_DIR  + "/taxonomy/kraken2/classified.tsv",
     conda: "../envs/kraken2.yaml"
     params:
