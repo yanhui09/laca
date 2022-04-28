@@ -40,6 +40,7 @@ include: "rules/kmerBin.smk"
 include: "rules/clustCon.smk"
 include: "rules/umiCon.smk"
 include: "rules/quant.smk"
+include: "rules/requant.smk"
 include: "rules/taxonomy.smk"
 include: "rules/tree.smk"
 
