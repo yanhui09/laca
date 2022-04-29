@@ -83,17 +83,24 @@ rule reheader:
 rule read_simulate:
     input:
         ref = rules.reheader.output,
-    output: OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated"
+    output: 
+        expand(
+            OUTPUT_DIR + "/nanosim/simulate/{{minid}}_{{n}}/simulated{suffix}",
+            suffix=["_aligned_error_profile", "_aligned_reads.fasta", "_unaligned_reads.fasta"]
+        )
     conda: "../envs/nanosim.yaml"
     params:
-        c = OUTPUT_DIR + "/nanosim/model/nanosim_model_profile",
+        c = OUTPUT_DIR + "/nanosim/model/nanosim",
+        o = lambda wc: OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated".format(minid=wc.minid, n=wc.n),
         n = lambda wc: int(wc.n),
     log: OUTPUT_DIR + "/logs/nanosim/read_simulate/{minid}_{n}.log"
     benchmark: OUTPUT_DIR + "/benchmarks/nanosim/read_simulate/{minid}_{n}.txt"
     threads: config["threads"]["large"]
     shell:
-        "simulator.py genome -rg {input.ref} -c {params.c} -o {output} -n {params.n} -t {threads} -dna_type linear"
+        "simulator.py genome -rg {input.ref} -c {params.c} -o {params.o}"
+        " -n {params.n} -t {threads} -dna_type linear"
+        " > {log} 2>&1"
 
 rule nanosim:
-    input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated/", minid=IDS, n=NS)
+    input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fasta", minid=IDS, n=NS)
     output: temp(touch(OUTPUT_DIR + ".simulated_DONE"))
