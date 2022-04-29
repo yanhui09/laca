@@ -89,12 +89,6 @@ rule quant:
     input: chimeraF(config["chimeraF"])
     output: temp(touch(OUTPUT_DIR + "/.quant_DONE"))
 
-rule requant:
-    input:
-        OUTPUT_DIR + "/rep_seqs_requant.fasta",
-        OUTPUT_DIR + "/count_matrix_requant.tsv",
-    output: temp(touch(OUTPUT_DIR + "/.requant_DONE"))
-
 rule taxa: 
     input:
         [OUTPUT_DIR + "/taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
@@ -106,3 +100,11 @@ rule tree:
         [OUTPUT_DIR + "/tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],
         OUTPUT_DIR + "/tree.nwk",
     output: temp(touch(OUTPUT_DIR + "/.tree_DONE"))
+
+rule requant:
+    input:
+        OUTPUT_DIR + "/rep_seqs_requant.fasta",
+        OUTPUT_DIR + "/count_matrix_requant.tsv",
+        OUTPUT_DIR + "/.taxa_DONE",
+        OUTPUT_DIR + "/.tree_DONE",
+    output: temp(touch(OUTPUT_DIR + "/.requant_DONE"))

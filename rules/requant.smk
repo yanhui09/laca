@@ -174,3 +174,11 @@ use rule count_matrix as count_matrix_re with:
         seqs_count = lambda wildcards: get_qout_re(wildcards, "count"),
     output: 
         OUTPUT_DIR + "/count_matrix_requant.tsv"
+
+def col_info_rep(requant = False, chimera_check = True):
+    check_val("requant", requant, bool)
+    if requant:
+        fo = chimeraF(chimera_check)
+    else:
+        fo = ["count_matrix_requant.tsv", "rep_seqs_requant.fasta"]
+    return fo
