@@ -11,8 +11,8 @@ f5al_pattern2 = linked_pattern(rprimers_min, fprimers_max)
 f5al_patterns = f5al_pattern1 + ' ' + f5al_pattern2
 
 rule trim_repseqs:
-    input: OUTPUT_DIR + "/rep_seqs.fasta"
-    output: OUTPUT_DIR + "/tree/rep_seqs_trimmed.fasta"
+    input: col_info_rep(config["requant"], config["chimeraF"])[1]
+    output: temp(OUTPUT_DIR + "/tree/rep_seqs_trimmed.fasta")
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5al_patterns,
@@ -23,8 +23,8 @@ rule trim_repseqs:
 
 rule q2_repseqs:
     input: rules.trim_repseqs.output
-    output: OUTPUT_DIR + "/tree/rep_seqs.qza"
-    conda: "../envs/q2_phylogen.yaml"
+    output: temp(OUTPUT_DIR + "/tree/rep_seqs.qza")
+    conda: "../envs/q2_plugins.yaml"
     log: OUTPUT_DIR + "/logs/tree/q2_repseqs.log"
     benchmark: OUTPUT_DIR + "/benchmarks/tree/q2_repseqs.txt"
     shell:
@@ -39,9 +39,13 @@ rule q2_repseqs:
 rule q2_fasttree:
     input: rules.q2_repseqs.output
     output: 
-        expand(OUTPUT_DIR + "/tree/FastTree/{prefix}.qza",
-         prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]),
-    conda: "../envs/q2_phylogen.yaml"
+        temp(
+            expand(
+                OUTPUT_DIR + "/tree/FastTree/{prefix}.qza", 
+                prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]
+                )
+        ),
+    conda: "../envs/q2_plugins.yaml"
     params:
         supp = config["q2-phylogen"]["fasttree"]
     log: OUTPUT_DIR + "/logs/tree/q2_fasttree.log"
@@ -61,10 +65,14 @@ rule q2_fasttree:
 
 rule q2_iqtree:
     input: rules.q2_repseqs.output
-    output: 
-        expand(OUTPUT_DIR + "/tree/IQ-TREE/{prefix}.qza",
-         prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]),
-    conda: "../envs/q2_phylogen.yaml"
+    output:
+        temp(
+            expand(
+                OUTPUT_DIR + "/tree/IQ-TREE/{prefix}.qza", 
+                prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]
+                )
+            ),
+    conda: "../envs/q2_plugins.yaml"
     params:
         supp = config["q2-phylogen"]["iqtree"]
     log: OUTPUT_DIR + "/logs/tree/q2_iqtree.log"
@@ -84,10 +92,14 @@ rule q2_iqtree:
 
 rule q2_raxml:
     input: rules.q2_repseqs.output
-    output: 
-        expand(OUTPUT_DIR + "/tree/RAxML/{prefix}.qza",
-         prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]),
-    conda: "../envs/q2_phylogen.yaml"
+    output:
+        temp(
+            expand(
+                OUTPUT_DIR + "/tree/RAxML/{prefix}.qza", 
+                prefix = ["alignment", "masked_alignment", "tree", "rooted_tree"]
+                )
+            ),
+    conda: "../envs/q2_plugins.yaml"
     params:
         supp = config["q2-phylogen"]["raxml"]
     log: OUTPUT_DIR + "/logs/tree/q2_raxml.log"
@@ -108,7 +120,7 @@ rule q2_raxml:
 rule q2export_tree:
     input: OUTPUT_DIR + "/tree/{phylogen}/rooted_tree.qza"
     output: OUTPUT_DIR + "/tree/{phylogen}/tree.nwk"
-    conda: "../envs/q2_phylogen.yaml"
+    conda: "../envs/q2_plugins.yaml"
     params:
         _dir = OUTPUT_DIR + "/tree/{phylogen}",
     log: OUTPUT_DIR + "/logs/tree/{phylogen}_export.log"
