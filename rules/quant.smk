@@ -27,7 +27,7 @@ rule derep_denoised_seqs:
 # rm duplicates of reverse complements
 rule rmdup_revcom:
     input: rules.derep_denoised_seqs.output.rep
-    output: OUTPUT_DIR + "/quant/mmseqs_rep_seq_rmdup.fasta"
+    output: temp(OUTPUT_DIR + "/quant/mmseqs_rep_seq_rmdup.fasta")
     message: "Remove duplicates of reverse complements"
     conda: "../envs/seqkit.yaml"
     log: OUTPUT_DIR + "/logs/quant/rmdup_revcom.log"

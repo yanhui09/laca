@@ -103,7 +103,7 @@ rule classify_kraken2:
         ancient(rules.database_kraken2.output.k2d), 
         dbloc = ancient(DATABASE_DIR + "/kraken2"),
         fna = col_info_rep(config["requant"], config["chimeraF"])[1]
-    output: OUTPUT_DIR  + "/taxonomy/kraken2/classified.tsv",
+    output: temp(OUTPUT_DIR  + "/taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
     params:
         classify_cmd = config["kraken2"]["classify_cmd"],
@@ -120,7 +120,7 @@ use rule lineage_taxonkit_mmseqs2 as lineage_taxonkit_kraken2 with:
         taxdump = ancient(rules.update_taxdump.output),
         tsv = rules.classify_kraken2.output,
     output: 
-        OUTPUT_DIR + "/taxonomy/kraken2/lineage.tsv",
+        temp(OUTPUT_DIR + "/taxonomy/kraken2/lineage.tsv"),
     params:
         f = 3,
     log: 

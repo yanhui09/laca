@@ -112,7 +112,7 @@ rule q_filter:
     input:  
         rules.trim_primers.output.trimmed,
         rules.revcomp_fq.output,
-    output: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
+    output: temp(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq")
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min-qual"],

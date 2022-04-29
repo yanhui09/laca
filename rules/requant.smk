@@ -178,7 +178,7 @@ use rule count_matrix as count_matrix_re with:
 def col_info_rep(requant = False, chimera_check = True):
     check_val("requant", requant, bool)
     if requant:
-        fo = chimeraF(chimera_check)
+        fo = expand(OUTPUT_DIR + "/{f}", f = ["count_matrix_requant.tsv", "rep_seqs_requant.fasta"]) 
     else:
-        fo = ["count_matrix_requant.tsv", "rep_seqs_requant.fasta"]
+        fo = chimeraF(chimera_check)
     return fo
