@@ -22,13 +22,16 @@ rule read_analysis:
     log: OUTPUT_DIR + "/logs/nanosim/read_analysis.log"
     benchmark: OUTPUT_DIR + "/benchmarks/nanosim/read_analysis.txt"
     threads: config["nanosim"]["threads"]
-    shell: "read_analysis.py genome -i {input.read} -rg {input.ref} -o {output} -a {params.a} -t {threads} > {log} 2>&1"
+    shell: 
+        "read_analysis.py genome -i {input.read} -rg {input.ref}"
+        " -o {params.prefix} -a {params.a} -t {threads}"
+        " > {log} 2>&1"
 
 # cluster ref by identity
 rule cls_ref:
     input: REF
     output: 
-        rep = OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_rep_seq.fasta",
+        rep = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
         tsv = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
         tmp = temp(directory(OUTPUT_DIR + "/tmp/cls_ref/id_{minid}")),
@@ -82,11 +85,12 @@ rule reheader:
 # simulate reads by number of reads
 rule read_simulate:
     input:
+        rules.read_analysis.output,
         ref = rules.reheader.output,
     output: 
         expand(
             OUTPUT_DIR + "/nanosim/simulate/{{minid}}_{{n}}/simulated{suffix}",
-            suffix=["_aligned_error_profile", "_aligned_reads.fasta", "_unaligned_reads.fasta"]
+            suffix=["_aligned_error_profile", "_aligned_reads.fastq", "_unaligned_reads.fastq"]
         )
     conda: "../envs/nanosim.yaml"
     params:
@@ -98,9 +102,9 @@ rule read_simulate:
     threads: config["threads"]["large"]
     shell:
         "simulator.py genome -rg {input.ref} -c {params.c} -o {params.o}"
-        " -n {params.n} -t {threads} -dna_type linear"
+        " -n {params.n} -b guppy --fastq -t {threads} -dna_type linear"
         " > {log} 2>&1"
 
 rule nanosim:
-    input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fasta", minid=IDS, n=NS)
+    input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
     output: temp(touch(OUTPUT_DIR + ".simulated_DONE"))
