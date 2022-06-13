@@ -34,7 +34,7 @@ rule cls_ref:
         rep = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
         tsv = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
-        tmp = temp(directory(OUTPUT_DIR + "/tmp/cls_ref/id_{minid}")),
+        tmp = temp(directory(OUTPUT_DIR + "/nanosim/tmp/cls_ref/id_{minid}")),
     conda: "../envs/mmseqs2.yaml"
     params:
         minid = lambda wc: int(wc.minid) * 0.01,
@@ -107,4 +107,21 @@ rule read_simulate:
 
 rule nanosim:
     input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
-    output: temp(touch(OUTPUT_DIR + ".simulated_DONE"))
+    output: 
+        temp(touch(OUTPUT_DIR + ".simulated_DONE")),
+        directory(OUTPUT_DIR + "/demultiplexed")
+    run:
+        import shutil
+        # replace fqs to follow demultiplexing wildcards
+        if not os.path.exists(output[1]):
+            os.makedirs(output[1])
+        for fq in input:
+            fname = os.path.basename(fq)
+            # last second directory name
+            dirname = os.path.basename(os.path.dirname(fq))
+            # remove "_"
+            dirname = dirname.replace("_", "")
+            dirname = os.path.join(output[1], "si" + dirname)
+            os.makedirs(dirname)
+            shutil.copy(fq, os.path.join(dirname, fname))
+
