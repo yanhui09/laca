@@ -1,3 +1,4 @@
+OUTPUT_DIR = config["results_dir"].rstrip("/")
 # Prepare nanopore reads
 REF = config["nanosim"]["ref"]
 # expand list from comma separated string
