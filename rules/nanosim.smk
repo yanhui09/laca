@@ -106,11 +106,13 @@ rule read_simulate:
         " -n {params.n} -b guppy --fastq -t {threads} -dna_type linear"
         " > {log} 2>&1"
 
+# pseudo demultiplex
 rule nanosim:
     input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
     output: 
         temp(touch(OUTPUT_DIR + ".simulated_DONE")),
-        directory(OUTPUT_DIR + "/demultiplexed")
+        directory(OUTPUT_DIR + "/demultiplexed"),
+        touch(OUTPUT_DIR + "/.demultiplexed"),
     run:
         import shutil
         # replace fqs to follow demultiplexing wildcards
