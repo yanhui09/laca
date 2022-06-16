@@ -112,8 +112,6 @@ samtools:
 # chimera identification 
 chimeraF: TRUE
 
-# requant choice
-requant: FALSE
 ##############################################################
 # Taxonomy assignment
 classifier:

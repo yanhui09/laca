@@ -1,5 +1,5 @@
 # check the existence of the requant directory
-def requant_check(path, chimera_check = True):
+def requant_check(path):
     requant_path = path + '/f2requant'
     if not os.path.exists(requant_path):
         raise ValueError("\n  f2requant directory not found.\n\tMake sure {} is loaded.\n".format(requant_path))
@@ -12,11 +12,13 @@ def requant_check(path, chimera_check = True):
         if len(fas) == 0 or len(fqs) == 0:
             raise ValueError("\n  The required fasta (.fasta|.fa|.fna) or fastq (.fastq|.fq) files \n  are not found in {}.\n".format(requant_path))
         else:
-            return chimeraF(chimera_check)
+            return True
 
 checkpoint requant_dir:
-    input: requant_check(OUTPUT_DIR, config["chimeraF"])
+    input: OUTPUT_DIR
     output: touch(directory(OUTPUT_DIR + "/f2requant"))
+    run:
+        requant_check(OUTPUT_DIR)
 
 def col_info_requant(wildcards, type):
     if type == "fq":
@@ -174,11 +176,3 @@ use rule count_matrix as count_matrix_re with:
         seqs_count = lambda wildcards: get_qout_re(wildcards, "count"),
     output: 
         OUTPUT_DIR + "/count_matrix_requant.tsv"
-
-def col_info_rep(requant = False, chimera_check = True):
-    check_val("requant", requant, bool)
-    if requant:
-        fo = expand(OUTPUT_DIR + "/{f}", f = ["count_matrix_requant.tsv", "rep_seqs_requant.fasta"]) 
-    else:
-        fo = chimeraF(chimera_check)
-    return fo

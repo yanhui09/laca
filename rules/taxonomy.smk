@@ -5,7 +5,7 @@ check_list_ele("classifier", config["classifier"], ["kraken2", "mmseqs2"])
 TaxDB = config["mmseqs"]["taxdb"]
     
 rule createdb_query:
-    input: col_info_rep(config["requant"], config["chimeraF"])[1]
+    input: chimeraF(config["chimeraF"])[1]
     output: 
         expand(OUTPUT_DIR + "/taxonomy/mmseqs2/queryDB{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
@@ -102,7 +102,7 @@ rule classify_kraken2:
     input:
         ancient(rules.database_kraken2.output.k2d), 
         dbloc = ancient(DATABASE_DIR + "/kraken2"),
-        fna = col_info_rep(config["requant"], config["chimeraF"])[1]
+        fna = chimeraF(config["chimeraF"])[1]
     output: temp(OUTPUT_DIR  + "/taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
     params:

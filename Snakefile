@@ -106,6 +106,4 @@ rule requant:
     input:
         OUTPUT_DIR + "/rep_seqs_requant.fasta",
         OUTPUT_DIR + "/count_matrix_requant.tsv",
-        OUTPUT_DIR + "/.taxa_DONE",
-        OUTPUT_DIR + "/.tree_DONE",
     output: temp(touch(OUTPUT_DIR + "/.requant_DONE"))
