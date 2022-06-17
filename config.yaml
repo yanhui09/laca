@@ -16,9 +16,10 @@ pool: True
 barcode_kits: "SQK16S-GXO192"
 ##############################################################
 # Quality control
-# Subsampling raw reads if with inadequate memory
+# Subsample raw reads if with inadequate memory
 subsample: True
 
+# Quality filtering
 seqkit:
   min-qual: 7
   min-len: 800
@@ -27,6 +28,8 @@ seqkit:
   p: 0.9 # subsampling portion, upper it if with uneven library [float]
   n: 50 # subsampling number [int]
 
+# trim primers
+trim: True
 # order matters
 fprimer:
   27Fa: "AGAGTTTGATYMTGGCTYAG"

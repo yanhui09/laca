@@ -107,11 +107,18 @@ rule revcomp_fq:
     threads: config["threads"]["normal"]
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
+# trim primers or not
+def trim_check(trim, subsample, p, n):
+    check_val("trim", trim, bool)
+    out = [rules.trim_primers.output.trimmed, rules.revcomp_fq.output]
+    if trim is False:
+        out = get_raw(subsample, p, n)
+    return out
+
 # quality filter
 rule q_filter:
-    input:  
-        rules.trim_primers.output.trimmed,
-        rules.revcomp_fq.output,
+    input:
+        trim_check(config["trim"], config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
     output: temp(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq")
     conda: "../envs/seqkit.yaml"
     params:
