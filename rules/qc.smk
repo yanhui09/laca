@@ -48,7 +48,7 @@ def get_raw(subsample, p, n):
     check_val("subsample", subsample, bool)
     check_val("p[seqkit]", p, float)
     check_val("n[seqkit]", n, int)
-    if subsample == True:
+    if subsample is True:
         return rules.subsample.output.n
     else:
         return rules.collect_fastq.output
