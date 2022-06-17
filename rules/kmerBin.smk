@@ -132,9 +132,9 @@ rule col_kmerbatch:
                     for line in f:
                         out.write(line.rstrip() + "\t" + batch + "\n") 
 
-def get_bin(wildcards, pooling = True):
-    check_val("pooling", pooling, bool)
-    if pooling == True:
+def get_bin(wildcards, pool = True):
+    check_val("pool", pool, bool)
+    if pool == True:
         barcodes = ["pooled"]
     else:
         barcodes = get_qced(wildcards)
@@ -142,7 +142,7 @@ def get_bin(wildcards, pooling = True):
 
 # split reads by kmerbin
 checkpoint cls_kmerbin:
-    input: lambda wildcards: get_bin(wildcards, pooling = config["pooling"])
+    input: lambda wildcards: get_bin(wildcards, pool = config["pool"])
     output: directory(OUTPUT_DIR + "/kmerBin/clusters"),
     run:
         import pandas as pd
@@ -180,18 +180,18 @@ rule skip_bin:
     shell: "cp -p {input} {output} 2> {log}"
 
 # get {barcode} {c} from chekckpoint
-def get_kmerBin(wildcards, pooling = True, kmerbin = True):
-    check_val("pooling", pooling, bool)
+def get_kmerBin(wildcards, pool = True, kmerbin = True):
+    check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
     
-    if kmerbin == True:
+    if kmerbin is True:
         fqs = []
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
             fqs.append(OUTPUT_DIR + "/kmerBin/{bc}/split/{kb}.fastq".format(bc=bc, kb=kb))
     else:
-        if pooling == True:
+        if pool is True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)

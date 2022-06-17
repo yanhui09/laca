@@ -143,16 +143,16 @@ def get_qced(wildcards):
     barcodes = [b for b in barcodes if b not in barcodes_empty]
     return barcodes
 
-#  pooling fqs for sensitivity 
+#  pool fqs for sensitivity 
 rule combine_fastq:
     input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_qced(wc))
     output: temp(OUTPUT_DIR + "/qc/qfilt/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
-def get_filt(wildcards, pooling = True):
+def get_filt(wildcards, pool = True):
     barcodes = get_qced(wildcards) 
-    check_val("pooling", pooling, bool)
-    if pooling == True:
+    check_val("pool", pool, bool)
+    if pool is True:
         barcodes.append("pooled")
     return expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=barcodes)

@@ -56,18 +56,18 @@ rule bin2clustering:
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
-def get_clust(wildcards, pooling = True, kmerbin = True):
-    check_val("pooling", pooling, bool)
+def get_clust(wildcards, pool = True, kmerbin = True):
+    check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
         
-    if kmerbin == True:
+    if kmerbin is True:
         bin2cls = []
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
             bin2cls.append(OUTPUT_DIR + "/clustCon/{bc}/avr_aln/{kb}/bin2clust.csv".format(bc=bc, kb=kb))
     else:
-        if pooling == True:
+        if pool is True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
@@ -75,7 +75,7 @@ def get_clust(wildcards, pooling = True, kmerbin = True):
     return bin2cls
  
 checkpoint cls_clustCon:
-    input: lambda wc: get_clust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
+    input: lambda wc: get_clust(wc, pool = config["pool"], kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/clustCon/clusters")
     params:
         min_size = config["min_cluster_size"],
@@ -129,18 +129,18 @@ rule isONclust:
         "isONclust --ont --fastq {input} "
         "--outfolder {output._dir} --t {threads} > {log} 2>&1"
 
-def get_isONclust(wildcards, pooling = True, kmerbin = True):
-    check_val("pooling", pooling, bool)
+def get_isONclust(wildcards, pool = True, kmerbin = True):
+    check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
         
-    if kmerbin == True:
+    if kmerbin is True:
         bin2cls = []
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
             bin2cls.append(OUTPUT_DIR + "/isONclustCon/{bc}/{kb}/final_clusters.tsv".format(bc=bc, kb=kb))
     else:
-        if pooling == True:
+        if pool is True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
@@ -148,7 +148,7 @@ def get_isONclust(wildcards, pooling = True, kmerbin = True):
     return bin2cls
 
 checkpoint cls_isONclust:
-    input: lambda wc: get_isONclust(wc, pooling = config["pooling"], kmerbin = config["kmerbin"])
+    input: lambda wc: get_isONclust(wc, pool = config["pool"], kmerbin = config["kmerbin"])
     output: directory(OUTPUT_DIR + "/isONclustCon/clusters")
     params:
         min_size = config["min_cluster_size"],

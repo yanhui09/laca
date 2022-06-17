@@ -9,7 +9,7 @@ threads:
     large: 6 # threads dependent e.g., canu
 
 # Pooling samples for denoise [TRUE|FALSE]
-pooling: TRUE
+pool: True
 
 ##############################################################
 # Demultiplex with guppy
@@ -17,7 +17,7 @@ barcode_kits: "SQK16S-GXO192"
 ##############################################################
 # Quality control
 # Subsampling raw reads if with inadequate memory
-subsample: TRUE
+subsample: True
 
 seqkit:
   min-qual: 7
@@ -45,7 +45,7 @@ cutadapt:
 
 ##############################################################
 # kmer binning
-kmerbin: TRUE
+kmerbin: True
 bin_mem: 50 # GB
 # Bool, whether to bin or not; TRUE is highly recommened in clustCon mode, considering the massive pairwise alignments inside.
 
@@ -110,7 +110,7 @@ samtools:
   m: 3G
 
 # chimera identification 
-chimeraF: TRUE
+chimeraF: True
 
 ##############################################################
 # Taxonomy assignment

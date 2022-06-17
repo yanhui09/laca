@@ -50,11 +50,11 @@ rule demultiplex:
     output: temp(touch(OUTPUT_DIR + "/.demultiplex_DONE"))
 
 rule qc:
-    input: lambda wc: get_filt(wc, pooling = config["pooling"]),
+    input: lambda wc: get_filt(wc, pool = config["pool"]),
     output: temp(touch(OUTPUT_DIR + "/.qc_DONE"))
 
 rule kmerBin:
-    input: lambda wc: get_kmerBin(wc, pooling = config["pooling"], kmerbin = config["kmerbin"]),
+    input: lambda wc: get_kmerBin(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
     output: temp(touch(OUTPUT_DIR + "/.kmerBin_DONE"))
 
 rule kmerCon:
