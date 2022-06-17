@@ -110,7 +110,7 @@ rule read_simulate:
 rule nanosim:
     input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
     output: 
-        temp(touch(OUTPUT_DIR + ".simulated_DONE")),
+        temp(touch(OUTPUT_DIR + "/.simulated_DONE")),
         directory(OUTPUT_DIR + "/demultiplexed"),
         touch(OUTPUT_DIR + "/.demultiplexed"),
     run:

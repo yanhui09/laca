@@ -100,18 +100,19 @@ rule taxonomy_mmseqs2:
 
 rule classify_kraken2:
     input:
+        ancient(DATABASE_DIR + "/.initDB_DONE"),
         ancient(rules.database_kraken2.output.k2d), 
-        dbloc = ancient(DATABASE_DIR + "/kraken2"),
         fna = chimeraF(config["chimeraF"])[1]
     output: temp(OUTPUT_DIR  + "/taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
     params:
         classify_cmd = config["kraken2"]["classify_cmd"],
+        dbloc = ancient(DATABASE_DIR + "/kraken2"),
     log: OUTPUT_DIR + "/logs/taxonomy/kraken2/classify.log"
     benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/classify.txt"
     threads: config["threads"]["large"]
     shell:
-        "kraken2 --db {input.dbloc} --threads {threads} --output {output} {input.fna}"
+        "kraken2 --db {params.dbloc} --threads {threads} --output {output} {input.fna}"
         " {params.classify_cmd} 1> {log} 2>&1"
 
 # use taxonkit to get NCBI taxonomy
