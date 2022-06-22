@@ -1,2 +1,3 @@
 *.smk linguist-language=Python
 Snakefile linguist-language=Python
+kamp/_version.py export-subst

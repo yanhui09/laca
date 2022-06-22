@@ -26,3 +26,4 @@ def get_demultiplexed(wildcards):
     return sorted(set(barcodes))
 
 # consider add minibar? https://github.com/calacademy-research/minibar
+# demultiplex? https://github.com/jfjlaros/demultiplex
