@@ -1,12 +1,14 @@
 import click
 import os
+import logging
+import subprocess
 
 from snakemake import load_configfile
 from snakemake.utils import validate
 from .__init__ import __version__
 
 
-def get_snakefile(file="Snakefile"):
+def get_snakefile(file="workflow/Snakefile"):
     sf = os.path.join(os.path.dirname(os.path.abspath(__file__)), file)
     if not os.path.exists(sf):
         sys.exit("Unable to locate the Snakemake workflow file; tried %s" % sf)
@@ -73,13 +75,14 @@ def cli(self):
 )
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
 def run_workflow(
-    workflow, snakefile, configfile, jobs, maxmem, dryrun, snake_args
+    workflow, configfile, jobs, maxmem, dryrun, snake_args
 ):
     """
     Run Kamp workflow to proceess long read amplicons.
     Most snakemake arguments can be appended, for more info see 'snakemake --help'
     """
-
+    
+    logger = logging.getLogger()
     logger.info(f"Kamp version: {__version__}")
 
     if not os.path.exists(configfile):
@@ -88,28 +91,26 @@ def run_workflow(
         )
         exit(1)
     
-    validate(configfile, "config.schema.yaml")
     conf = load_configfile(configfile)
 
     db_dir = conf["database_dir"]
 
     cmd = (
-        "snakemake --snakefile {snakefile} "
+        "snakemake {wf} --snakefile {snakefile} "
         "--configfile '{configfile}' "
         "--use-conda {conda_prefix} {dryrun} "
         "--rerun-triggers mtime --rerun-incomplete "
         "--jobs {jobs} --nolock "
         " {max_mem} "
-        " {wf} "
         " {args} "
     ).format(
+        wf=workflow if workflow != "None" else "",
         snakefile=get_snakefile(),
         configfile=configfile,
         conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
         dryrun="--dryrun" if dryrun else "",
         jobs=int(jobs) if jobs is not None else 1,
-        max_mem="--resources mem={}".format(float(maxmem)*1024) if maxmem is not None else 50,
-        wf=workflow if workflow != "None" else "",
+        max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
         args=" ".join(snake_args),
     )
     logger.debug("Executing: %s" % cmd)
