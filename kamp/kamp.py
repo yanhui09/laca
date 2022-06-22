@@ -1,7 +1,7 @@
 import click
 import os
-import logging
 import subprocess
+from .log import logger
 
 from snakemake import load_configfile
 from snakemake.utils import validate
@@ -82,7 +82,6 @@ def run_workflow(
     Most snakemake arguments can be appended, for more info see 'snakemake --help'
     """
     
-    logger = logging.getLogger()
     logger.info(f"Kamp version: {__version__}")
 
     if not os.path.exists(configfile):
