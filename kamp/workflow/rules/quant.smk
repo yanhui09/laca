@@ -4,21 +4,21 @@ check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustC
 # dereplicate sequences with mmseqs
 rule derep_denoised_seqs:
     input: 
-        [OUTPUT_DIR + "/" + str(x) + ".fna" for x in config["cluster"]][1:],
-        first = OUTPUT_DIR + "/" + str(config["cluster"][0]) + ".fna",
+        ["" + str(x) + ".fna" for x in config["cluster"]][1:],
+        first = "" + str(config["cluster"][0]) + ".fna",
     output: 
-        rep = temp(OUTPUT_DIR + "/quant/mmseqs_rep_seq.fasta"),
-        all_by_cluster = temp(OUTPUT_DIR + "/quant/mmseqs_all_seqs.fasta"),
-        tsv = temp(OUTPUT_DIR + "/quant/mmseqs_cluster.tsv"),
-        tmp = temp(directory(OUTPUT_DIR + "/tmp")),
+        rep = temp("quant/mmseqs_rep_seq.fasta"),
+        all_by_cluster = temp("quant/mmseqs_all_seqs.fasta"),
+        tsv = temp("quant/mmseqs_cluster.tsv"),
+        tmp = temp(directory("tmp")),
     message: "Dereplicate denoised sequences"
     params:
-        prefix = OUTPUT_DIR + "/quant/mmseqs",
+        prefix = "quant/mmseqs",
         mid = config["mmseqs"]["min-seq-id"],
         c = config["mmseqs"]["c"],
     conda: "../envs/mmseqs2.yaml"
-    log: OUTPUT_DIR + "/logs/quant/derep_denoised_seqs.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/derep_denoised_seqs.txt"
+    log: "logs/quant/derep_denoised_seqs.log"
+    benchmark: "benchmarks/quant/derep_denoised_seqs.txt"
     threads: config["threads"]["large"]
     shell:
         "mmseqs easy-cluster {input.first} {params.prefix} {output.tmp} "
@@ -27,19 +27,19 @@ rule derep_denoised_seqs:
 # rm duplicates of reverse complements
 rule rmdup_revcom:
     input: rules.derep_denoised_seqs.output.rep
-    output: temp(OUTPUT_DIR + "/quant/mmseqs_rep_seq_rmdup.fasta")
+    output: temp("quant/mmseqs_rep_seq_rmdup.fasta")
     message: "Remove duplicates of reverse complements"
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/quant/rmdup_revcom.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/rmdup_revcom.txt"
+    log: "logs/quant/rmdup_revcom.log"
+    benchmark: "benchmarks/quant/rmdup_revcom.txt"
     shell: "seqkit rmdup -s {input} -o {output} -w 0 > {log} 2>&1"
 
 # keep fasta header unique
 rule rename_fasta_header:
     input: rules.rmdup_revcom.output
-    output: OUTPUT_DIR + "/rep_seqs.fasta"
-    log: OUTPUT_DIR + "/logs/quant/rename_fasta.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/rename_fasta.benchmark"
+    output: "rep_seqs.fasta"
+    log: "logs/quant/rename_fasta.log"
+    benchmark: "benchmarks/quant/rename_fasta.benchmark"
     run:
         with open(output[0], "w") as out:
             with open (input[0], "r") as inp:
@@ -53,22 +53,22 @@ rule rename_fasta_header:
 # create abundance matrix with minimap
 rule index:
     input: rules.rename_fasta_header.output,
-    output: temp(OUTPUT_DIR + "/rep_seqs.mmi")
+    output: temp("rep_seqs.mmi")
     message: "Index denoised sequences [Generate abundance matrix]"
     params:
         index_size = config["minimap"]["index_size"],
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/quant/index.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/index.txt"
+    log: "logs/quant/index.log"
+    benchmark: "benchmarks/quant/index.txt"
     shell: "minimap2 -I {params.index_size} -d {output} {input} 2> {log}"
 
 rule dict:
     input: rules.rename_fasta_header.output,
-    output: temp(OUTPUT_DIR + "/rep_seqs.dict")
+    output: temp("rep_seqs.dict")
     message: "Dict denoised sequences [Generate abundance matrix]"
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/quant/dict.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/dict.txt"
+    log: "logs/quant/dict.log"
+    benchmark: "benchmarks/quant/dict.txt"
     shell: "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
 
 rule minimap_rep_seqs:
@@ -76,13 +76,13 @@ rule minimap_rep_seqs:
         fq = rules.q_filter.output,
         mmi = rules.index.output,
         dict = rules.dict.output,
-    output: temp(OUTPUT_DIR + "/quant/mapped/{barcode}.bam")
+    output: temp("quant/mapped/{barcode}.bam")
     message: "Re-map {wildcards.barcode}.fastq files [Generate abundance matrix]"
     params:
         x = config["minimap"]["x"]
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/quant/minimap/{barcode}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/minimap/{barcode}.txt"
+    log: "logs/quant/minimap/{barcode}.log"
+    benchmark: "benchmarks/quant/minimap/{barcode}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -93,35 +93,35 @@ rule minimap_rep_seqs:
 
 rule sort:
     input: rules.minimap_rep_seqs.output
-    output: temp(OUTPUT_DIR + "/quant/mapped/{barcode}.sorted.bam")
+    output: temp("quant/mapped/{barcode}.sorted.bam")
     params:
-        prefix = OUTPUT_DIR + "/quant/mapped/tmp.{barcode}",
+        prefix = "quant/mapped/tmp.{barcode}",
         m = config["samtools"]["m"],
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/quant/sort/{barcode}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/sort/{barcode}.txt"
+    log: "logs/quant/sort/{barcode}.log"
+    benchmark: "benchmarks/quant/sort/{barcode}.txt"
     shell:
         "samtools sort {input} -T {params.prefix} --threads 1 -m {params.m} -o {output} 2>{log}"
 
 rule samtools_index:        
     input: rules.sort.output
-    output: temp(OUTPUT_DIR + "/quant/mapped/{barcode}.sorted.bam.bai")
+    output: temp("quant/mapped/{barcode}.sorted.bam.bai")
     params:
         m = config["samtools"]["m"],
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/quant/index/{barcode}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/index/{barcode}.txt"
+    log: "logs/quant/index/{barcode}.log"
+    benchmark: "benchmarks/quant/index/{barcode}.txt"
     shell:
         "samtools index -m {params.m} -@ 1 {input} {output} 2>{log}"
 
 def get_qout(wildcards, type_o):
     barcodes = get_qced(wildcards)
     if type_o == "bam":
-        output = expand(OUTPUT_DIR + "/quant/mapped/{barcode}.sorted.bam", barcode=barcodes)
+        output = expand("quant/mapped/{barcode}.sorted.bam", barcode=barcodes)
     elif type_o == "bai":
-        output = expand(OUTPUT_DIR + "/quant/mapped/{barcode}.sorted.bam.bai", barcode=barcodes)
+        output = expand("quant/mapped/{barcode}.sorted.bam.bai", barcode=barcodes)
     elif type_o == "count":
-        output = expand(OUTPUT_DIR + "/quant/mapped/{barcode}.count", barcode=barcodes)
+        output = expand("quant/mapped/{barcode}.count", barcode=barcodes)
     else:
         raise ValueError("type_o must be 'bam', 'bai', or 'count'")
     return output
@@ -131,10 +131,10 @@ rule rowname_kOTU:
     input:
         bam = lambda wildcards: get_qout(wildcards, "bam"),
         bai = lambda wildcards: get_qout(wildcards, "bai"),
-    output: temp(OUTPUT_DIR + "/quant/rowname_seqs")
+    output: temp("quant/rowname_seqs")
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/quant/rowname_kOTU.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/rowname_kOTU.txt"
+    log: "logs/quant/rowname_kOTU.log"
+    benchmark: "benchmarks/quant/rowname_kOTU.txt"
     shell:
         """
         echo '#OTU ID' > {output}
@@ -143,12 +143,12 @@ rule rowname_kOTU:
        
 rule seqs_count:
     input:
-        bam = OUTPUT_DIR + "/quant/mapped/{barcode}.sorted.bam",
-        bai = OUTPUT_DIR + "/quant/mapped/{barcode}.sorted.bam.bai"
-    output: temp(OUTPUT_DIR + "/quant/mapped/{barcode}.count")
+        bam = "quant/mapped/{barcode}.sorted.bam",
+        bai = "quant/mapped/{barcode}.sorted.bam.bai"
+    output: temp("quant/mapped/{barcode}.count")
     conda: "../envs/polish.yaml"
-    log: OUTPUT_DIR + "/logs/quant/seqs_count/{barcode}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/quant/seqs_count/{barcode}.txt"
+    log: "logs/quant/seqs_count/{barcode}.log"
+    benchmark: "benchmarks/quant/seqs_count/{barcode}.txt"
     shell:
         """
         echo '{wildcards.barcode}' > {output}
@@ -159,16 +159,16 @@ rule count_matrix:
     input:
         rowname_seqs = rules.rowname_kOTU.output,
         seqs_count = lambda wildcards: get_qout(wildcards, "count"),
-    output: OUTPUT_DIR + "/count_matrix.tsv"
+    output: "count_matrix.tsv"
     shell:
         "paste {input.rowname_seqs} {input.seqs_count} > {output}"
 
 rule q2_repseqs_import:
     input: rules.rename_fasta_header.output
-    output: temp(OUTPUT_DIR + "/rep_seqs.qza")
+    output: temp("rep_seqs.qza")
     conda: "../envs/q2_plugins.yaml"
-    log: OUTPUT_DIR + "/logs/chimeraF/q2_repseqs_import.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/q2_repseqs_import.txt"
+    log: "logs/chimeraF/q2_repseqs_import.log"
+    benchmark: "benchmarks/chimeraF/q2_repseqs_import.txt"
     shell:
         """
         qiime tools import \
@@ -181,11 +181,11 @@ rule q2_repseqs_import:
 rule q2_ftable_import:
     input: rules.count_matrix.output
     output: 
-        biom = temp(OUTPUT_DIR + "/table.biom"),
-        qza = temp(OUTPUT_DIR + "/table.qza")
+        biom = temp("table.biom"),
+        qza = temp("table.qza")
     conda: "../envs/q2_plugins.yaml"
-    log: OUTPUT_DIR + "/logs/chimeraF/q2_ftable_import.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/q2_ftable_import.txt"
+    log: "logs/chimeraF/q2_ftable_import.log"
+    benchmark: "benchmarks/chimeraF/q2_ftable_import.txt"
     shell:
         """
         biom convert -i {input} -o {output.biom} --table-type="OTU table" --to-hdf5 > {log} 2>&1
@@ -202,12 +202,12 @@ rule q2_uchime_denovo:
         ftable = rules.q2_ftable_import.output.qza,
         repseqs = rules.q2_repseqs_import.output,
     output: 
-        nonchimeras = OUTPUT_DIR + "/chimeraF/nonchimeras.qza",
-        chimeras = OUTPUT_DIR + "/chimeraF/chimeras.qza",
-        stats = OUTPUT_DIR + "/chimeraF/stats.qza",
+        nonchimeras = "chimeraF/nonchimeras.qza",
+        chimeras = "chimeraF/chimeras.qza",
+        stats = "chimeraF/stats.qza",
     conda: "../envs/q2_plugins.yaml"
-    log: OUTPUT_DIR + "/logs/chimeraF/uchime_denovo.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/uchime_denovo.txt"
+    log: "logs/chimeraF/uchime_denovo.log"
+    benchmark: "benchmarks/chimeraF/uchime_denovo.txt"
     shell:
         """
         qiime vsearch uchime-denovo \
@@ -223,10 +223,10 @@ rule q2_filter_features:
     input:
         ftable = rules.q2_ftable_import.output.qza,
         nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
-    output: temp(OUTPUT_DIR + "/chimeraF/table_nonchimeras.qza")
+    output: temp("chimeraF/table_nonchimeras.qza")
     conda: "../envs/q2_plugins.yaml"
-    log: OUTPUT_DIR + "/logs/chimeraF/filter_features.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/filter_features.txt"
+    log: "logs/chimeraF/filter_features.log"
+    benchmark: "benchmarks/chimeraF/filter_features.txt"
     shell:
         """
         qiime feature-table filter-features \
@@ -240,10 +240,10 @@ rule q2_filter_seqs:
     input:
         repseqs = rules.q2_repseqs_import.output,
         nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
-    output: temp(OUTPUT_DIR + "/chimeraF/rep_seqs_nonchimeras.qza")
+    output: temp("chimeraF/rep_seqs_nonchimeras.qza")
     conda: "../envs/q2_plugins.yaml"
-    log: OUTPUT_DIR + "/logs/chimeraF/filter_seqs.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/filter_seqs.txt"
+    log: "logs/chimeraF/filter_seqs.log"
+    benchmark: "benchmarks/chimeraF/filter_seqs.txt"
     shell:
         """
         qiime feature-table filter-seqs \
@@ -256,13 +256,13 @@ rule q2_filter_seqs:
 rule q2_ftable_export:
     input: rules.q2_filter_features.output
     output:
-        biom = temp(OUTPUT_DIR + "/chimeraF/table_nonchimeras.biom"), 
-        tsv = OUTPUT_DIR + "/chimeraF/table_nonchimeras.tsv"
+        biom = temp("chimeraF/table_nonchimeras.biom"), 
+        tsv = "chimeraF/table_nonchimeras.tsv"
     params:
-        _dir = OUTPUT_DIR + "/chimeraF"
+        _dir = "chimeraF"
     conda: "../envs/q2_plugins.yaml"
-    log: OUTPUT_DIR + "/logs/chimeraF/ftable_export.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/ftable_export.txt"
+    log: "logs/chimeraF/ftable_export.log"
+    benchmark: "benchmarks/chimeraF/ftable_export.txt"
     shell:
         """
         qiime tools export \
@@ -275,12 +275,12 @@ rule q2_ftable_export:
 
 rule q2_repseqs_export:
     input: rules.q2_filter_seqs.output
-    output: OUTPUT_DIR + "/chimeraF/rep_seqs_nonchimeras.fasta"
+    output: "chimeraF/rep_seqs_nonchimeras.fasta"
     conda: "../envs/q2_plugins.yaml"
     params:
-        _dir = OUTPUT_DIR + "/chimeraF"
-    log: OUTPUT_DIR + "/logs/chimeraF/repseqs_export.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/chimeraF/repseqs_export.txt"
+        _dir = "chimeraF"
+    log: "logs/chimeraF/repseqs_export.log"
+    benchmark: "benchmarks/chimeraF/repseqs_export.txt"
     shell:
         """
         qiime tools export \
@@ -295,4 +295,4 @@ def chimeraF(chimera_check = True):
     fs = ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]
     if chimera_check == False:
         fs = ["count_matrix.tsv", "rep_seqs.fasta"]
-    return expand(OUTPUT_DIR + "/{f}", f = fs)
+    return expand("{f}", f = fs)

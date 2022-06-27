@@ -7,14 +7,14 @@ TaxDB = config["mmseqs"]["taxdb"]
 rule createdb_query:
     input: chimeraF(config["chimeraF"])[1]
     output: 
-        expand(OUTPUT_DIR + "/taxonomy/mmseqs2/queryDB{ext}",
+        expand("taxonomy/mmseqs2/queryDB{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
                 "_h", "_h.dbtype", "_h.index"]),
     conda: "../envs/mmseqs2.yaml"
     params:
-        DB = OUTPUT_DIR + "/taxonomy/mmseqs2/queryDB",
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/create_queryDB.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/create_queryDB.txt"
+        DB = "taxonomy/mmseqs2/queryDB",
+    log: "logs/taxonomy/mmseqs2/create_queryDB.log"
+    benchmark: "benchmarks/taxonomy/mmseqs2/create_queryDB.txt"
     shell: "mmseqs createdb {input} {params.DB} 1> {log} 2>&1"
 
 def get_seqTaxDB(blastdb_alias, db):
@@ -32,16 +32,16 @@ rule classify_mmseqs2:
         queryDB = rules.createdb_query.output[0],
         targetDB = ancient(get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[0]),
     output:
-        resultDB = multiext(OUTPUT_DIR + "/taxonomy/mmseqs2/resultDB",
+        resultDB = multiext("taxonomy/mmseqs2/resultDB",
          ".0", ".1", ".2", ".3", ".4", ".5", ".dbtype", ".index"),
-        tmp = temp(directory(OUTPUT_DIR + "/taxonomy/mmseqs2/tmp")),
+        tmp = temp(directory("taxonomy/mmseqs2/tmp")),
     message: "Taxonomy assignment with MMseqs2"
     conda: "../envs/mmseqs2.yaml"
     params: 
-        resultDB = OUTPUT_DIR + "/taxonomy/mmseqs2/resultDB",
+        resultDB = "taxonomy/mmseqs2/resultDB",
         lca_mode = config["mmseqs"]["lca-mode"],
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/taxonomy.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/taxonomy.txt"
+    log: "logs/taxonomy/mmseqs2/taxonomy.log"
+    benchmark: "benchmarks/taxonomy/mmseqs2/taxonomy.txt"
     threads: config["threads"]["large"]
     shell:
         "mmseqs taxonomy {input.queryDB} {input.targetDB} {params.resultDB} {output.tmp}"
@@ -52,13 +52,13 @@ rule createtsv:
     input:
         queryDB = rules.createdb_query.output[0],
         resultDB = rules.classify_mmseqs2.output.resultDB,
-    output: temp(OUTPUT_DIR + "/taxonomy/mmseqs2/output.tsv"),
+    output: temp("taxonomy/mmseqs2/output.tsv"),
     message: "Creating tsv file for taxonomy"
     conda: "../envs/mmseqs2.yaml"
     params: 
-        resultDB = OUTPUT_DIR + "/taxonomy/mmseqs2/resultDB",
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/createtsv_mmseqs2.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/createtsv_mmseqs2.txt"
+        resultDB = "taxonomy/mmseqs2/resultDB",
+    log: "logs/taxonomy/mmseqs2/createtsv_mmseqs2.log"
+    benchmark: "benchmarks/taxonomy/mmseqs2/createtsv_mmseqs2.txt"
     threads: config["threads"]["normal"]
     shell:
         "mmseqs createtsv  {input.queryDB} {params.resultDB} {output}"
@@ -70,12 +70,12 @@ rule lineage_taxonkit_mmseqs2:
     input:
         taxdump = ancient(rules.update_taxdump.output),
         tsv = rules.createtsv.output,
-    output: OUTPUT_DIR + "/taxonomy/mmseqs2/lineage.tsv",
+    output: "taxonomy/mmseqs2/lineage.tsv",
     conda: "../envs/taxonkit.yaml"
     params:
         f = 2,
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/lineage_taxonkit.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/lineage_taxonkit.txt"
+    log: "logs/taxonomy/mmseqs2/lineage_taxonkit.log"
+    benchmark: "benchmarks/taxonomy/mmseqs2/lineage_taxonkit.txt"
     threads: config["threads"]["normal"]
     shell:
         "cut -f {params.f} {input.tsv} | sort -u | taxonkit reformat -I 1 -P -j {threads}"
@@ -85,7 +85,7 @@ rule taxonomy_mmseqs2:
     input:
         rules.createtsv.output,
         rules.lineage_taxonkit_mmseqs2.output,
-    output: OUTPUT_DIR + "/taxonomy/mmseqs2/taxonomy.tsv"
+    output: "taxonomy/mmseqs2/taxonomy.tsv"
     run:
         import pandas as pd
         df = pd.read_csv(input[0], sep = "\t", header = None)
@@ -103,13 +103,13 @@ rule classify_kraken2:
         ancient(DATABASE_DIR + "/.initDB_DONE"),
         ancient(rules.database_kraken2.output.k2d), 
         fna = chimeraF(config["chimeraF"])[1]
-    output: temp(OUTPUT_DIR  + "/taxonomy/kraken2/classified.tsv"),
+    output: temp("taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
     params:
         classify_cmd = config["kraken2"]["classify_cmd"],
         dbloc = ancient(DATABASE_DIR + "/kraken2"),
-    log: OUTPUT_DIR + "/logs/taxonomy/kraken2/classify.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/classify.txt"
+    log: "logs/taxonomy/kraken2/classify.log"
+    benchmark: "benchmarks/taxonomy/kraken2/classify.txt"
     threads: config["threads"]["large"]
     shell:
         "kraken2 --db {params.dbloc} --threads {threads} --output {output} {input.fna}"
@@ -121,19 +121,19 @@ use rule lineage_taxonkit_mmseqs2 as lineage_taxonkit_kraken2 with:
         taxdump = ancient(rules.update_taxdump.output),
         tsv = rules.classify_kraken2.output,
     output: 
-        temp(OUTPUT_DIR + "/taxonomy/kraken2/lineage.tsv"),
+        temp("taxonomy/kraken2/lineage.tsv"),
     params:
         f = 3,
     log: 
-        OUTPUT_DIR + "/logs/taxonomy/kraken2/lineage_taxonkit.log"
+        "logs/taxonomy/kraken2/lineage_taxonkit.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/lineage_taxonkit.txt"
+        "benchmarks/taxonomy/kraken2/lineage_taxonkit.txt"
 
 rule taxonomy_kraken2:
     input:
         rules.classify_kraken2.output,
         rules.lineage_taxonkit_kraken2.output,
-    output: OUTPUT_DIR + "/taxonomy/kraken2/taxonomy.tsv"
+    output: "taxonomy/kraken2/taxonomy.tsv"
     run:
         import pandas as pd
         df = pd.read_csv(input[0], sep = "\t", header = None)
@@ -146,7 +146,7 @@ rule taxonomy_kraken2:
         df.to_csv(output[0], sep = "\t", index = False, header = False)
 
 rule get_taxonomy:
-    input: OUTPUT_DIR + "/taxonomy/" + config["classifier"][0] + "/taxonomy.tsv",
-    output: OUTPUT_DIR + "/taxonomy.tsv"
+    input: "taxonomy/" + config["classifier"][0] + "/taxonomy.tsv",
+    output: "taxonomy.tsv"
     shell:
         "cp -f {input} {output}"

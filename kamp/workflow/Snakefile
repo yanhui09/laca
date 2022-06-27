@@ -2,7 +2,6 @@
 configfile: "config.yaml"
 #--------------
 INPUT_DIR = config["basecalled_dir"].rstrip("/")
-OUTPUT_DIR = config["results_dir"].rstrip("/")
 DATABASE_DIR = config["database_dir"].rstrip("/")
 
 # Allow users to fix the underlying OS via singularity.
@@ -26,12 +25,12 @@ def check_list_ele(var, val, eles):
 
 rule all:
     input:
-        OUTPUT_DIR + "/.demultiplex_DONE",
-        OUTPUT_DIR + "/.qc_DONE",
-        OUTPUT_DIR + "/.kmerBin_DONE",
-        OUTPUT_DIR + "/.quant_DONE",
-        OUTPUT_DIR + "/.taxa_DONE",
-        OUTPUT_DIR + "/.tree_DONE",
+        ".demultiplex_DONE",
+        ".qc_DONE",
+        ".kmerBin_DONE",
+        ".quant_DONE",
+        ".taxa_DONE",
+        ".tree_DONE",
 
 include: "rules/init.smk"
 #include: "rules/nanosim.smk"
@@ -46,64 +45,64 @@ include: "rules/taxonomy.smk"
 include: "rules/tree.smk"
 
 rule demultiplex:
-    input: lambda wc: expand(OUTPUT_DIR + "/qc/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: temp(touch(OUTPUT_DIR + "/.demultiplex_DONE"))
+    input: lambda wc: expand("qc/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    output: temp(touch(".demultiplex_DONE"))
 
 rule qc:
     input: lambda wc: get_filt(wc, pool = config["pool"]),
-    output: temp(touch(OUTPUT_DIR + "/.qc_DONE"))
+    output: temp(touch(".qc_DONE"))
 
 rule kmerBin:
     input: lambda wc: get_kmerBin(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
-    output: temp(touch(OUTPUT_DIR + "/.kmerBin_DONE"))
+    output: temp(touch(".kmerBin_DONE"))
 
 rule kmerCon:
     input:
-        OUTPUT_DIR + "/.kmerBin_DONE",
-        OUTPUT_DIR + "/kmerCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/.kmerCon_DONE"))
+        ".kmerBin_DONE",
+        "kmerCon.fna"
+    output: temp(touch(".kmerCon_DONE"))
 
 rule clustCon:
     input:
-        OUTPUT_DIR + "/.kmerBin_DONE",
-        OUTPUT_DIR + "/clustCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/.clustCon_DONE"))
+        ".kmerBin_DONE",
+        "clustCon.fna"
+    output: temp(touch(".clustCon_DONE"))
 
 rule isONclustCon:
     input:
-        OUTPUT_DIR + "/.kmerBin_DONE",
-        OUTPUT_DIR + "/isONclustCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/.isONclustCon_DONE"))
+        ".kmerBin_DONE",
+        "isONclustCon.fna"
+    output: temp(touch(".isONclustCon_DONE"))
 
 rule isONcorCon:
     input: 
-        OUTPUT_DIR + "/.kmerBin_DONE",
-        OUTPUT_DIR + "/isONcorCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/.isONcorCon_DONE"))
+        ".kmerBin_DONE",
+        "isONcorCon.fna"
+    output: temp(touch(".isONcorCon_DONE"))
 
 rule umiCon:
     input: 
-        OUTPUT_DIR + "/umiCon.fna"
-    output: temp(touch(OUTPUT_DIR + "/.umiCon_DONE"))
+        "umiCon.fna"
+    output: temp(touch(".umiCon_DONE"))
 
 rule quant:
     input: chimeraF(config["chimeraF"])
-    output: temp(touch(OUTPUT_DIR + "/.quant_DONE"))
+    output: temp(touch(".quant_DONE"))
 
 rule taxa: 
     input:
-        [OUTPUT_DIR + "/taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
-        OUTPUT_DIR + "/taxonomy.tsv",
-    output: temp(touch(OUTPUT_DIR + "/.taxa_DONE"))
+        ["taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
+        "taxonomy.tsv",
+    output: temp(touch(".taxa_DONE"))
 
 rule tree: 
     input:
-        [OUTPUT_DIR + "/tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],
-        OUTPUT_DIR + "/tree.nwk",
-    output: temp(touch(OUTPUT_DIR + "/.tree_DONE"))
+        ["tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],
+        "tree.nwk",
+    output: temp(touch(".tree_DONE"))
 
 rule requant:
     input:
-        OUTPUT_DIR + "/rep_seqs_requant.fasta",
-        OUTPUT_DIR + "/count_matrix_requant.tsv",
-    output: temp(touch(OUTPUT_DIR + "/.requant_DONE"))
+        "rep_seqs_requant.fasta",
+        "count_matrix_requant.tsv",
+    output: temp(touch(".requant_DONE"))

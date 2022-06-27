@@ -1,4 +1,4 @@
-OUTPUT_DIR = config["results_dir"].rstrip("/")
+#OUTPUT_DIR = config["results_dir"].rstrip("/")
 # Prepare nanopore reads
 REF = config["nanosim"]["ref"]
 # expand list from comma separated string
@@ -15,13 +15,13 @@ rule read_analysis:
     input: 
       read = NREAD,
       ref = RG,
-    output: OUTPUT_DIR + "/nanosim/model/nanosim_model_profile"
+    output: "nanosim/model/nanosim_model_profile"
     conda: "../envs/nanosim.yaml"
     params:
         a = config["nanosim"]["read_analysis"]["a"],
-        prefix = OUTPUT_DIR + "/nanosim/model/nanosim",
-    log: OUTPUT_DIR + "/logs/nanosim/read_analysis.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/nanosim/read_analysis.txt"
+        prefix = "nanosim/model/nanosim",
+    log: "logs/nanosim/read_analysis.log"
+    benchmark: "benchmarks/nanosim/read_analysis.txt"
     threads: config["nanosim"]["threads"]
     shell: 
         "read_analysis.py genome -i {input.read} -rg {input.ref}"
@@ -32,17 +32,17 @@ rule read_analysis:
 rule cls_ref:
     input: REF
     output: 
-        rep = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
-        all_by_cluster = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
-        tsv = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
-        tmp = temp(directory(OUTPUT_DIR + "/nanosim/tmp/cls_ref/id_{minid}")),
+        rep = temp("nanosim/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
+        all_by_cluster = temp("nanosim/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
+        tsv = temp("nanosim/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
+        tmp = temp(directory("nanosim/tmp/cls_ref/id_{minid}")),
     conda: "../envs/mmseqs2.yaml"
     params:
         minid = lambda wc: int(wc.minid) * 0.01,
-        prefix = lambda wc: OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/mmseqs".format(minid=wc.minid),
+        prefix = lambda wc: "nanosim/cls_ref/id_{minid}/mmseqs".format(minid=wc.minid),
         c = 1,
-    log: OUTPUT_DIR + "/logs/nanosim/id_{minid}/cls_ref.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/nanosim/id_{minid}/cls_ref.txt"
+    log: "logs/nanosim/id_{minid}/cls_ref.log"
+    benchmark: "benchmarks/nanosim/id_{minid}/cls_ref.txt"
     threads: config["nanosim"]["threads"]
     shell:
         "mmseqs easy-cluster {input} {params.prefix} {output.tmp} "
@@ -52,14 +52,14 @@ rule cls_ref:
 rule subsample_cls_ref:
     input: rules.cls_ref.output.rep
     output:
-        p = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/subsampled_p.fasta"),
-        n = temp(OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/subsampled.fasta"),
+        p = temp("nanosim/cls_ref/id_{minid}/subsampled_p.fasta"),
+        n = temp("nanosim/cls_ref/id_{minid}/subsampled.fasta"),
     conda: "../envs/seqkit.yaml"
     params:
         p = 1,
         n = config["nanosim"]["subsample_n"],
-    log: OUTPUT_DIR + "/logs/nanosim/id_{minid}/subsample_cls_ref.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/nanosim/id_{minid}/subsample_cls_ref.txt"
+    log: "logs/nanosim/id_{minid}/subsample_cls_ref.log"
+    benchmark: "benchmarks/nanosim/id_{minid}/subsample_cls_ref.txt"
     threads: 1
     shell:
         """
@@ -70,9 +70,9 @@ rule subsample_cls_ref:
 # keep fasta header unique
 rule reheader:
     input: rules.subsample_cls_ref.output
-    output: OUTPUT_DIR + "/nanosim/cls_ref/id_{minid}/ref.fasta"
-    log: OUTPUT_DIR + "/logs/nanosim/cls_ref/id_{minid}/reheader.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/nanosim/cls_ref/id_{minid}/reheader.txt"
+    output: "nanosim/cls_ref/id_{minid}/ref.fasta"
+    log: "logs/nanosim/cls_ref/id_{minid}/reheader.log"
+    benchmark: "benchmarks/nanosim/cls_ref/id_{minid}/reheader.txt"
     run:
         with open(output[0], "w") as out:
             with open (input[0], "r") as inp:
@@ -90,16 +90,16 @@ rule read_simulate:
         ref = rules.reheader.output,
     output: 
         expand(
-            OUTPUT_DIR + "/nanosim/simulate/{{minid}}_{{n}}/simulated{suffix}",
+            "nanosim/simulate/{{minid}}_{{n}}/simulated{suffix}",
             suffix=["_aligned_error_profile", "_aligned_reads.fastq", "_unaligned_reads.fastq"]
         )
     conda: "../envs/nanosim.yaml"
     params:
-        c = OUTPUT_DIR + "/nanosim/model/nanosim",
-        o = lambda wc: OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated".format(minid=wc.minid, n=wc.n),
+        c = "nanosim/model/nanosim",
+        o = lambda wc: "nanosim/simulate/{minid}_{n}/simulated".format(minid=wc.minid, n=wc.n),
         n = lambda wc: int(wc.n),
-    log: OUTPUT_DIR + "/logs/nanosim/read_simulate/{minid}_{n}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/nanosim/read_simulate/{minid}_{n}.txt"
+    log: "logs/nanosim/read_simulate/{minid}_{n}.log"
+    benchmark: "benchmarks/nanosim/read_simulate/{minid}_{n}.txt"
     threads: config["threads"]["large"]
     shell:
         "simulator.py genome -rg {input.ref} -c {params.c} -o {params.o}"
@@ -108,11 +108,11 @@ rule read_simulate:
 
 # pseudo demultiplex
 rule nanosim:
-    input: expand(OUTPUT_DIR + "/nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
+    input: expand("nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
     output: 
-        temp(touch(OUTPUT_DIR + "/.simulated_DONE")),
-        directory(OUTPUT_DIR + "/demultiplexed"),
-        touch(OUTPUT_DIR + "/.demultiplexed"),
+        temp(touch(".simulated_DONE")),
+        directory("demultiplexed"),
+        touch(".demultiplexed"),
     run:
         import shutil
         # replace fqs to follow demultiplexing wildcards

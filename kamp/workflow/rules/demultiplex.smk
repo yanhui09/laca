@@ -1,23 +1,23 @@
 rule guppy:
     input: INPUT_DIR
-    output: OUTPUT_DIR + "/.demultiplexed"
-    log: OUTPUT_DIR + "/logs/demultiplex.log"
+    output: ".demultiplexed"
+    log: "logs/demultiplex.log"
     threads: config["threads"]["large"]
     params:
         guppy=config["guppy"],
         barcode_kits=config["barcode_kits"],
-        out=OUTPUT_DIR + "/demultiplexed",
+        out="demultiplexed",
     shell:
         "{params.guppy}/guppy_barcoder -i {input} -s {params.out} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}"
 
 checkpoint demultiplex_check:
-    input: OUTPUT_DIR + "/.demultiplexed"
-    output: touch(directory(OUTPUT_DIR + "/demultiplexed"))
+    input: ".demultiplexed"
+    output: touch(directory("demultiplexed"))
 
 # collect demultiplexed files
 rule collect_fastq:
-    input:  OUTPUT_DIR + "/demultiplexed/{barcode}"
-    output: temp(OUTPUT_DIR + "/qc/{barcode}.fastq")
+    input:  "demultiplexed/{barcode}"
+    output: temp("qc/{barcode}.fastq")
     shell: "cat {input}/*.fastq > {output}"
 
 def get_demultiplexed(wildcards):

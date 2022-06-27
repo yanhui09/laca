@@ -1,12 +1,12 @@
 # kmer calculation
 rule kmer_freqs:
-    input: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
-    output: OUTPUT_DIR + "/kmerBin/{barcode}/kmer_freqs.txt"
+    input: "qc/qfilt/{barcode}.fastq"
+    output: "kmerBin/{barcode}/kmer_freqs.txt"
     conda: "../envs/kmerBin.yaml"
     params: 
         kmer_size = config["kmer_size"],
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/kmer_freqs.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/kmer_freqs.txt"
+    log: "logs/kmerBin/{barcode}/kmer_freqs.log"
+    benchmark: "benchmarks/kmerBin/{barcode}/kmer_freqs.txt"
     threads: config["threads"]["large"]
     shell:
         "python scripts/kmerFreqs.py"
@@ -42,12 +42,12 @@ def get_batch_size(batch_size, ram, kmer_file):
 # check whether to split the kmer freqs in batches
 checkpoint shuffle_batch:
     input: rules.kmer_freqs.output
-    output: directory(OUTPUT_DIR + "/kmerBin/{barcode}/batch_check")
+    output: directory("kmerBin/{barcode}/batch_check")
     conda: "../envs/coreutils.yaml"
     params:
         batch_size = lambda wc, input: get_batch_size(config["batch_size"], config["bin_mem"], input[0]),
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/shuffle_batch.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/shuffle_batch.txt"
+    log: "logs/kmerBin/{barcode}/shuffle_batch.log"
+    benchmark: "benchmarks/kmerBin/{barcode}/shuffle_batch.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -62,8 +62,8 @@ checkpoint shuffle_batch:
 #rule umap:
 #    input: rules.kmer_freqs.output
 #    output: 
-#        cluster=OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv",
-#	    plot=OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.png",
+#        cluster="kmerBin/{barcode}/hdbscan.tsv",
+#	    plot="kmerBin/{barcode}/hdbscan.png",
 #    conda: "../envs/kmerBin.yaml"
 #    params:
 #        n_neighbors = config["umap"]["n_neighbors"],
@@ -73,8 +73,8 @@ checkpoint shuffle_batch:
 #	    min_bin_size = config["hdbscan"]["min_bin_size"],
 #        min_samples = config["hdbscan"]["min_samples"],
 #	    epsilon = config["hdbscan"]["epsilon"],
-#    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/umap.log"
-#    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/umap.txt"
+#    log: "logs/kmerBin/{barcode}/umap.log"
+#    benchmark: "benchmarks/kmerBin/{barcode}/umap.txt"
 #    threads: config["threads"]["large"]
 #    resources:
 #        mem_mb = config["bin_mem"] * 1024
@@ -88,10 +88,10 @@ checkpoint shuffle_batch:
 # batch binning
 rule umap:
     input: 
-        OUTPUT_DIR + "/kmerBin/{barcode}/batch_check/{batch}.tsv",
+        "kmerBin/{barcode}/batch_check/{batch}.tsv",
     output: 
-        cluster=OUTPUT_DIR + "/kmerBin/{barcode}/{batch}/hdbscan.tsv",
-	    plot=OUTPUT_DIR + "/kmerBin/{barcode}/{batch}/hdbscan.png",
+        cluster="kmerBin/{barcode}/{batch}/hdbscan.tsv",
+	    plot="kmerBin/{barcode}/{batch}/hdbscan.png",
     conda: "../envs/kmerBin.yaml"
     params:
         n_neighbors = config["umap"]["n_neighbors"],
@@ -102,9 +102,9 @@ rule umap:
         min_samples = config["hdbscan"]["min_samples"],
 	    epsilon = config["hdbscan"]["epsilon"],
     log: 
-        OUTPUT_DIR + "/logs/kmerBin/{barcode}/{batch}/umap.log"
+        "logs/kmerBin/{barcode}/{batch}/umap.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/{batch}/umap.txt"
+        "benchmarks/kmerBin/{barcode}/{batch}/umap.txt"
     threads: config["threads"]["large"]
     resources:
         mem_mb = config["bin_mem"] * 1024
@@ -117,11 +117,11 @@ rule umap:
 
 def get_kmerbatch(wildcards):
     batches = glob_wildcards(checkpoints.shuffle_batch.get(**wildcards).output[0] + "/{batch}.tsv").batch
-    return expand(OUTPUT_DIR + "/kmerBin/{{barcode}}/{batch}/hdbscan.tsv", batch=batches)
+    return expand("kmerBin/{{barcode}}/{batch}/hdbscan.tsv", batch=batches)
 
 rule col_kmerbatch:
     input: get_kmerbatch
-    output: OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv"
+    output: "kmerBin/{barcode}/hdbscan.tsv"
     run:
         with open(output[0], "w") as out:
             out.write("read\tlength\tD1\tD2\tbin_id\tbatch_id\n")
@@ -138,12 +138,12 @@ def get_bin(wildcards, pool = True):
         barcodes = ["pooled"]
     else:
         barcodes = get_qced(wildcards)
-    return expand(OUTPUT_DIR + "/kmerBin/{barcode}/hdbscan.tsv", barcode=barcodes)
+    return expand("kmerBin/{barcode}/hdbscan.tsv", barcode=barcodes)
 
 # split reads by kmerbin
 checkpoint cls_kmerbin:
     input: lambda wildcards: get_bin(wildcards, pool = config["pool"])
-    output: directory(OUTPUT_DIR + "/kmerBin/clusters"),
+    output: directory("kmerBin/clusters"),
     run:
         import pandas as pd
         if not os.path.exists(output[0]):
@@ -164,19 +164,19 @@ checkpoint cls_kmerbin:
         
 rule split_bin:
     input: 
-        cluster = OUTPUT_DIR + "/kmerBin/clusters/{barcode}_{c}.csv",
-        fqs = OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq",
-    output: OUTPUT_DIR + "/kmerBin/{barcode}/split/{c}.fastq",
+        cluster = "kmerBin/clusters/{barcode}_{c}.csv",
+        fqs = "qc/qfilt/{barcode}.fastq",
+    output: "kmerBin/{barcode}/split/{c}.fastq",
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/split/{c}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/split/{c}.txt"
+    log: "logs/kmerBin/{barcode}/split/{c}.log"
+    benchmark: "benchmarks/kmerBin/{barcode}/split/{c}.txt"
     shell:
         "seqkit grep {input.fqs} -f {input.cluster} -o {output} 2> {log}"
 
 rule skip_bin:
-    input: OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq"
-    output: OUTPUT_DIR + "/kmerBin/{barcode}/all.fastq"
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/skip_bin.log"
+    input: "qc/qfilt/{barcode}.fastq"
+    output: "kmerBin/{barcode}/all.fastq"
+    log: "logs/kmerBin/{barcode}/skip_bin.log"
     shell: "cp -p {input} {output} 2> {log}"
 
 # get {barcode} {c} from chekckpoint
@@ -189,11 +189,11 @@ def get_kmerBin(wildcards, pool = True, kmerbin = True):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            fqs.append(OUTPUT_DIR + "/kmerBin/{bc}/split/{kb}.fastq".format(bc=bc, kb=kb))
+            fqs.append("kmerBin/{bc}/split/{kb}.fastq".format(bc=bc, kb=kb))
     else:
         if pool is True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
-        fqs = expand(OUTPUT_DIR + "/kmerBin/{bc}/all.fastq", bc=bcs)
+        fqs = expand("kmerBin/{bc}/all.fastq", bc=bcs)
     return fqs

@@ -29,8 +29,8 @@ rule databases_mmseqs2:
     params:
         taxdb = TaxDB,
         targetDB = DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB,
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/databases_mmseqs2.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/databases_mmseqs2.txt"
+    log: "logs/taxonomy/mmseqs2/databases_mmseqs2.log"
+    benchmark: "benchmarks/taxonomy/mmseqs2/databases_mmseqs2.txt"
     shell: 
         "mmseqs databases {params.taxdb} {params.targetDB} {output.tmp} 1> {log} 2>&1"
 
@@ -38,8 +38,8 @@ rule databases_mmseqs2:
 # the predefined one do not have taxonomy information
 rule update_taxdump:
     output: directory(DATABASE_DIR + "/mmseqs2/customDB/taxdump"),
-    log: OUTPUT_DIR + "/logs/taxonomy/update_taxdump.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/update_taxdump.txt"
+    log: "logs/taxonomy/update_taxdump.log"
+    benchmark: "benchmarks/taxonomy/update_taxdump.txt"
     shell:
         """
         wget ftp://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz -P {output} 1> {log} 2>&1
@@ -51,8 +51,8 @@ rule update_blastdb:
     conda: "../envs/rsync.yaml"
     params:
         blastdb_alias = config["mmseqs"]["blastdb_alias"],
-    log: OUTPUT_DIR + "/logs/taxonomy/update_blastdb.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/update_blastdb.txt"
+    log: "logs/taxonomy/update_blastdb.log"
+    benchmark: "benchmarks/taxonomy/update_blastdb.txt"
     shell:
         """
         rsync -rv --include="{params.blastdb_alias}*.tar.gz" --exclude="*" rsync://ftp.ncbi.nlm.nih.gov/blast/db/ {output} 1> {log} 2>&1
@@ -67,8 +67,8 @@ rule blastdbcmd:
     conda: "../envs/blast.yaml"
     params:
         db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs"]["blastdb_alias"],
-    log: OUTPUT_DIR + "/logs/taxonomy/blast/blastdbcmd.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/blast/blastdbcmd.txt"
+    log: "logs/taxonomy/blast/blastdbcmd.log"
+    benchmark: "benchmarks/taxonomy/blast/blastdbcmd.txt"
     shell:
     # ignore err: [blastdbcmd] error while reading seqid
     # I don't know how to escape it using blastdbcmd
@@ -86,8 +86,8 @@ rule createdb_seqTax:
     conda: "../envs/mmseqs2.yaml"
     params:
         DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/create_customDB.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/create_customDB.txt"
+    log: "logs/taxonomy/mmseqs2/create_customDB.log"
+    benchmark: "benchmarks/taxonomy/mmseqs2/create_customDB.txt"
     shell: 
         "mmseqs createdb {input} {params.DB} 1> {log} 2>&1"
 
@@ -103,8 +103,8 @@ rule createtaxdb_seqTax:
     conda: "../envs/mmseqs2.yaml"
     params:
         DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
-    log: OUTPUT_DIR + "/logs/taxonomy/mmseqs2/create_taxdb.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/mmseqs2/create_taxdb.txt"
+    log: "logs/taxonomy/mmseqs2/create_taxdb.log"
+    benchmark: "benchmarks/taxonomy/mmseqs2/create_taxdb.txt"
     shell: 
         "mmseqs createtaxdb {params.DB} {output.tmp} "
         "--ncbi-tax-dump {input.taxdump} --tax-mapping-file {input.taxidmapping} 1> {log} 2>&1"
@@ -117,8 +117,8 @@ rule database_kraken2:
     params:
         buildb_cmd = config["kraken2"]["buildb_cmd"],
         dbloc = directory(DATABASE_DIR + "/kraken2"),
-    log: OUTPUT_DIR + "/logs/taxonomy/kraken2/build_database.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/taxonomy/kraken2/build_database.txt"
+    log: "logs/taxonomy/kraken2/build_database.log"
+    benchmark: "benchmarks/taxonomy/kraken2/build_database.txt"
     threads: config["threads"]["large"]
     shell:
         "kraken2-build --db {params.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"

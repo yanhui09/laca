@@ -38,47 +38,47 @@ use rule q_filter as qfilter_umi with:
     input:
         get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
     output:
-        OUTPUT_DIR + "/umi/{barcode}/qfilt.fastq"
+        "umi/{barcode}/qfilt.fastq"
     params:
         Q = config["umi"]["seqkit"]["min-qual"],
         m = config["umi"]["seqkit"]["min-len"],
         M = config["umi"]["seqkit"]["max-len"],
     log:
-        OUTPUT_DIR + "/logs/umi/{barcode}/qfilter.log"
+        "logs/umi/{barcode}/qfilter.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/qfilter.txt"
+        "benchmarks/umi/{barcode}/qfilter.txt"
     threads:
         config["threads"]["large"]
 
 # kmer calculation
 use rule kmer_freqs as kmer_freqs_umi with:
     input: 
-        OUTPUT_DIR + "/umi/{barcode}/qfilt.fastq"
+        "umi/{barcode}/qfilt.fastq"
     output: 
-        OUTPUT_DIR + "/umi/{barcode}/kmerBin/kmer_freqs.txt"
+        "umi/{barcode}/kmerBin/kmer_freqs.txt"
     log: 
-        OUTPUT_DIR + "/logs/{barcode}/kmerBin/kmer_freqs.log"
+        "logs/{barcode}/kmerBin/kmer_freqs.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/{barcode}/kmerBin/kmer_freqs.txt"
+        "benchmarks/{barcode}/kmerBin/kmer_freqs.txt"
 
 # kmer binning
 use rule umap as umap_umi with:
     input: 
         rules.kmer_freqs_umi.output
     output: 
-        cluster=OUTPUT_DIR + "/umi/{barcode}/kmerBin/hdbscan.tsv",
-	      plot=OUTPUT_DIR + "/umi/{barcode}/kmerBin/hdbscan.png",
+        cluster="umi/{barcode}/kmerBin/hdbscan.tsv",
+	      plot="umi/{barcode}/kmerBin/hdbscan.png",
     log: 
-        OUTPUT_DIR + "/logs/umi/{barcode}/kmerBin/umap.log"
+        "logs/umi/{barcode}/kmerBin/umap.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/kmerBin/umap.txt"
+        "benchmarks/umi/{barcode}/kmerBin/umap.txt"
     
 # split reads by cluster
 checkpoint cls_kmerbin_umi:
     input: rules.umap_umi.output.cluster,
-    output: directory(OUTPUT_DIR + "/umi/{barcode}/kmerBin/clusters"),
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/kmerBin/clusters.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/kmerBin/clusters.txt"
+    output: directory("umi/{barcode}/kmerBin/clusters"),
+    log: "logs/umi/{barcode}/kmerBin/clusters.log"
+    benchmark: "benchmarks/umi/{barcode}/kmerBin/clusters.txt"
     run:
         import pandas as pd
         df = pd.read_csv(input[0], sep="\t")
@@ -90,22 +90,22 @@ checkpoint cls_kmerbin_umi:
         
 use rule split_bin as split_bin_umi with:
     input: 
-        clusters = OUTPUT_DIR + "/umi/{barcode}/kmerBin/clusters/{c}.txt",
-        fastq = OUTPUT_DIR + "/umi/{barcode}/qfilt.fastq",
+        clusters = "umi/{barcode}/kmerBin/clusters/{c}.txt",
+        fastq = "umi/{barcode}/qfilt.fastq",
     output: 
-        OUTPUT_DIR + "/umi/{barcode}/kmerBin/clusters/{c}.fastq",
+        "umi/{barcode}/kmerBin/clusters/{c}.fastq",
     log: 
-        OUTPUT_DIR + "/logs/umi/{barcode}/kmerBin/clusters/{c}.log"
+        "logs/umi/{barcode}/kmerBin/clusters/{c}.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/kmerBin/clusters/{c}.txt"
+        "benchmarks/umi/{barcode}/kmerBin/clusters/{c}.txt"
 
 use rule skip_bin as skip_bin_umi with:
     input: 
-        OUTPUT_DIR + "/umi/{barcode}/qfilt.fastq"
+        "umi/{barcode}/qfilt.fastq"
     output: 
-        OUTPUT_DIR + "/umi/{barcode}/kmerBin/clusters/all.fastq"
+        "umi/{barcode}/kmerBin/clusters/all.fastq"
     log: 
-        OUTPUT_DIR + "/logs/umi/{barcode}/kmerBin/clusters/skip_bin.log"
+        "logs/umi/{barcode}/kmerBin/clusters/skip_bin.log"
 
 def get_fq4Con_umi(kmerbin = True):
     check_val("kmerbin", kmerbin, bool)
@@ -119,13 +119,13 @@ def get_fq4Con_umi(kmerbin = True):
 rule umi_loc:
     input: get_fq4Con_umi(config["kmerbin"])
     output:
-        start = OUTPUT_DIR + "/umi/{barcode}/{c}/start.fastq",
-        end = OUTPUT_DIR + "/umi/{barcode}/{c}/end.fastq",
+        start = "umi/{barcode}/{c}/start.fastq",
+        end = "umi/{barcode}/{c}/end.fastq",
     conda: "../envs/seqkit.yaml"
     params:
         umi_loc=config["umi"]["loc"]
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/umi_loc.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/umi_loc.txt"
+    log: "logs/umi/{barcode}/{c}/umi_loc.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/umi_loc.txt"
     shell:
         """
         seqkit subseq -r 1:{params.umi_loc} {input} 2> {log} 1> {output.start}
@@ -141,8 +141,8 @@ rule extract_umi:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        umi1 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi1.fastq",
-        umi2 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi2.fastq",
+        umi1 = "umi/{barcode}/{c}/umi1.fastq",
+        umi2 = "umi/{barcode}/{c}/umi2.fastq",
     conda: "../envs/cutadapt.yaml"
     params:
         f = f_pattern,
@@ -151,8 +151,8 @@ rule extract_umi:
         min_overlap = config["umi"]["min_overlap"],
         min_len = config["umi"]["len"],
         max_len = config["umi"]["len"],
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/extract_umi.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/extract_umi.txt"
+    log: "logs/umi/{barcode}/{c}/extract_umi.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/extract_umi.txt"
     threads: config["threads"]["normal"]
     shell:
         "cutadapt "
@@ -169,10 +169,10 @@ rule concat_umi:
     input:
         umi1 = rules.extract_umi.output.umi1,
         umi2 = rules.extract_umi.output.umi2,
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umi.fasta"
+    output: "umi/{barcode}/{c}/umi.fasta"
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/concat_umi.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/concat_umi.txt"
+    log: "logs/umi/{barcode}/{c}/concat_umi.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/concat_umi.txt"
     shell: "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -o {output} 2>> {log}"
 
 def get_umifile1(wildcards, kmerbin = True):
@@ -186,12 +186,12 @@ def get_umifile1(wildcards, kmerbin = True):
         else:
             cs = ["all"]
         for c in cs:
-            bin2clusters.append(OUTPUT_DIR + "/umi/{barcode}/{c}/umi.fasta".format(barcode=i, c=c))
+            bin2clusters.append("umi/{barcode}/{c}/umi.fasta".format(barcode=i, c=c))
     return bin2clusters
 
 checkpoint umi_check1:
     input: lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"])
-    output: directory(OUTPUT_DIR + "/umi/check1")
+    output: directory("umi/check1")
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -254,25 +254,25 @@ def get_umi_pattern(umi_pattern, length):
     return grep_pattern
 
 rule check_umi:
-    input: OUTPUT_DIR + "/umi/check1/{barcode}_{c}.fa"
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umif.fasta"
+    input: "umi/check1/{barcode}_{c}.fa"
+    output: "umi/{barcode}/{c}/umif.fasta"
     params:
         pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/check_umi.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/check_umi.txt"
+    log: "logs/umi/{barcode}/{c}/check_umi.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/check_umi.txt"
     shell: "grep -B1 -E {params.pattern} {input} > {output} 2> {log}"
 
 # cluster UMIs
 rule cluster_umi:
     input: rules.check_umi.output
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/centroid.fasta"
+    output: "umi/{barcode}/{c}/centroid.fasta"
     conda: "../envs/vsearch.yaml"
     params:
         cl_identity = config["umi"]["cl_identity"],
         min_len = 2*config["umi"]["len"],
         max_len = 2*config["umi"]["len"],
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/cluster_umi.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/cluster_umi.txt"
+    log: "logs/umi/{barcode}/{c}/cluster_umi.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/cluster_umi.txt"
     threads: config["threads"]["normal"]
     shell:
         "vsearch "
@@ -284,10 +284,10 @@ rule cluster_umi:
 
 rule rename_umi_centroid:
     input: rules.cluster_umi.output
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umi_centroid.fasta"
+    output: "umi/{barcode}/{c}/umi_centroid.fasta"
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/rename_umi_centroid.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/rename_umi_centroid.txt"
+    log: "logs/umi/{barcode}/{c}/rename_umi_centroid.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/rename_umi_centroid.txt"
     shell: "seqkit replace -p '^(.+)$' -r 'umi{{nr}}' {input} -o {output} 2> {log}"
 
 # align the trimmed UMI reads to the potential UMIs, which determine the final UMI clusters
@@ -312,8 +312,8 @@ rule extract_umip:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        umi1 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi1p.fastq",
-        umi2 = OUTPUT_DIR + "/umi/{barcode}/{c}/umi2p.fastq",
+        umi1 = "umi/{barcode}/{c}/umi1p.fastq",
+        umi2 = "umi/{barcode}/{c}/umi2p.fastq",
     params:
         f = fprimers_trim,
         r = rprimers_trim,
@@ -321,8 +321,8 @@ rule extract_umip:
         min_overlap = config["umi"]["min_overlap"],
         min_len = config["umi"]["len"],
         max_len = config["umi"]["len"],
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/extract_umip.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/extract_umip.txt"
+    log: "logs/umi/{barcode}/{c}/extract_umip.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/extract_umip.txt"
     threads: config["threads"]["normal"]
     shell:
         "cutadapt "
@@ -338,10 +338,10 @@ rule concat_umip:
     input:
         umi1=rules.extract_umip.output.umi1,
         umi2=rules.extract_umip.output.umi2,
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umip.fastq"
+    output: "umi/{barcode}/{c}/umip.fastq"
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/concat_umip.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/concat_umip.txt"
+    log: "logs/umi/{barcode}/{c}/concat_umip.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/concat_umip.txt"
     shell: "seqkit concat {input.umi1} {input.umi2} -o {output} 2> {log}"
 
 # calculate the UMI cluster size through mapping
@@ -349,10 +349,10 @@ rule concat_umip:
 rule bwa_index:
     input: rules.rename_umi_centroid.output,
     output:
-        multiext(OUTPUT_DIR + "/umi/{barcode}/{c}/umi_centroid.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        multiext("umi/{barcode}/{c}/umi_centroid.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
     conda: "../envs/bwa.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bwa_index.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bwa_index.txt"
+    log: "logs/umi/{barcode}/{c}/bwa_index.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/bwa_index.txt"
     shell: "bwa index {input} 2> {log}"
 
 rule bwa_aln:
@@ -360,12 +360,12 @@ rule bwa_aln:
         rules.bwa_index.output,
         umip = rules.concat_umip.output,
         ref = rules.rename_umi_centroid.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umip.sai",
+    output: "umi/{barcode}/{c}/umip.sai",
     conda: "../envs/bwa.yaml"
     params:
         n = 6,
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bwa_aln.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bwa_aln.txt"
+    log: "logs/umi/{barcode}/{c}/bwa_aln.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/bwa_aln.txt"
     threads: config["threads"]["large"]
     shell: "bwa aln -n {params.n} -t {threads} -N {input.ref} {input.umip} > {output} 2> {log}"
 
@@ -374,12 +374,12 @@ rule bwa_samse:
         umip = rules.concat_umip.output,
         ref = rules.rename_umi_centroid.output,
         sai = rules.bwa_aln.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umip.sam",
+    output: "umi/{barcode}/{c}/umip.sam",
     conda: "../envs/bwa.yaml"
     params:
         F = 4,
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bwa_samse.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bwa_samse.txt"
+    log: "logs/umi/{barcode}/{c}/bwa_samse.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/bwa_samse.txt"
     shell:
         "bwa samse -n 10000000 {input.ref} {input.sai} {input.umip} 2> {log} | "
         "samtools view -F {params.F} - > {output} 2>> {log}"
@@ -388,10 +388,10 @@ rule umi_filter:
     input:
         sam = rules.bwa_samse.output,
         ref = rules.rename_umi_centroid.output,
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/umicf.fa",
+    output: "umi/{barcode}/{c}/umicf.fa",
     conda: "../envs/umi.yaml"
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/umi_filter.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/umi_filter.txt"
+    log: "logs/umi/{barcode}/{c}/umi_filter.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/umi_filter.txt"
     shell:
         """
         awk \
@@ -423,12 +423,12 @@ def get_umifile2(wildcards, kmerbin = True):
     bin2clusters = []
     for i in b_cs:
         b, c = i.split("_")
-        bin2clusters.append(OUTPUT_DIR + "/umi/{barcode}/{c}/umicf.fa".format(barcode=b, c=c))
+        bin2clusters.append("umi/{barcode}/{c}/umicf.fa".format(barcode=b, c=c))
     return bin2clusters
  
 checkpoint umi_check2:
     input: lambda wc: get_umifile2(wc, kmerbin = config["kmerbin"])
-    output: directory(OUTPUT_DIR + "/umi/check2")
+    output: directory("umi/check2")
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -441,15 +441,15 @@ checkpoint umi_check2:
 
 # rm potential chimera
 rule rm_chimera:
-    input: OUTPUT_DIR + "/umi/check2/{barcode}_{c}.fa",
+    input: "umi/check2/{barcode}_{c}.fa",
     output:
-        ref = OUTPUT_DIR + "/umi/{barcode}/{c}/umi_ref.txt",
-        fa = OUTPUT_DIR + "/umi/{barcode}/{c}/umi_ref.fa",
+        ref = "umi/{barcode}/{c}/umi_ref.txt",
+        fa = "umi/{barcode}/{c}/umi_ref.fa",
     conda: "../envs/umi.yaml"
     params:
         umip_len = config["umi"]["len"],
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/rm_chimera.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/rm_chimera.txt"
+    log: "logs/umi/{barcode}/{c}/rm_chimera.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/rm_chimera.txt"
     shell:
         """
         paste <(cat {input} | paste - - ) \
@@ -511,14 +511,14 @@ rule umi_loc2:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        start = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/reads_umi1.fa",
-        end = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/reads_umi2.fa",
+        start = "umi/{barcode}/{c}/bin/reads_umi1.fa",
+        end = "umi/{barcode}/{c}/bin/reads_umi2.fa",
     conda: "../envs/seqkit.yaml"
     params:
         s = config["umi"]["s"],
         e = config["umi"]["e"],
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/umi_loc2.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/umi_loc2.txt"
+    log: "logs/umi/{barcode}/{c}/bin/umi_loc2.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/bin/umi_loc2.txt"
     shell:
         """
         seqkit subseq -r 1:{params.s} {input.start} 2> {log} | seqkit fq2fa -o {output.start} 2>> {log}
@@ -529,13 +529,13 @@ rule umi_loc2:
 rule split_umi_ref:
     input: rules.rm_chimera.output.fa
     output:
-        umi1 = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_umi1.fa",
-        umi2 = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_umi2.fa",
+        umi1 = "umi/{barcode}/{c}/bin/barcodes_umi1.fa",
+        umi2 = "umi/{barcode}/{c}/bin/barcodes_umi2.fa",
     conda: "../envs/umi.yaml"
     params:
         umi_len = config["umi"]["len"],
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/split_umi_ref.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/split_umi_ref.txt"
+    log: "logs/umi/{barcode}/{c}/bin/split_umi_ref.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/bin/split_umi_ref.txt"
     shell:
         """
         cat {input} <(seqtk seq -r {input} |\
@@ -557,49 +557,49 @@ rule split_umi_ref:
 ##         in correct orientations.
 use rule bwa_index as index_umi with:
     input:
-        ref = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/reads_{umi}.fa",
+        ref = "umi/{barcode}/{c}/bin/reads_{umi}.fa",
     output:
-        multiext(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        multiext("umi/{barcode}/{c}/bin/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
     log:
-        OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/index_{umi}.log"
+        "logs/umi/{barcode}/{c}/bin/index_{umi}.log"
     benchmark:
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/index_{umi}.txt"
+        "benchmarks/umi/{barcode}/{c}/bin/index_{umi}.txt"
 
 use rule bwa_aln as aln_umi with:
     input:
-        multiext(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
-        umip = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_{umi}.fa",
-        ref = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/reads_{umi}.fa",
+        multiext("umi/{barcode}/{c}/bin/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        umip = "umi/{barcode}/{c}/bin/barcodes_{umi}.fa",
+        ref = "umi/{barcode}/{c}/bin/reads_{umi}.fa",
     output:
-        OUTPUT_DIR + "/umi/{barcode}/{c}/bin/{umi}_map.sai",
+        "umi/{barcode}/{c}/bin/{umi}_map.sai",
     params:
         n = 3,
     log:
-        OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/aln_{umi}.log"
+        "logs/umi/{barcode}/{c}/bin/aln_{umi}.log"
     benchmark:
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/aln_{umi}.txt"
+        "benchmarks/umi/{barcode}/{c}/bin/aln_{umi}.txt"
 
 use rule bwa_samse as samse_umi with:
     input:
-        umip = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/barcodes_{umi}.fa",
-        ref = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/reads_{umi}.fa",
-        sai = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/{umi}_map.sai",
+        umip = "umi/{barcode}/{c}/bin/barcodes_{umi}.fa",
+        ref = "umi/{barcode}/{c}/bin/reads_{umi}.fa",
+        sai = "umi/{barcode}/{c}/bin/{umi}_map.sai",
     output:
-        OUTPUT_DIR + "/umi/{barcode}/{c}/bin/{umi}_map.sam",
+        "umi/{barcode}/{c}/bin/{umi}_map.sam",
     params:
         F = 20,
     log: 
-        OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/samse_{umi}.log"
+        "logs/umi/{barcode}/{c}/bin/samse_{umi}.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/samse_{umi}.txt"
+        "benchmarks/umi/{barcode}/{c}/bin/samse_{umi}.txt"
 
 rule umi_binning:
     input:
-        umi1 = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/umi1_map.sam",
-        umi2 = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/umi2_map.sam",
+        umi1 = "umi/{barcode}/{c}/bin/umi1_map.sam",
+        umi2 = "umi/{barcode}/{c}/bin/umi2_map.sam",
     output:
-        bin_map = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/umi_bin_map.txt",
-        stats = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/umi_stats.txt",
+        bin_map = "umi/{barcode}/{c}/bin/umi_bin_map.txt",
+        stats = "umi/{barcode}/{c}/bin/umi_stats.txt",
     conda: "../envs/umi.yaml"
     params:
         u = config["umi"]["u"],
@@ -607,8 +607,8 @@ rule umi_binning:
         O = config["umi"]["O"],
         N = config["umi"]["N"],
         S = config["umi"]["S"],
-    log: OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/umi_binning.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/umi_binning.txt"
+    log: "logs/umi/{barcode}/{c}/bin/umi_binning.log"
+    benchmark: "benchmarks/umi/{barcode}/{c}/bin/umi_binning.txt"
     shell:
         """
         awk \
@@ -809,9 +809,9 @@ rule umi_binning:
 # split reads by umi bins
 checkpoint bin_info:
     input: rules.umi_binning.output.bin_map
-    output: directory(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned")
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/{c}/bin/bin_info.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/{c}/bin/bin_info.txt"
+    output: directory("umi/{barcode}/{c}/bin/binned")
+    log: "logs/kmerBin/{barcode}/{c}/bin/bin_info.log"
+    benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/bin_info.txt"
     run:
         import pandas as pd
         df = pd.read_csv(input[0], sep=" ", header=None, usecols=[0,1], names=["umi","read"])
@@ -822,30 +822,30 @@ checkpoint bin_info:
         
 use rule split_bin as split_umibin with:
     input: 
-        clusters = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.txt",
+        clusters = "umi/{barcode}/{c}/bin/binned/{umi_id}.txt",
         fastq = rules.qfilter_umi.output,
     output:
-        OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.fastq"
+        "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq"
     log:
-        OUTPUT_DIR + "/logs/kmerBin/{barcode}/{c}/bin/split_by_{umi_id}.log"
+        "logs/kmerBin/{barcode}/{c}/bin/split_by_{umi_id}.log"
     benchmark:
-        OUTPUT_DIR + "/benchmarks/kmerBi/{barcode}/{c}/bin/split_by_{umi_id}.txt"
+        "benchmarks/kmerBi/{barcode}/{c}/bin/split_by_{umi_id}.txt"
 
 # find the seed read
 rule fq2fa_umi:
     input: rules.split_umibin.output
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.fna"
+    output: "umi/{barcode}/{c}/bin/binned/{umi_id}.fna"
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/{c}/bin/fq2fa_{umi_id}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/{c}/bin/fq2fa_{umi_id}.txt"
+    log: "logs/kmerBin/{barcode}/{c}/bin/fq2fa_{umi_id}.log"
+    benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/fq2fa_{umi_id}.txt"
     shell: "seqkit fq2fa {input} -o {output} 2> {log}"
 
 rule get_centroids_umifa:
     input: rules.fq2fa_umi.output
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}_centroid.fna",
+    output: "umi/{barcode}/{c}/bin/binned/{umi_id}_centroid.fna",
     conda: "../envs/vsearch.yaml"
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/{c}/bin/get_centroids_{umi_id}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/{c}/bin/get_centroids_{umi_id}.txt"
+    log: "logs/kmerBin/{barcode}/{c}/bin/get_centroids_{umi_id}.log"
+    benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/get_centroids_{umi_id}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -855,64 +855,64 @@ rule get_centroids_umifa:
 
 rule take_seedfa:
     input: rules.get_centroids_umifa.output
-    output: OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/raw.fna"
+    output: "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/raw.fna"
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/kmerBin/{barcode}/{c}/bin/polish/{umi_id}/take_seedfa.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/kmerBin/{barcode}/{c}/bin/polish/{umi_id}/take_seedfa.txt"
+    log: "logs/kmerBin/{barcode}/{c}/bin/polish/{umi_id}/take_seedfa.log"
+    benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/polish/{umi_id}/take_seedfa.txt"
     shell: "seqkit head -n 1 {input} 2> {log} | seqkit replace -p '^(.+)$' -r 'seed' -o {output} 2>> {log}"  
 
 # align seed with raw reads
 # reused in racon iterations
 use rule minimap2polish as minimap2polish_umi with:
     input: 
-        ref = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/{assembly}.fna",
-        fastq = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
+        ref = "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/{assembly}.fna",
+        fastq = "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
     output: 
-        OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/{assembly}.paf",
+        "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/{assembly}.paf",
     message: 
         "Polish umi [id={wildcards.umi_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
     log: 
-        OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/polish/{umi_id}/minimap2polish/{assembly}.log"
+        "logs/umi/{barcode}/{c}/bin/polish/{umi_id}/minimap2polish/{assembly}.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/minimap2polish/{assembly}.txt"
+        "benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/minimap2polish/{assembly}.txt"
 
 def get_racon_input_umi(wildcards):
     # adjust input based on racon iteritions
     if int(wildcards.iter) == 1:
-        prefix = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/raw"
+        prefix = "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/raw"
         return(prefix + ".paf", prefix + ".fna")
     else:
-        prefix = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}".format(barcode=wildcards.barcode,
+        prefix = "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}".format(barcode=wildcards.barcode,
          c=wildcards.c, umi_id=wildcards.umi_id, iter=str(int(wildcards.iter) - 1))
         return(prefix + ".paf", prefix + ".fna")
 
 use rule racon as racon_umi with:
     input:
-        OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
+        "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
         get_racon_input_umi,
     output: 
-        OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}.fna"
+        "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}.fna"
     message: 
         "Polish {wildcards.c} draft [id={wildcards.umi_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
     log: 
-        OUTPUT_DIR +"/logs/umi/{barcode}/{c}/bin/polish/{umi_id}/racon/round{iter}.log"
+        "logs/umi/{barcode}/{c}/bin/polish/{umi_id}/racon/round{iter}.log"
     benchmark: 
-        OUTPUT_DIR +"/benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/racon/round{iter}.txt"
+        "benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/racon/round{iter}.txt"
 
 use rule medaka_consensus as medaka_consensus_umi with:
     input:
-        fna = expand(OUTPUT_DIR + "/umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/draft/racon_{iter}.fna", 
+        fna = expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/draft/racon_{iter}.fna", 
         iter = config["racon"]["iter"]),
-        fastq = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
+        fastq = "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
     output: 
-        fasta = OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka/consensus.fasta",
-        _dir = directory(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka"),
+        fasta = "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka/consensus.fasta",
+        _dir = directory("umi/{barcode}/{c}/bin/polish/{umi_id}/medaka"),
     message: 
         "Generate umi consensus [id={wildcards.umi_id}] in {wildcards.c} with medaka [{wildcards.barcode}]"
     log: 
-        OUTPUT_DIR + "/logs/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.log"
+        "logs/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.txt"
+        "benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.txt"
 
 def get_umiCon(wildcards):
     b_cs = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{b_c}.fa").b_c
@@ -922,12 +922,12 @@ def get_umiCon(wildcards):
         b, c = i.split("_")
         uids = glob_wildcards(checkpoints.bin_info.get(barcode=b, c=c).output[0] + "/{uid}.txt").uid
         for j in uids:
-            fnas.append(OUTPUT_DIR + "/umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=b, c=c, uid=j))
+            fnas.append("umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=b, c=c, uid=j))
     return fnas
 
 rule collect_umiCon:
     input: lambda wc: get_umiCon(wc),
-    output: OUTPUT_DIR + "/umi/umiCon_full.fna"
+    output: "umi/umiCon_full.fna"
     run: 
         with open(output[0], "w") as out:
             for i in input:
@@ -943,9 +943,9 @@ use rule trim_primers as trim_umiCon with:
     input: 
         rules.collect_umiCon.output
     output: 
-        OUTPUT_DIR + "/umiCon.fna"
+        "umiCon.fna"
     log: 
-        OUTPUT_DIR + "/logs/umi/trim_umiCon.log"
+        "logs/umi/trim_umiCon.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/umi/trim_umiCon.txt"
+        "benchmarks/umi/trim_umiCon.txt"
     

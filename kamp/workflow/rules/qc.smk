@@ -27,14 +27,14 @@ f5_pattern2 = linked_pattern(rprimers, fprimers)
 rule subsample:
     input: rules.collect_fastq.output
     output:
-        p = temp(OUTPUT_DIR + "/qc/subsampled/{barcode}_p.fastq"),
-        n = temp(OUTPUT_DIR + "/qc/subsampled/{barcode}.fastq"),
+        p = temp("qc/subsampled/{barcode}_p.fastq"),
+        n = temp("qc/subsampled/{barcode}.fastq"),
     conda: "../envs/seqkit.yaml"
     params:
         p = config["seqkit"]["p"],
         n = config["seqkit"]["n"],
-    log: OUTPUT_DIR + "/logs/subsample/{barcode}.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/subsample/{barcode}.txt"
+    log: "logs/subsample/{barcode}.log"
+    benchmark: "benchmarks/subsample/{barcode}.txt"
     threads: 1
     shell:
         # I don't know why pipe fails, 
@@ -58,16 +58,16 @@ def get_raw(subsample, p, n):
 rule trim_primers:
     input: get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
     output: 
-        trimmed = temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}F.fastq"),
-        untrimmed = temp(OUTPUT_DIR + "/qc/primers_untrimmed/{barcode}F.fastq"),
+        trimmed = temp("qc/primers_trimmed/{barcode}F.fastq"),
+        untrimmed = temp("qc/primers_untrimmed/{barcode}F.fastq"),
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5_pattern1,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
         m = config["cutadapt"]["minimum-length"],
-    log: OUTPUT_DIR + "/logs/qc/{barcode}/trim_primersF.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/trim_primersF.txt"
+    log: "logs/qc/{barcode}/trim_primersF.log"
+    benchmark: "benchmarks/qc/{barcode}/trim_primersF.txt"
     threads: config["threads"]["large"]
     shell:
         """
@@ -85,25 +85,25 @@ use rule trim_primers as trim_primersR with:
     input: 
         rules.trim_primers.output.untrimmed
     output:
-        trimmed = temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}R.fastq"),
-        untrimmed = OUTPUT_DIR + "/qc/primers_untrimmed/{barcode}.fastq",
+        trimmed = temp("qc/primers_trimmed/{barcode}R.fastq"),
+        untrimmed = "qc/primers_untrimmed/{barcode}.fastq",
     params:
         f = f5_pattern2,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
         m = config["cutadapt"]["minimum-length"],
     log: 
-        OUTPUT_DIR + "/logs/qc/{barcode}/trim_primersR.log"
+        "logs/qc/{barcode}/trim_primersR.log"
     benchmark: 
-        OUTPUT_DIR + "/benchmarks/qc/{barcode}/trim_primersR.txt"
+        "benchmarks/qc/{barcode}/trim_primersR.txt"
 
 # reverse complement for reverse strand
 rule revcomp_fq:
     input: rules.trim_primersR.output.trimmed
-    output: temp(OUTPUT_DIR + "/qc/primers_trimmed/{barcode}R_revcomp.fastq")
+    output: temp("qc/primers_trimmed/{barcode}R_revcomp.fastq")
     conda: "../envs/seqkit.yaml"
-    log: OUTPUT_DIR + "/logs/qc/{barcode}/revcomp_fq.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/revcomp_fq.txt"
+    log: "logs/qc/{barcode}/revcomp_fq.log"
+    benchmark: "benchmarks/qc/{barcode}/revcomp_fq.txt"
     threads: config["threads"]["normal"]
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
@@ -119,20 +119,20 @@ def trim_check(trim, subsample, p, n):
 rule q_filter:
     input:
         trim_check(config["trim"], config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
-    output: temp(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq")
+    output: temp("qc/qfilt/{barcode}.fastq")
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min-qual"],
         m = config["seqkit"]["min-len"],
         M = config["seqkit"]["max-len"],
-    log: OUTPUT_DIR + "/logs/qc/{barcode}/q_filter.log"
-    benchmark: OUTPUT_DIR + "/benchmarks/qc/{barcode}/q_filter.txt"
+    log: "logs/qc/{barcode}/q_filter.log"
+    benchmark: "benchmarks/qc/{barcode}/q_filter.txt"
     threads: config["threads"]["normal"]
     shell: "cat {input} | seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i > {output} 2> {log}"
 
 checkpoint exclude_empty_fqs:
-    input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: directory(OUTPUT_DIR + "/qc/qfilt/empty")
+    input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    output: directory("qc/qfilt/empty")
     run:
         import shutil
         import pandas as pd
@@ -152,8 +152,8 @@ def get_qced(wildcards):
 
 #  pool fqs for sensitivity 
 rule combine_fastq:
-    input: lambda wc: expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=get_qced(wc))
-    output: temp(OUTPUT_DIR + "/qc/qfilt/pooled.fastq")
+    input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced(wc))
+    output: temp("qc/qfilt/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
@@ -162,4 +162,4 @@ def get_filt(wildcards, pool = True):
     check_val("pool", pool, bool)
     if pool is True:
         barcodes.append("pooled")
-    return expand(OUTPUT_DIR + "/qc/qfilt/{barcode}.fastq", barcode=barcodes)
+    return expand("qc/qfilt/{barcode}.fastq", barcode=barcodes)

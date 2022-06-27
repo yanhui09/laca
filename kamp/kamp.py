@@ -34,6 +34,13 @@ def cli(self):
     short_help='run kamp workflow'
 )
 @click.option(
+    "-w",
+    "--workdir",
+    type=click.Path(dir_okay=True, writable=True, resolve_path=True),
+    help="Output directory for kamp.",
+    default=".",
+)
+@click.option(
     "-c",
     "--configfile",
     type=click.Path(exists=True, resolve_path=True),
@@ -75,7 +82,7 @@ def cli(self):
 )
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
 def run_workflow(
-    workflow, configfile, jobs, maxmem, dryrun, snake_args
+    workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
 ):
     """
     Run Kamp workflow to proceess long read amplicons.
@@ -95,15 +102,19 @@ def run_workflow(
     db_dir = conf["database_dir"]
 
     cmd = (
-        "snakemake {wf} --snakefile {snakefile} "
+        "snakemake {wf} "
+        "--directory {workdir} "
+        "--snakefile {snakefile} "
         "--configfile '{configfile}' "
-        "--use-conda {conda_prefix} {dryrun} "
+        "--use-conda {conda_prefix} "
+        "{dryrun} "
         "--rerun-triggers mtime --rerun-incomplete "
         "--jobs {jobs} --nolock "
         " {max_mem} "
         " {args} "
     ).format(
         wf=workflow if workflow != "None" else "",
+        workdir=workdir,
         snakefile=get_snakefile(),
         configfile=configfile,
         conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
