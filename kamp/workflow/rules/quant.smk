@@ -57,7 +57,7 @@ rule index:
     message: "Index denoised sequences [Generate abundance matrix]"
     params:
         index_size = config["minimap"]["index_size"],
-    conda: "../envs/polish.yaml"
+    conda: "../envs/minimap2.yaml"
     log: "logs/quant/index.log"
     benchmark: "benchmarks/quant/index.txt"
     shell: "minimap2 -I {params.index_size} -d {output} {input} 2> {log}"
@@ -66,7 +66,7 @@ rule dict:
     input: rules.rename_fasta_header.output,
     output: temp("rep_seqs.dict")
     message: "Dict denoised sequences [Generate abundance matrix]"
-    conda: "../envs/polish.yaml"
+    conda: "../envs/samtools.yaml"
     log: "logs/quant/dict.log"
     benchmark: "benchmarks/quant/dict.txt"
     shell: "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
@@ -80,7 +80,7 @@ rule minimap_rep_seqs:
     message: "Re-map {wildcards.barcode}.fastq files [Generate abundance matrix]"
     params:
         x = config["minimap"]["x"]
-    conda: "../envs/polish.yaml"
+    conda: "../envs/minimap2.yaml"
     log: "logs/quant/minimap/{barcode}.log"
     benchmark: "benchmarks/quant/minimap/{barcode}.txt"
     threads: config["threads"]["normal"]
@@ -97,7 +97,7 @@ rule sort:
     params:
         prefix = "quant/mapped/tmp.{barcode}",
         m = config["samtools"]["m"],
-    conda: "../envs/polish.yaml"
+    conda: "../envs/samtools.yaml"
     log: "logs/quant/sort/{barcode}.log"
     benchmark: "benchmarks/quant/sort/{barcode}.txt"
     shell:
@@ -108,7 +108,7 @@ rule samtools_index:
     output: temp("quant/mapped/{barcode}.sorted.bam.bai")
     params:
         m = config["samtools"]["m"],
-    conda: "../envs/polish.yaml"
+    conda: "../envs/samtools.yaml"
     log: "logs/quant/index/{barcode}.log"
     benchmark: "benchmarks/quant/index/{barcode}.txt"
     shell:
@@ -132,7 +132,7 @@ rule rowname_kOTU:
         bam = lambda wildcards: get_qout(wildcards, "bam"),
         bai = lambda wildcards: get_qout(wildcards, "bai"),
     output: temp("quant/rowname_seqs")
-    conda: "../envs/polish.yaml"
+    conda: "../envs/samtools.yaml"
     log: "logs/quant/rowname_kOTU.log"
     benchmark: "benchmarks/quant/rowname_kOTU.txt"
     shell:
@@ -146,7 +146,7 @@ rule seqs_count:
         bam = "quant/mapped/{barcode}.sorted.bam",
         bai = "quant/mapped/{barcode}.sorted.bam.bai"
     output: temp("quant/mapped/{barcode}.count")
-    conda: "../envs/polish.yaml"
+    conda: "../envs/samtools.yaml"
     log: "logs/quant/seqs_count/{barcode}.log"
     benchmark: "benchmarks/quant/seqs_count/{barcode}.txt"
     shell:

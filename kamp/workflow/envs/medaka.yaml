@@ -1,8 +1,7 @@
-name: polish
+name: medaka
 channels:
   - bioconda
   - conda-forge
+  - defaults
 dependencies:
-  - racon
   - medaka
-  - minimap

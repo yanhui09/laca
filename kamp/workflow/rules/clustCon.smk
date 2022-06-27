@@ -32,7 +32,7 @@ rule spoa:
 rule minimap2clust:
     input: get_fq4Con(config["kmerbin"])
     output: "clustCon/{barcode}/avr_aln/{c}/minimap2clust.paf"
-    conda: '../envs/polish.yaml'
+    conda: '../envs/minimap2.yaml'
     log: "logs/clustCon/{barcode}/minimap2clust/{c}.log"
     benchmark: "benchmarks/clustCon/{barcode}/minimap2clust/{c}.txt"
     threads: config["threads"]["large"]
@@ -195,7 +195,7 @@ rule minimap2polish:
     message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.cls}]"
     params:
         x = config["minimap"]["x"]
-    conda: "../envs/polish.yaml"
+    conda: "../envs/minimap2.yaml"
     log: "logs/{cls}/{barcode}/{c}/{clust_id}/minimap2polish/{assembly}.log"
     benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/minimap2polish/{assembly}.txt"
     threads: config["threads"]["normal"]
@@ -224,7 +224,7 @@ rule racon:
         x = config["racon"]["x"],
         g = config["racon"]["g"],
         w = config["racon"]["w"],
-    conda: "../envs/polish.yaml"
+    conda: "../envs/racon.yaml"
     log: "logs/{cls}/{barcode}/{c}/{clust_id}/racon/round{iter}.log"
     benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/racon/round{iter}.txt"
     threads: config["threads"]["normal"]
@@ -244,7 +244,7 @@ rule medaka_consensus:
     message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka [{wildcards.cls}]"
     params:
         m = config["medaka"]["m"],
-    conda: "../envs/polish.yaml"
+    conda: "../envs/medaka.yaml"
     log: "logs/{cls}/{barcode}/{c}/{clust_id}/medaka.log"
     benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/medaka.txt"
     threads: config["threads"]["normal"]

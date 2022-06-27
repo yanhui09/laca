@@ -1,0 +1,7 @@
+name: racon
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - racon
