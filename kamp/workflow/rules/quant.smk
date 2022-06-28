@@ -188,7 +188,7 @@ rule q2_ftable_import:
     benchmark: "benchmarks/chimeraF/q2_ftable_import.txt"
     shell:
         """
-        biom convert -i {input} -o {output.biom} --table-type="OTU table" --to-hdf5 > {log} 2>&1
+        biom convert -i {input} -o {output.biom} --to-hdf5 > {log} 2>&1
         qiime tools import \
         --input-path {output.biom} \
         --type 'FeatureTable[Frequency]' \

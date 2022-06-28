@@ -102,13 +102,14 @@ def run_workflow(
     db_dir = conf["database_dir"]
 
     cmd = (
-        "snakemake {wf} "
+        "snakemake "
+        "-R {wf} "
         "--directory {workdir} "
         "--snakefile {snakefile} "
         "--configfile '{configfile}' "
         "--use-conda {conda_prefix} "
         "{dryrun} "
-        "--rerun-triggers mtime --rerun-incomplete "
+        "--rerun-incomplete "
         "--jobs {jobs} --nolock "
         " {max_mem} "
         " {args} "

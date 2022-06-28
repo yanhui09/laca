@@ -1,7 +1,8 @@
 name: cutadapt
 channels:
-  - bioconda
+  # order matters requiring xopen>=1.2.0
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - cutadapt

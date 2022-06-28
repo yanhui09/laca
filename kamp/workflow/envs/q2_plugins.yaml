@@ -1,4 +1,4 @@
-name: q2_phylogen
+name: q2_plugins
 channels:
   - qiime2
   - conda-forge
@@ -11,4 +11,3 @@ dependencies:
   - q2-feature-table
   - biom-format
   - q2cli
-  - h5py<3.2

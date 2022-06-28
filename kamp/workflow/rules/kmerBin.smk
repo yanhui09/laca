@@ -9,7 +9,7 @@ rule kmer_freqs:
     benchmark: "benchmarks/kmerBin/{barcode}/kmer_freqs.txt"
     threads: config["threads"]["large"]
     shell:
-        "python scripts/kmerFreqs.py"
+        "python {workflow.basedir}/scripts/kmerFreqs.py"
         " -k {params.kmer_size}"
         " -r {input} -t {threads}"
         " 2> {log} > {output}"
@@ -79,7 +79,7 @@ checkpoint shuffle_batch:
 #    resources:
 #        mem_mb = config["bin_mem"] * 1024
 #    shell:
-#       "NUMBA_NUM_THREADS={threads} python scripts/kmerBin.py -k {input}"
+#       "NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/kmerBin.py -k {input}"
 #       " -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components}"
 #       " -s {params.min_bin_size} -m {params.min_samples} -e {params.epsilon}"
 #       " -c {output.cluster} -p"
@@ -109,7 +109,7 @@ rule umap:
     resources:
         mem_mb = config["bin_mem"] * 1024
     shell:
-       "NUMBA_NUM_THREADS={threads} python scripts/kmerBin.py -k {input}"
+       "NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/kmerBin.py -k {input}"
        " -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components}"
        " -s {params.min_bin_size} -m {params.min_samples} -e {params.epsilon}"
        " -c {output.cluster} -p"

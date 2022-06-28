@@ -5,7 +5,7 @@ channels:
 dependencies:
   - python
   - mamba
-  - snakemake-minimal
+  - snakemake-minimal=7.7.0 # can't solve strict chanel priority check; some envs could only be resolved in flexible priority
   - pip
   - click
   - versioneer

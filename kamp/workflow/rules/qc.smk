@@ -72,13 +72,13 @@ rule trim_primers:
     shell:
         """
         cutadapt \
-            -j {threads} \
-            -e {params.e} -O {params.O} -m {params.m}\
-            {params.f} \
-            --untrimmed-output {output.untrimmed} \
-            -o {output.trimmed} \
-            {input} \
-            > {log} 2>&1
+        -j {threads} \
+        -e {params.e} -O {params.O} -m {params.m} \
+        {params.f} \
+        --untrimmed-output {output.untrimmed} \
+        -o {output.trimmed} \
+        {input} \
+        > {log} 2>&1
         """
 
 use rule trim_primers as trim_primersR with:
