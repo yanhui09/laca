@@ -1,7 +1,6 @@
 # This file should contain everything to configure the workflow on a global scale.
 basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
 database_dir: "/mnt/md0/Database/Kamp"
-guppy: "resources/ont-guppy/bin" # guppy bin
 
 threads:
     normal: 2 # short request for threads

@@ -1,18 +1,17 @@
 rule guppy:
     input: INPUT_DIR
-    output: ".demultiplexed"
-    log: "logs/demultiplex.log"
+    output: directory("demultiplexed_guppy")
+    log: "logs/demultiplex_guppy.log"
+    benchmark: "benchmarks/demultiplex_guppy.txt"
     threads: config["threads"]["large"]
     params:
-        guppy=config["guppy"],
         barcode_kits=config["barcode_kits"],
-        out="demultiplexed",
-    shell:
-        "{params.guppy}/guppy_barcoder -i {input} -s {params.out} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}"
+    shell: "{workflow.basedir}/resources/ont-guppy/bin/guppy_barcoder -i {input} -s {output} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}"
 
 checkpoint demultiplex_check:
-    input: ".demultiplexed"
-    output: touch(directory("demultiplexed"))
+    input: directory("demultiplexed_guppy")
+    output: directory("demultiplexed")
+    shell: "mv {input} {output}"
 
 # collect demultiplexed files
 rule collect_fastq:
