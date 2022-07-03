@@ -109,7 +109,7 @@ def run_workflow(
         "--configfile '{configfile}' "
         "--use-conda {conda_prefix} "
         "{dryrun} "
-        "--rerun-incomplete "
+        "--rerun-triggers mtime --rerun-incomplete "
         "--jobs {jobs} --nolock "
         " {max_mem} "
         " {args} "
