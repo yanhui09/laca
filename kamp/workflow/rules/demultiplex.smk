@@ -1,6 +1,6 @@
 rule guppy:
     input: INPUT_DIR
-    output: touch(".demultiplexed_guppy")
+    output: touch(".demultiplexed")
     log: "logs/demultiplex_guppy.log"
     benchmark: "benchmarks/demultiplex_guppy.txt"
     threads: config["threads"]["large"]
@@ -10,7 +10,7 @@ rule guppy:
     shell: "{workflow.basedir}/resources/ont-guppy/bin/guppy_barcoder -i {input} -s {params.dir} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}"
 
 checkpoint demultiplex_check:
-    input: ancient(".demultiplexed_guppy")
+    input: ancient(".demultiplexed")
     output: directory("demultiplexed")
     params:
         dir=os.path.join(os.getcwd(), "demultiplexed_guppy"),
