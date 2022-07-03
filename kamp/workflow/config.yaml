@@ -111,7 +111,7 @@ samtools:
   m: 3G
 
 # chimera identification 
-chimeraF: True
+chimeraF: False
 
 ##############################################################
 # Taxonomy assignment
