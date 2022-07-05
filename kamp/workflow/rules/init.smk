@@ -13,7 +13,7 @@ def get_classifier(c):
         out = expand(DATABASE_DIR + "/mmseqs2/customDB/customDB{ext}", ext = ["_mapping", "_taxonomy"])
     return out 
 
-rule init_database:
+rule initDB:
     input: get_classifier(config["classifier"][0])
     output: touch(DATABASE_DIR + "/.initDB_DONE")
 

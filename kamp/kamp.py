@@ -14,6 +14,56 @@ def get_snakefile(file="workflow/Snakefile"):
         sys.exit("Unable to locate the Snakemake workflow file; tried %s" % sf)
     return sf
 
+def run_smk(
+    workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile,
+):
+    """
+    Run Kamp workflow to proceess long read amplicons.
+    Most snakemake arguments can be appended, for more info see 'snakemake --help'
+    """
+    
+    logger.info(f"Kamp version: {__version__}")
+
+    if not os.path.exists(configfile):
+        logger.critical(
+            f"config-file not found: {configfile}\n"
+        )
+        exit(1)
+    
+    conf = load_configfile(configfile)
+
+    db_dir = conf["database_dir"]
+
+    cmd = (
+        "snakemake "
+        "{wf} "
+        "--directory {workdir} "
+        "--snakefile {snakefile} "
+        "--configfile '{configfile}' "
+        "--use-conda {conda_prefix} "
+        "{dryrun} "
+        "--rerun-triggers mtime --rerun-incomplete "
+        "--jobs {jobs} --nolock "
+        " {max_mem} "
+        " {args} "
+    ).format(
+        wf=workflow if workflow != "None" else "",
+        workdir=workdir,
+        snakefile=snakefile,
+        configfile=configfile,
+        conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
+        dryrun="--dryrun" if dryrun else "",
+        jobs=int(jobs) if jobs is not None else 1,
+        max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
+        args=" ".join(snake_args),
+    )
+    logger.debug("Executing: %s" % cmd)
+    try:
+        subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError as e:
+        logger.critical(e)
+        exit(1)
+
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(
     __version__,
@@ -77,59 +127,22 @@ def cli(self):
         ["demultiplex", "qc", "kmerBin",
          "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon",
          "quant", "taxa", "tree", "requant", "all",
-         "nanosim"]
+         "initDB", "nanosim"]
     ),
 )
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
-def run_workflow(
-    workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
-):
+def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args):
     """
-    Run Kamp workflow to proceess long read amplicons.
-    Most snakemake arguments can be appended, for more info see 'snakemake --help'
+    Run the kamp main workflow.
     """
-    
-    logger.info(f"Kamp version: {__version__}")
-
-    if not os.path.exists(configfile):
-        logger.critical(
-            f"config-file not found: {configfile}\n"
-        )
-        exit(1)
-    
-    conf = load_configfile(configfile)
-
-    db_dir = conf["database_dir"]
-
-    cmd = (
-        "snakemake "
-        "-R {wf} "
-        "--directory {workdir} "
-        "--snakefile {snakefile} "
-        "--configfile '{configfile}' "
-        "--use-conda {conda_prefix} "
-        "{dryrun} "
-        "--rerun-triggers mtime --rerun-incomplete "
-        "--jobs {jobs} --nolock "
-        " {max_mem} "
-        " {args} "
-    ).format(
-        wf=workflow if workflow != "None" else "",
-        workdir=workdir,
-        snakefile=get_snakefile(),
-        configfile=configfile,
-        conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
-        dryrun="--dryrun" if dryrun else "",
-        jobs=int(jobs) if jobs is not None else 1,
-        max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
-        args=" ".join(snake_args),
+    if workflow == "nanosim":
+        sf = "workflow/rules/nanosim.smk"
+    else:
+        sf = "workflow/Snakefile" 
+    snakefile = get_snakefile(sf)
+    run_smk(
+        workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile
     )
-    logger.debug("Executing: %s" % cmd)
-    try:
-        subprocess.check_call(cmd, shell=True)
-    except subprocess.CalledProcessError as e:
-        logger.critical(e)
-        exit(1)
 
 if __name__ == "__main__":
     cli()
