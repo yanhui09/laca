@@ -10,3 +10,4 @@ dependencies:
   - click
   - versioneer
   - pandas
+  - ruamel.yaml

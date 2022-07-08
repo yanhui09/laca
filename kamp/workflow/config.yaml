@@ -48,7 +48,8 @@ cutadapt:
 # kmer binning
 kmerbin: True
 bin_mem: 50 # GB
-# Bool, whether to bin or not; TRUE is highly recommened in clustCon mode, considering the massive pairwise alignments inside.
+# Bool, whether to bin or not; TRUE is highly recommened in clustCon mode,
+# considering the massive pairwise alignments inside.
 
 # To mitagate the memory bottleneck of umap in pooling mode,
 # batch mode is induced. kmer binning is done in batches and
