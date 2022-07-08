@@ -5,8 +5,6 @@ rlinker = config["rlinker"]
 rprimers = config["rprimer"]
 
 # reverse complementation
-def revcomp(seq):
-    return seq.translate(str.maketrans('ACGTacgtRYMKrymkVBHDvbhd', 'TGCAtgcaYRKMyrkmBVDHbvdh'))[::-1]
 flinkerR = revcomp(flinker)
 rlinkerR = revcomp(rlinker)
 fprimersR = {k: revcomp(v) for k, v in fprimers.items()}
@@ -14,13 +12,13 @@ rprimersR = {k: revcomp(v) for k, v in rprimers.items()}
 
 # pattern search for umi using cutadapt
 # nanopore possibly sequences either strand
-def seqs_join(linker, primer, reverse=False):
+def seqs_join_umi(linker, primer, reverse=False):
     joined = '-g ' + linker + '...' + primer
     if reverse:
         joined = '-G ' + primer + '...' + linker
     return joined
 def linked_pattern_umi(linker, primers,reverse=False):
-    linked = {k: seqs_join(linker, v, reverse) for k, v in primers.items()}        
+    linked = {k: seqs_join_umi(linker, v, reverse) for k, v in primers.items()}        
     return ' '.join(v for v in linked.values())
 
 # forward
@@ -90,8 +88,8 @@ checkpoint cls_kmerbin_umi:
         
 use rule split_bin as split_bin_umi with:
     input: 
-        clusters = "umi/{barcode}/kmerBin/clusters/{c}.txt",
-        fastq = "umi/{barcode}/qfilt.fastq",
+        cluster = "umi/{barcode}/kmerBin/clusters/{c}.txt",
+        fqs = "umi/{barcode}/qfilt.fastq",
     output: 
         "umi/{barcode}/kmerBin/clusters/{c}.fastq",
     log: 
@@ -943,7 +941,8 @@ use rule trim_primers as trim_umiCon with:
     input: 
         rules.collect_umiCon.output
     output: 
-        "umiCon.fna"
+        trimmed = "umiCon.fna",
+        untrimmed = "umi/umiCon_untrimmed.fna"
     log: 
         "logs/umi/trim_umiCon.log"
     benchmark: 
