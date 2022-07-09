@@ -1,6 +1,6 @@
 rule guppy:
     input: INPUT_DIR
-    output: touch(".demultiplexed")
+    output: temp(touch(".demultiplexed"))
     log: "logs/demultiplex_guppy.log"
     benchmark: "benchmarks/demultiplex_guppy.txt"
     threads: config["threads"]["large"]
@@ -12,9 +12,31 @@ rule guppy:
 checkpoint demultiplex_check:
     input: ancient(".demultiplexed")
     output: directory("demultiplexed")
+    log: "logs/demultiplex_check.log"
+    benchmark: "benchmarks/demultiplex_check.txt"
     params:
         dir=os.path.join(os.getcwd(), "demultiplexed_guppy"),
-    shell: "mv {params.dir} {output}"
+        nreads_m=config["nreads_m"],
+    shell: 
+        """
+        mv {params.dir} {output} > {log} 2>&1
+        # rm shallow sequencing to avoid bardcode bleeding
+        mkdir {output}/suspected -p >> {log} 2>&1
+        for i in {output}/*/
+        do
+            if [ "$i" = "{output}/suspected/" ] || [ "$i" = "{output}/unclassified/" ]
+            then
+                continue
+            fi
+            nlines=$(cat $i/* | wc -l)
+            nreads=$((nlines / 4))
+            if [ $nreads -lt {params.nreads_m} ]
+            then
+                mv "$i" {output}/suspected/ >> {log} 2>&1
+                echo "$i moved to {output}/suspected/ due to shallow sequencing < {params.nreads_m}" >> {log} 2>&1
+            fi
+        done
+        """
 
 # collect demultiplexed files
 rule collect_fastq:

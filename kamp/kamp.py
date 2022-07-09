@@ -172,6 +172,13 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     default=".",
 )
 @click.option(
+    "--fqs-min",
+    type=int,
+    default=1000,
+    show_default=True,
+    help="Minimum number of reads for the demultiplexed fastqs.",
+)
+@click.option(
     "--no-pool",
     is_flag=True,
     default=False,
@@ -230,11 +237,11 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     show_default=True,
     help="Number of jobs for threads-dependent tasks",
 )
-def run_init(fqdir, dbdir, workdir, no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max):
+def run_init(fqdir, dbdir, workdir, fqs_min, no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max):
     """
     Prepare the config file and working directory.
     """ 
-    init_conf(fqdir, dbdir, workdir, "config.yaml", 
+    init_conf(fqdir, dbdir, workdir, "config.yaml", fqs_min,
               no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max)
 
 if __name__ == "__main__":

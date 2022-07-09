@@ -8,6 +8,7 @@ def init_conf(
     dbdir,
     workdir,
     config="config.yaml",
+    nreads_m = 1000,
     no_pool=False,
     subsample=False,
     no_trim=False,
@@ -25,6 +26,7 @@ def init_conf(
         dbdir (str): path to the taxonomy database
         workdir (str): path to the working directory
         config (str): the config filename
+        nreads_m (int): minimum number of reads for the demultiplexed fastqs
         no_pool (bool): if True, do not pool the reads [default: False]
         subsample (bool): if True, subsample the reads [default: False]
         no_trim (bool): if True, do not trim the primers [default: False]
@@ -45,6 +47,7 @@ def init_conf(
         
     conf["basecalled_dir"] = fqdir
     conf["database_dir"] = dbdir
+    conf["nreads_m"] = nreads_m
     conf["pool"] = not no_pool
     conf["subsample"] = subsample
     conf["trim_primers"] = not no_trim
