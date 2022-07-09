@@ -40,7 +40,7 @@ def init_conf(
     os.makedirs(workdir, exist_ok=True)
     
     yaml = YAML()
-    template_conf_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workflow/config.yaml")
+    template_conf_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workflow/config_template.yaml")
     
     with open(template_conf_file) as template_conf:
         conf = yaml.load(template_conf)
