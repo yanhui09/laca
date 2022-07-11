@@ -81,9 +81,9 @@ hdbscan:
 cluster:
   #- kmerCon # the first for the final kOTUs
   #- clustCon 
-  - isONclustCon
   #- isONcorCon
   #- umiCon
+  - isONclustCon
 min_cluster_size: 8
 
 clustCon:
@@ -193,13 +193,13 @@ rlinker: "GTCTCGTGGGCTCGG"
 nanosim:
   threads: 6
   ref: "/mnt/md0/UMI16S/primer_test/silva/id_100/subsampled.fasta"
-  id: 90,95,97,98,99,100
-  subsample_n: 1000
+  id: 80,90,95,97,98,99,100
+  subsample_n: 100
   read_analysis:
     read: "/mnt/md0/UMI16S/nanosim/ampmock/raw.fastq"
     rg: "/mnt/md0/UMI16S/nanosim/ampmock/zymock_16s.fna"
     a: minimap2
   simulator: 
-    n: 500,1000,2000,5000,10000
+    n: 100,200,300,400,500,1000,2000,5000,10000
     dna_type: linear
         
