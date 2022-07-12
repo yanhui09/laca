@@ -3,4 +3,4 @@ channels:
   - bioconda
 dependencies:
   - nanosim
-  - scikit-learn==0.22.1 # compatible with pretrained models
+  #- scikit-learn==0.22.1 # compatible with pretrained models

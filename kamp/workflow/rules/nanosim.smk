@@ -1,57 +1,25 @@
-#OUTPUT_DIR = config["results_dir"].rstrip("/")
-# Prepare nanopore reads
-REF = config["nanosim"]["ref"]
 # expand list from comma separated string
 def exp_list(x):
     return [y.strip() for y in x.split(",")]
 IDS = exp_list(config["nanosim"]["id"])
 NS = exp_list(config["nanosim"]["simulator"]["n"])
 
-# characterize error model
-NREAD = config["nanosim"]["read_analysis"]["read"]
-RG = config["nanosim"]["read_analysis"]["rg"]
-
-rule download_pretrained_model:
-    output: "nanosim/model_pretrained/training_model_profile"
-    params:
-        model="https://github.com/bcgsc/NanoSim/raw/master/pre-trained_models/human_NA12878_DNA_FAB49712_guppy.tar.gz",
-        dir=os.path.join(os.getcwd(), "nanosim"),
-    log: "logs/nanosim/download_pretrained_model.log"
-    benchmark: "benchmarks/nanosim/download_pretrained_model.txt"
-    shell: 
-        """
-        mkdir -p {params.dir}/model_pretrained > {log} 2>&1
-        wget -O {params.dir}/model.tar.gz {params.model} >> {log} 2>&1
-        tar -xvzf {params.dir}/model.tar.gz --strip-components=1 -C {params.dir}/model_pretrained >> {log} 2>&1
-        rm {params.dir}/model.tar.gz -f >> {log} 2>&1
-        """
-       
 rule read_analysis:
-    input: 
-      read = NREAD,
-      ref = RG,
     output: "nanosim/model/training_model_profile"
     conda: "../envs/nanosim.yaml"
     params:
-        a = config["nanosim"]["read_analysis"]["a"],
-        prefix = "nanosim/model/training",
+        prefix = os.path.join(os.getcwd(), "nanosim/model/training"),
     log: "logs/nanosim/read_analysis.log"
     benchmark: "benchmarks/nanosim/read_analysis.txt"
-    threads: config["nanosim"]["threads"]
+    threads: config["threads"]["large"]
     shell: 
-        "read_analysis.py genome -i {input.read} -rg {input.ref}"
-        " -o {params.prefix} -a {params.a} -t {threads}"
-        " > {log} 2>&1"
+        "read_analysis.py genome -i {workflow.basedir}/../resources/data/raw.fastq.gz "
+        "-rg {workflow.basedir}/../resources/data/zymock_16s.fna "
+        "-o {params.prefix} -a minimap2 -t {threads} "
+        "> {log} 2>&1 "
 
-def get_nanosim_model(pretrained):
-    if pretrained:
-        return rules.download_pretrained_model.output
-    else:
-        return rules.read_analysis.output
- 
 # cluster ref by identity
 rule cls_ref:
-    input: REF
     output: 
         rep = temp("nanosim/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp("nanosim/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
@@ -64,9 +32,10 @@ rule cls_ref:
         c = 1,
     log: "logs/nanosim/id_{minid}/cls_ref.log"
     benchmark: "benchmarks/nanosim/id_{minid}/cls_ref.txt"
-    threads: config["nanosim"]["threads"]
+    threads: config["threads"]["large"]
     shell:
-        "mmseqs easy-cluster {input} {params.prefix} {output.tmp} "
+        "mmseqs easy-cluster {workflow.basedir}/../resources/data/silva_id100subs.fna "
+        "{params.prefix} {output.tmp} "
         "--threads {threads} --min-seq-id {params.minid} -c {params.c} > {log} 2>&1"
 
 # subsample clustered ref
@@ -107,7 +76,7 @@ rule reheader:
 # simulate reads by number of reads
 rule read_simulate:
     input:
-        get_nanosim_model(config["nanosim"]["read_analysis"]["pretrained"]),
+        rules.read_analysis.output,
         ref = rules.reheader.output,
     output: 
         expand(
