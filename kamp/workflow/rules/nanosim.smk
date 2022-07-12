@@ -11,15 +11,30 @@ NS = exp_list(config["nanosim"]["simulator"]["n"])
 NREAD = config["nanosim"]["read_analysis"]["read"]
 RG = config["nanosim"]["read_analysis"]["rg"]
 
+rule download_pretrained_model:
+    output: "nanosim/model_pretrained/training_model_profile"
+    params:
+        model="https://github.com/bcgsc/NanoSim/raw/master/pre-trained_models/human_NA12878_DNA_FAB49712_guppy.tar.gz",
+        dir=os.path.join(os.getcwd(), "nanosim"),
+    log: "logs/nanosim/download_pretrained_model.log"
+    benchmark: "benchmarks/nanosim/download_pretrained_model.txt"
+    shell: 
+        """
+        mkdir -p {params.dir}/model_pretrained > {log} 2>&1
+        wget -O {params.dir}/model.tar.gz {params.model} >> {log} 2>&1
+        tar -xvzf {params.dir}/model.tar.gz --strip-components=1 -C {params.dir}/model_pretrained >> {log} 2>&1
+        rm {params.dir}/model.tar.gz -f >> {log} 2>&1
+        """
+       
 rule read_analysis:
     input: 
       read = NREAD,
       ref = RG,
-    output: "nanosim/model/nanosim_model_profile"
+    output: "nanosim/model/training_model_profile"
     conda: "../envs/nanosim.yaml"
     params:
         a = config["nanosim"]["read_analysis"]["a"],
-        prefix = "nanosim/model/nanosim",
+        prefix = "nanosim/model/training",
     log: "logs/nanosim/read_analysis.log"
     benchmark: "benchmarks/nanosim/read_analysis.txt"
     threads: config["nanosim"]["threads"]
@@ -28,6 +43,12 @@ rule read_analysis:
         " -o {params.prefix} -a {params.a} -t {threads}"
         " > {log} 2>&1"
 
+def get_nanosim_model(pretrained):
+    if pretrained:
+        return rules.download_pretrained_model.output
+    else:
+        return rules.read_analysis.output
+ 
 # cluster ref by identity
 rule cls_ref:
     input: REF
@@ -69,7 +90,7 @@ rule subsample_cls_ref:
 
 # keep fasta header unique
 rule reheader:
-    input: rules.subsample_cls_ref.output
+    input: rules.subsample_cls_ref.output.n
     output: "nanosim/cls_ref/id_{minid}/ref.fasta"
     log: "logs/nanosim/cls_ref/id_{minid}/reheader.log"
     benchmark: "benchmarks/nanosim/cls_ref/id_{minid}/reheader.txt"
@@ -86,7 +107,7 @@ rule reheader:
 # simulate reads by number of reads
 rule read_simulate:
     input:
-        rules.read_analysis.output,
+        get_nanosim_model(config["nanosim"]["read_analysis"]["pretrained"]),
         ref = rules.reheader.output,
     output: 
         expand(
@@ -95,16 +116,17 @@ rule read_simulate:
         )
     conda: "../envs/nanosim.yaml"
     params:
-        c = "nanosim/model/nanosim",
         o = lambda wc: "nanosim/simulate/{minid}_{n}/simulated".format(minid=wc.minid, n=wc.n),
         n = lambda wc: int(wc.n),
     log: "logs/nanosim/read_simulate/{minid}_{n}.log"
     benchmark: "benchmarks/nanosim/read_simulate/{minid}_{n}.txt"
     threads: config["threads"]["large"]
     shell:
-        "simulator.py genome -rg {input.ref} -c {params.c} -o {params.o}"
-        " -n {params.n} -b guppy --fastq -t {threads} -dna_type linear"
-        " > {log} 2>&1"
+        """
+        MODEL={input[0]}
+        c=${{MODEL//_model_profile/}}
+        simulator.py genome -rg {input.ref} -c "$c" -o {params.o} -n {params.n} -b guppy --fastq -t {threads} -dna_type linear --seed 1234 > {log} 2>&1
+        """
 
 # pseudo demultiplex
 rule nanosim:
