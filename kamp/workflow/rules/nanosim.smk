@@ -34,7 +34,7 @@ rule cls_ref:
     benchmark: "benchmarks/nanosim/id_{minid}/cls_ref.txt"
     threads: config["threads"]["large"]
     shell:
-        "mmseqs easy-cluster {workflow.basedir}/../resources/data/silva_id100subs.fna "
+        "mmseqs easy-cluster {workflow.basedir}/../resources/data/silva_id100subs1000.fna "
         "{params.prefix} {output.tmp} "
         "--threads {threads} --min-seq-id {params.minid} -c {params.c} > {log} 2>&1"
 
