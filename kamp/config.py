@@ -50,7 +50,7 @@ def init_conf(
     conf["nreads_m"] = nreads_m
     conf["pool"] = not no_pool
     conf["subsample"] = subsample
-    conf["trim_primers"] = not no_trim
+    conf["trim"] = not no_trim
     conf["kmerbin"] = kmerbin
     conf["cluster"] = list(cluster)
     conf["chimer_filter"] = chimer_filter
