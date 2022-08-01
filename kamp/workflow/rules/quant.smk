@@ -161,7 +161,15 @@ rule count_matrix:
         seqs_count = lambda wildcards: get_qout(wildcards, "count"),
     output: "count_matrix.tsv"
     shell:
-        "paste {input.rowname_seqs} {input.seqs_count} > {output}"
+        """
+        cp {input.rowname_seqs} {output}
+        # split if exceed 1000 (max 1024 by default in most OS)
+        while read fs; do
+            paste {output} $fs > {output}.tmp
+            # redirection first
+            mv {output}.tmp {output}
+        done < <(echo {input.seqs_count} | xargs -n 1000)
+        """
 
 rule q2_repseqs_import:
     input: rules.rename_fasta_header.output
