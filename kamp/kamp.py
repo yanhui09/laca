@@ -83,13 +83,13 @@ def cli(self):
 @cli.command(
     'run',
     context_settings=dict(ignore_unknown_options=True),
-    short_help='Run kamp workflow'
+    short_help='Run Kamp workflow.'
 )
 @click.option(
     "-w",
     "--workdir",
     type=click.Path(dir_okay=True, writable=True, resolve_path=True),
-    help="Output directory for kamp.",
+    help="Output directory for Kamp.",
     show_default=True,
     default=".",
 )
@@ -130,7 +130,7 @@ def cli(self):
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
 def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     """
-    Run the kamp main workflow.
+    Run Kamp workflow.
     """
     if workflow == "nanosim":
         sf = "workflow/rules/nanosim.smk"
@@ -147,7 +147,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
 @cli.command(
     'init',
     context_settings=dict(ignore_unknown_options=True),
-    short_help='Prepare config file and taxonomy database.',
+    short_help='Prepare the config file.',
 )
 @click.option(
     '-f',
@@ -167,7 +167,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     "-w",
     "--workdir",
     type=click.Path(dir_okay=True, writable=True, resolve_path=True),
-    help="Output directory for kamp.",
+    help="Output directory for Kamp.",
     show_default=True,
     default=".",
 )
@@ -228,18 +228,18 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     type=int,
     default=2,
     show_default=True,
-    help="Number of jobs for common tasks",
+    help="Number of jobs for common tasks.",
 )
 @click.option(
     "--jobs-max",
     type=int,
     default=6,
     show_default=True,
-    help="Number of jobs for threads-dependent tasks",
+    help="Number of jobs for threads-dependent tasks.",
 )
 def run_init(fqdir, dbdir, workdir, fqs_min, no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max):
     """
-    Prepare the config file and working directory.
+    Prepare the config file for Kamp.
     """ 
     init_conf(fqdir, dbdir, workdir, "config.yaml", fqs_min,
               no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max)
