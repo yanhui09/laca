@@ -21,6 +21,9 @@ rule derep_denoised_seqs:
     benchmark: "benchmarks/quant/derep_denoised_seqs.txt"
     threads: config["threads"]["large"]
     shell:
+        #https://github.com/soedinglab/MMseqs2/wiki#how-do-parameters-of-cd-hit-relate-to-mmseqs2
+        #divergent amplicons for local alignment, mmseqs2 yes, cd-hit no.
+        #--min-seq-id 0.99 -c 0.5 (best in benchmark, -c 0.5-0.7 is good)
         "mmseqs easy-cluster {input.first} {params.prefix} {output.tmp} "
         "--threads {threads} --min-seq-id {params.mid} -c {params.c} > {log} 2>&1"
 

@@ -117,3 +117,78 @@ Options:
   -n, --dryrun        Dry run.
   -h, --help          Show this message and exit.
 ```
+
+# Benchmark
+
+We *in silico* benchmarked `Kamp` performance with simulated Nanopore reads at the sequencing depth 
+of `1`, `2`, `3`, `4`, `5`, `10`, `15`, `20`, `25`, `50`, `100`, `250`, `500` and `1000`. The reads 
+were simulated by `nanosim` on 16S rRNA gene sequences at the minimum divergence of `0`, `1`, `2`, 
+`3`, `5`, `10` and `20`. For the simulation reference, `20` sequences were sampled from the representative 
+sequences picked for `SILVA_138.1_SSURef_NR99` by `MMseqs2 easy-cluster` at the min sequence identity
+ of `1`, `0.99`, `0.98`, `0.97`, `0.95`, `0.9` and `0.8`, respectively. 
+
+To reproduce
+```
+conda activate kamp
+# with kmer bin 
+kamp init -f /path/to/fastqs -d /path/to/database --fqs-min 0 --kmerbin --no-pool --no-trim --cluster isONclustCon
+kamp run nanosim
+kamp run all
+# without kmer bin
+rm config.yaml
+kamp init -f /path/to/fastqs -d /path/to/database --fqs-min 0 --no-pool --no-trim --cluster isONclustCon
+kamp run all
+```
+
+The generated denoised sequences were aligned to respective reference with `Minimap2` in base-level mode 
+of `asm5`, `asm10` and `asm20`.
+
+1. The number of denoised sequences
+   ![p1_seqsnum](docs/images/benchmark/p1_seqsnum.png)
+2. The number of recovered reference
+   ![p2_refcov](docs/images/benchmark/p2_refcov.png)
+3. The percentage of denoised sequnece aligned to the reference
+   ![p3_tseqsnum](docs/images/benchmark/p3_tseqsnum.png)
+4. The alignment statistics of benchmarks on reference divergence > 1% [`asm5`]
+   ![p5_stats99](docs/images/benchmark/p5_stats99.png)
+5. The percentage of alignment block in query/denoised sequence [`asm5`]
+6. ![p4_qaln](docs/images/benchmark/p4_qaln.png)
+7. The percentage of matches in query/denoised sequence [`asm5`]
+   ![p4_qcov](docs/images/benchmark/p4_qcov.png)
+8. The percentage of matches in alignment block of query/denoised sequence [`asm5`]
+   ![p4_qtaln](docs/images/benchmark/p4_qtaln.png)
+9. The percentage of alignment block in target/reference sequence [`asm5`]
+   ![p4_taln](docs/images/benchmark/p4_taln.png)
+10. The percentage of matches in target/reference sequence [`asm5`]
+   ![p4_tcov](docs/images/benchmark/p4_tcov.png)
+11. The percentage of matches in alignment block of target/reference sequence [`asm5`]
+    ![p4_ttaln](docs/images/benchmark/p4_ttaln.png)
+
+# Acknowledgement
+
+`Kamp` integrates multiple open-source tools to analyze Nanopore amplicon data reproducibly. 
+Under preview stage, here listed the software/tools involved in the `Kamp`. The full list will 
+be finalized in the manuscript. 
+
+Inspirations from package structure:
+[metagenome-atlas](https://github.com/metagenome-atlas/atlas)
+[virsorter2](https://github.com/jiarong/VirSorter2)
+
+Included Software (some not in direct use):
+[Seqkit](https://github.com/shenwei356/seqkit)
+[Cutadapt](https://github.com/marcelm/cutadapt)
+[Spoa](https://github.com/rvaser/spoa)
+[Racon](https://github.com/isovic/racon)
+[Medaka](https://github.com/nanoporetech/medaka)
+[UMAP](https://github.com/lmcinnes/umap)
+[HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan)
+[isONclust](https://github.com/ksahlin/isONclust)
+[isONcorrect](https://github.com/ksahlin/isONcorrect)
+[NanoCLUST](https://github.com/genomicsITER/NanoCLUST)
+[DTR-phage-pipeline](https://github.com/nanoporetech/DTR-phage-pipeline)
+[Kraken2](https://github.com/DerrickWood/kraken2)
+[MMseqs2](https://github.com/soedinglab/MMseqs2)
+[Nanosim](https://github.com/soedinglab/MMseqs2)
+[QIIME2](https://qiime2.org/)
+[Longread_umi](https://github.com/SorenKarst/longread_umi)
+[Vsearch](https://github.com/torognes/vsearch)
