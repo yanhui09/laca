@@ -149,19 +149,19 @@ of `asm5`, `asm10` and `asm20`.
    ![p2_refcov](docs/images/benchmark/p2_refcov.png)
 3. The percentage of denoised sequnece aligned to the reference
    ![p3_tseqsnum](docs/images/benchmark/p3_tseqsnum.png)
-4. The alignment statistics of benchmarks on reference divergence > 1% [`asm5`]
+4. The alignment statistics of benchmarks on reference divergence > 1% `asm5`
    ![p5_stats99](docs/images/benchmark/p5_stats99.png)
-5. The percentage of alignment block in query/denoised sequence [`asm5`]
+5. The percentage of alignment block in query/denoised sequence `asm5`
 6. ![p4_qaln](docs/images/benchmark/p4_qaln.png)
-7. The percentage of matches in query/denoised sequence [`asm5`]
+7. The percentage of matches in query/denoised sequence `asm5`
    ![p4_qcov](docs/images/benchmark/p4_qcov.png)
-8. The percentage of matches in alignment block of query/denoised sequence [`asm5`]
+8. The percentage of matches in alignment block of query/denoised sequence `asm5`
    ![p4_qtaln](docs/images/benchmark/p4_qtaln.png)
-9. The percentage of alignment block in target/reference sequence [`asm5`]
+9. The percentage of alignment block in target/reference sequence `asm5`
    ![p4_taln](docs/images/benchmark/p4_taln.png)
-10. The percentage of matches in target/reference sequence [`asm5`]
+10. The percentage of matches in target/reference sequence `asm5`
    ![p4_tcov](docs/images/benchmark/p4_tcov.png)
-11. The percentage of matches in alignment block of target/reference sequence [`asm5`]
+11. The percentage of matches in alignment block of target/reference sequence `asm5`
     ![p4_ttaln](docs/images/benchmark/p4_ttaln.png)
 
 # Acknowledgement
