@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/snakemake-workflows/Kamp.svg?branch=master)](https://travis-ci.org/snakemake-workflows/Kamp)
 
 `Kamp` is a kmer-based denoise workflow to analyze long-read noisy amplicons by Nanopore sequencing, e.g., 16S rRNA gene.
-Using `Snakemake` as a job controller behind, `Kamp` is wrapped into a python package for development and mainteniance.
+Using `Snakemake` as the job controller, `Kamp` is wrapped into a python package for development and mainteniance.
 `Kamp` provides an end-to-end solution from bascecalled reads to the final count matrix.
 
 **Important: `Kamp` is under development, and here released as a preview for early access. 
@@ -26,19 +26,20 @@ You can speed up the whole process if [`mamba`](https://github.com/mamba-org/mam
 mamba env create -n kamp -f kampenv.yml 
 ```
 2. Install `Kamp` with `pip`
-We suggest installing `Kamp` in the above `conda` environment
+      
+To avoid inconsistency, we suggest installing `Kamp` in the above `conda` environment
 ```
 conda activate kamp
 pip install --editable .
 ```
 
-At this moment, `Kamp` uses a compiled but tailored `guppy` for demultiplexing the barcodes sets in our lab.
+At this moment, `Kamp` uses a compiled but tailored `guppy` for barcode demultiplexing (in our lab).<br>
 **Remember to revise the config file in `guppy` if new barcodes are introduced.**
 
 # Example
 ```
 conda activate kamp                                  # activate required environment 
-kamp init -f /path/to/fastqs -d /path/to/database    # init config file
+kamp init -f /path/to/fastqs -d /path/to/database    # init config file and check
 kamp run all                                         # start analysis
 ```
 
@@ -62,7 +63,7 @@ Commands:
 
 `Kamp` is easy to use. You can start a new analysis in two steps using `kamp init` and `kamp run` . 
 
-Remember to first activate the conda environment.
+Remember to activate the conda environment.
 ```
 conda activate kamp
 ```
@@ -121,13 +122,13 @@ Options:
 # Benchmark
 
 We *in silico* benchmarked `Kamp` performance with simulated Nanopore reads at the sequencing depth 
-of `1`, `2`, `3`, `4`, `5`, `10`, `15`, `20`, `25`, `50`, `100`, `250`, `500` and `1000`. The reads 
-were simulated by `nanosim` on 16S rRNA gene sequences at the minimum divergence of `0`, `1`, `2`, 
-`3`, `5`, `10` and `20`. For the simulation reference, `20` sequences were sampled from the representative 
-sequences picked for `SILVA_138.1_SSURef_NR99` by `MMseqs2 easy-cluster` at the min sequence identity
+of `1X`, `2X`, `3X`, `4X`, `5X`, `10X`, `15X`, `20X`, `25X`, `50X`, `100X`, `250X`, `500X` and `1000X`. The reads 
+were simulated by `Nanosim` on 16S rRNA gene sequences at the minimum divergence of `0`, `1%`, `2%`, 
+`3%`, `5%`, `10%` and `20%`. For the simulation reference, `20` sequences were sampled from the representative 
+sequences picked from `SILVA_138.1_SSURef_NR99` by `MMseqs2 easy-cluster` at the minimum sequence identity
  of `1`, `0.99`, `0.98`, `0.97`, `0.95`, `0.9` and `0.8`, respectively. 
 
-To reproduce
+*To reproduce*
 ```
 conda activate kamp
 # with kmer bin 
@@ -141,7 +142,8 @@ kamp run all
 ```
 
 The generated denoised sequences were aligned to respective reference with `Minimap2` in base-level mode 
-of `asm5`, `asm10` and `asm20`.
+of `asm5`, `asm10` and `asm20`. For comparison, all denoised fragments were dereplicated by `MMseqs2` under
+minimum sequence identity of `0.99` and the least coverage of `0.5`. 
 
 1. The number of denoised sequences
    ![p1_seqsnum](docs/images/benchmark/p1_seqsnum.png)
@@ -152,16 +154,16 @@ of `asm5`, `asm10` and `asm20`.
 4. The alignment statistics of benchmarks on reference divergence > 1% `asm5`
    ![p5_stats99](docs/images/benchmark/p5_stats99.png)
 5. The percentage of alignment block in query/denoised sequence `asm5`
-6. ![p4_qaln](docs/images/benchmark/p4_qaln.png)
-7. The percentage of matches in query/denoised sequence `asm5`
+   ![p4_qaln](docs/images/benchmark/p4_qaln.png)
+6. The percentage of matches in query/denoised sequence `asm5`
    ![p4_qcov](docs/images/benchmark/p4_qcov.png)
-8. The percentage of matches in alignment block of query/denoised sequence `asm5`
+7. The percentage of matches in alignment block of query/denoised sequence `asm5`
    ![p4_qtaln](docs/images/benchmark/p4_qtaln.png)
-9. The percentage of alignment block in target/reference sequence `asm5`
+8. The percentage of alignment block in target/reference sequence `asm5`
    ![p4_taln](docs/images/benchmark/p4_taln.png)
-10. The percentage of matches in target/reference sequence `asm5`
+9. The percentage of matches in target/reference sequence `asm5`
    ![p4_tcov](docs/images/benchmark/p4_tcov.png)
-11. The percentage of matches in alignment block of target/reference sequence `asm5`
+10. The percentage of matches in alignment block of target/reference sequence `asm5`
     ![p4_ttaln](docs/images/benchmark/p4_ttaln.png)
 
 # Acknowledgement
@@ -174,8 +176,9 @@ Inspirations from package structure:
 [metagenome-atlas](https://github.com/metagenome-atlas/atlas)
 [virsorter2](https://github.com/jiarong/VirSorter2)
 
-Included Software (some not in direct use):
+Included Software (Not all in direct use):
 [Seqkit](https://github.com/shenwei356/seqkit)
+[Taxonki](https://github.com/shenwei356/taxonkit)
 [Cutadapt](https://github.com/marcelm/cutadapt)
 [Spoa](https://github.com/rvaser/spoa)
 [Racon](https://github.com/isovic/racon)
@@ -192,3 +195,7 @@ Included Software (some not in direct use):
 [QIIME2](https://qiime2.org/)
 [Longread_umi](https://github.com/SorenKarst/longread_umi)
 [Vsearch](https://github.com/torognes/vsearch)
+[Minimap2](https://github.com/lh3/minimap2)
+[Samtools](https://github.com/samtools/samtools)
+[Blast](https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs)
+[Rsync](https://github.com/WayneD/rsync)
