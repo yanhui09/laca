@@ -30,9 +30,12 @@ def get_batch_size(batch_size, ram, kmer_file):
         # auto estimation of batch size base on RAM
     except:
         if batch_size == "auto":
-            # estimated constan m from 333 reads with max RAM of 241.26 MB
-            m = 241.26 * 2 / 333 ** 2
-            est_size = int((2 * 1024 * ram / m) ** 0.5)
+            # estimated constan m
+            # max_rss y = 254 + 0.0514x R2=0.96 
+            # max_vms y = 1570 + 0.0969x R2 = 0.81
+            
+            m = 0.06
+            est_size = int((1024 * ram - 254) / m)
             if est_size > total:
                 batch_size = total
             else:

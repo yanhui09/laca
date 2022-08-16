@@ -123,7 +123,7 @@ classifier:
 
 mmseqs:
   min-seq-id: 0.99
-  c: 0.99 # the fraction of aligned residues
+  c: 0.9 # the fraction of aligned residues
   taxdb: SILVA # predefined taxonomy database name in `mmseqs databases`; The provided NT database do not have taxonomy info yet.
   # make a custom seqTaxDB using local blast databases;
   #blastdb_ftp: "ftp://ftp.ncbi.nlm.nih.gov/blast/db/refseq_rna.??.tar.gz"

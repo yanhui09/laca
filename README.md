@@ -149,7 +149,7 @@ minimum sequence identity of `0.99` and the least coverage of `0.5`.
    ![p1_seqsnum](docs/images/benchmark/p1_seqsnum.png)
 2. The number of recovered reference
    ![p2_refcov](docs/images/benchmark/p2_refcov.png)
-3. The percentage of denoised sequnece aligned to the reference
+3. The percentage of denoised sequence aligned to the reference
    ![p3_tseqsnum](docs/images/benchmark/p3_tseqsnum.png)
 4. The alignment statistics of benchmarks on reference divergence > 1% `asm5`
    ![p5_stats99](docs/images/benchmark/p5_stats99.png)
