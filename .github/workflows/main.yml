@@ -30,17 +30,17 @@ jobs:
 
       - name: Setup Kamp environment
         run: |
-          export PATH="/usr/share/miniconda/bin:$PATH"
+          #export PATH="/usr/share/miniconda/bin:$PATH"
           conda config --set channel_priority flexible
           conda install -c conda-forge -q mamba
           # ensure that mamba is happy to write into the cache
-          sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
+          #sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
           mamba env create -q --name kamp --file kampenv.yml
           # additionally add singularity ??
       
       - name: Install Kamp
         run: |
-          source activate kamp
+          conda activate kamp
           pip install --editable .
           kamp -h
           kamp init -h
@@ -49,8 +49,8 @@ jobs:
       - name: Dry-run kamp
         run: |
           # activate conda env
-          export PATH="/usr/share/miniconda/bin:$PATH"
-          source activate kamp
+          #export PATH="/usr/share/miniconda/bin:$PATH"
+          conda activate kamp
           KAMP=$(PWD)
           mkdir ~/test && cd ~/test
           kamp init -f $KAMP/kamp/workflow/resources/data -d ./Kamp
