@@ -50,10 +50,8 @@ jobs:
         run: |
           export PATH="/usr/share/miniconda/bin:$PATH"
           source activate kamp
-          mkdir ~/test && cd ~/test
-          KAMP=$(pwd)
-          echo $KAMP
-          kamp init -f $KAMP/kamp/workflow/resources/data -d ./Kamp
+          mkdir test && cd test
+          kamp init -f ../kamp/workflow/resources/data -d ./Database
           kamp run all -n 
 
       
