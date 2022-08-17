@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - conda
+  pull_request:
+    branches_ignore: []
+
+
+jobs:
+  Formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Formatting
+        uses: github/super-linter@v4
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: master
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_SNAKEMAKE_SNAKEFMT: true
+
+   Testing:
+    runs-on: ubuntu-latest
+    needs: Formatting
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # we need tags for versioneer to work
+
+      - name: Setup Kamp environment
+        run: |
+          export PATH="/usr/share/miniconda/bin:$PATH"
+          conda config --set channel_priority flexible
+          conda install -c conda-forge -q mamba
+          # ensure that mamba is happy to write into the cache
+          sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
+          mamba env create -q --name kamp --file kampenv.yml
+          # additionally add singularity ??
+      
+      - name: Install Kamp
+        run: |
+          source activate kamp
+          pip install --editable .
+          kamp -h
+          kamp init -h
+          kamp run -h
+
+      - name: Dry-run kamp
+        run: |
+          # activate conda env
+          export PATH="/usr/share/miniconda/bin:$PATH"
+          source activate kamp
+          KAMP=$(PWD)
+          mkdir ~/test && cd ~/test
+          kamp init -f $KAMP/kamp/workflow/resources/data -d ./Kamp
+          kamp run all -n 
+
+      
+           
