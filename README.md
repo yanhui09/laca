@@ -9,7 +9,7 @@ Using `Snakemake` as the job controller, `Kamp` is wrapped into a python package
 
 **Important: `Kamp` is under development, and here released as a preview for early access. 
 As `Kamp` integrates multiple bioinformatic tools, it is only tested in Linux systems, i.e., Ubuntu.
-The detailed instruction and manuscript is in preparation.**
+The detailed instruction and manuscript are in preparation.**
 
 # Installation
 [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) is the only required dependency prior to installation.
