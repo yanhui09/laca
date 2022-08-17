@@ -30,7 +30,7 @@ jobs:
 
       - name: Setup Kamp environment
         run: |
-          which conda
+          export PATH="/usr/share/miniconda/bin:$PATH"
           conda config --set channel_priority flexible
           conda install -c conda-forge -q mamba
           # ensure that mamba is happy to write into the cache
@@ -39,7 +39,8 @@ jobs:
       
       - name: Install Kamp
         run: |
-          conda activate kamp
+          export PATH="/usr/share/miniconda/bin:$PATH"
+          source activate kamp
           pip install --editable .
           kamp -h
           kamp init -h
@@ -47,7 +48,8 @@ jobs:
 
       - name: Dry-run kamp
         run: |
-          conda activate kamp
+          export PATH="/usr/share/miniconda/bin:$PATH"
+          source activate kamp
           KAMP=$(PWD)
           mkdir ~/test && cd ~/test
           kamp init -f $KAMP/kamp/workflow/resources/data -d ./Kamp

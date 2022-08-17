@@ -1,2 +1,2 @@
 #!/bin/sh -l
-export PATH="/opt/conda:$PATH"
+#export PATH="/usr/share/miniconda/bin:$PATH"
