@@ -1,7 +1,7 @@
 # Kamp
 
 [![Snakemake](https://img.shields.io/badge/snakemake-=7.8.5-brightgreen.svg)](https://snakemake.bitbucket.io)
-[![Build Status](https://travis-ci.org/snakemake-workflows/Kamp.svg?branch=master)](https://travis-ci.org/snakemake-workflows/Kamp)
+[![Build Status](https://github.com/yanhui09/Kamp/actions/workflows/main.yml/badge.svg?branch=conda)](https://github.com/yanhui09/Kamp/actions?query=branch%3Amain+workflow%3ACI)
 
 `Kamp` is a kmer-based denoise workflow to analyze long-read noisy amplicons by Nanopore sequencing, e.g., 16S rRNA gene.
 Using `Snakemake` as the job controller, `Kamp` is wrapped into a python package for development and mainteniance.
