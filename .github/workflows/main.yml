@@ -30,6 +30,7 @@ jobs:
 
       - name: Setup Kamp environment
         run: |
+          which conda
           conda config --set channel_priority flexible
           conda install -c conda-forge -q mamba
           # ensure that mamba is happy to write into the cache
