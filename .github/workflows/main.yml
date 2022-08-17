@@ -7,7 +7,6 @@ on:
   pull_request:
     branches_ignore: []
 
-
 jobs:
   Formatting:
     runs-on: ubuntu-latest
@@ -21,7 +20,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_SNAKEMAKE_SNAKEFMT: true
 
-   Testing:
+  Testing:
     runs-on: ubuntu-latest
     needs: Formatting
     steps:
