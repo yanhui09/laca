@@ -1,3 +1,6 @@
+# Nanosim seems not to properly simulate the ends of reference
+# https://github.com/bcgsc/NanoSim/issues/101
+
 # expand list from comma separated string
 def exp_list(x):
     return [y.strip() for y in x.split(",")]

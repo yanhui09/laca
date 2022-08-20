@@ -101,7 +101,7 @@ rule taxonomy_mmseqs2:
 rule classify_kraken2:
     input:
         ancient(DATABASE_DIR + "/.initDB_DONE"),
-        ancient(rules.database_kraken2.output.k2d), 
+        ancient(expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"])), 
         fna = chimeraF(config["chimeraF"])[1]
     output: temp("taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
@@ -115,7 +115,8 @@ rule classify_kraken2:
         "kraken2 --db {params.dbloc} --threads {threads} --output {output} {input.fna}"
         " {params.classify_cmd} 1> {log} 2>&1"
 
-# use taxonkit to get NCBI taxonomy
+# use taxonkit to get NCBI taxonomy 
+# Not work with special database: greengenes, silva, and RDP
 use rule lineage_taxonkit_mmseqs2 as lineage_taxonkit_kraken2 with:
     input:
         taxdump = ancient(rules.update_taxdump.output),

@@ -110,16 +110,33 @@ rule createtaxdb_seqTax:
         "--ncbi-tax-dump {input.taxdump} --tax-mapping-file {input.taxidmapping} 1> {log} 2>&1"
 
 # add kraken classifier
-rule database_kraken2:
+#rule database_kraken2:
+#    output: 
+#        k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
+#    conda: "../envs/kraken2.yaml"
+#    params:
+#        buildb_cmd = config["kraken2"]["buildb_cmd"],
+#        dbloc = directory(DATABASE_DIR + "/kraken2"),
+#    log: "logs/taxonomy/kraken2/build_database.log"
+#    benchmark: "benchmarks/taxonomy/kraken2/build_database.txt"
+#    threads: config["threads"]["large"]
+#    shell:
+#        "kraken2-build --db {params.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"
+
+# Download prebuilt kraken2 database
+rule kraken2_prebuilt:
     output: 
         k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
-    conda: "../envs/kraken2.yaml"
     params:
-        buildb_cmd = config["kraken2"]["buildb_cmd"],
+        address = "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz",
         dbloc = directory(DATABASE_DIR + "/kraken2"),
-    log: "logs/taxonomy/kraken2/build_database.log"
-    benchmark: "benchmarks/taxonomy/kraken2/build_database.txt"
-    threads: config["threads"]["large"]
+    log: "logs/taxonomy/kraken2/kraken2_prebuilt.log"
+    benchmark: "benchmarks/taxonomy/kraken2/kraken2_prebuilt.txt"
+    threads: 1
     shell:
-        "kraken2-build --db {params.dbloc} {params.buildb_cmd} -threads {threads} 1> {log} 2>&1"
+        """
+        wget {params.address} -O {params.dbloc}/kraken2.tar.gz 1> {log} 2>&1
+        tar -xzvf {params.dbloc}/kraken2.tar.gz -C {params.dbloc} 1>> {log} 2>&1
+        rm {params.dbloc}/kraken2.tar.gz 1>> {log} 2>&1
+        """
 
