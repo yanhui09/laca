@@ -131,6 +131,8 @@ mmseqs:
   lca-mode: 3 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [3]
 
 kraken2:
+  # Find prebuilt database: https://benlangmead.github.io/aws-indexes/k2
+  prebuilt: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz"
   classify_cmd: "--confidence 0.01" # use --confidence 0.01 for standard database 
 
 ##############################################################

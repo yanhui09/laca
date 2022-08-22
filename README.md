@@ -126,7 +126,10 @@ of `1X`, `2X`, `3X`, `4X`, `5X`, `10X`, `15X`, `20X`, `25X`, `50X`, `100X`, `250
 were simulated by `Nanosim` on 16S rRNA gene sequences at the minimum divergence of `0`, `1%`, `2%`, 
 `3%`, `5%`, `10%` and `20%`. For the simulation reference, `20` sequences were sampled from the representative 
 sequences picked from `SILVA_138.1_SSURef_NR99` by `MMseqs2 easy-cluster` at the minimum sequence identity
- of `1`, `0.99`, `0.98`, `0.97`, `0.95`, `0.9` and `0.8`, respectively. 
+ of `1`, `0.99`, `0.98`, `0.97`, `0.95`, `0.9` and `0.8`, respectively.
+
+*Note: Sampling bias may be included in `20` reference seqeunces with minimum divergence. We will add comparasion 
+on reference with controlled maximum divergence in next iteration.* 
 
 *To reproduce*
 ```
@@ -177,6 +180,7 @@ Inspirations from package structure:
 [virsorter2](https://github.com/jiarong/VirSorter2)
 
 Included Software (Not all in direct use):
+[Snakemake](https://github.com/snakemake/snakemake)
 [Seqkit](https://github.com/shenwei356/seqkit)
 [Taxonki](https://github.com/shenwei356/taxonkit)
 [Cutadapt](https://github.com/marcelm/cutadapt)

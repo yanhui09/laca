@@ -128,7 +128,7 @@ rule kraken2_prebuilt:
     output: 
         k2d = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"]),
     params:
-        address = "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz",
+        address = config["kraken2"]["prebuilt"],
         dbloc = directory(DATABASE_DIR + "/kraken2"),
     log: "logs/taxonomy/kraken2/kraken2_prebuilt.log"
     benchmark: "benchmarks/taxonomy/kraken2/kraken2_prebuilt.txt"
