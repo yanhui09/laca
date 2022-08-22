@@ -143,7 +143,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     )
 
 # kamp init
-# initialize taxonomy database and config file
+# initialize config file
 @cli.command(
     'init',
     context_settings=dict(ignore_unknown_options=True),
