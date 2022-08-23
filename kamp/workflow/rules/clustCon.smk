@@ -272,6 +272,7 @@ rule isONcorrect:
     conda: "../envs/isONcorCon.yaml"
     params:
         _dir = "isONcorCon/{barcode}/{c}/{clust_id}",
+        max_seqs = 2000,
     log: "logs/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.log"
     benchmark: "benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.txt"
     threads: config["threads"]["normal"]
@@ -279,8 +280,16 @@ rule isONcorrect:
         """
         mkdir -p {params._dir}/isONclust
         cp {input} {params._dir}/isONclust
-        run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
-        --set_w_dynamically --split_wrt_batches > {log} 2>&1
+        # number of reads in fastqs
+        nlines=$(cat {params._dir}/isONclust/* | wc -l)
+        nreads=$((nlines / 4))
+        if [ $nreads -gt {params.max_seqs} ]; then
+            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
+            --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
+        else
+            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
+            --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
+        fi
         rm -rf {params._dir}/isONclust
         """
 

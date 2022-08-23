@@ -32,6 +32,7 @@ r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
 # indepent qfilt (qc.smk trims the primer together with linker and umi)
+# Retain primer and linker for following umi finding steps
 use rule q_filter as qfilter_umi with:
     input:
         get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
@@ -47,6 +48,31 @@ use rule q_filter as qfilter_umi with:
         "benchmarks/umi/{barcode}/qfilter.txt"
     threads:
         config["threads"]["large"]
+
+# UMI-barcoded molecules have different barcodes as well as UMIs
+# Sample pooling destroy the UMI-barcoding defination
+
+# Remove samples in shallow sequencing
+checkpoint exclude_shallow_umi:
+    input: lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_demultiplexed(wc))
+    output: directory("umi/shallow")
+    run:
+        import shutil
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input):
+            num_reads = sum(1 for line in open(i)) / 4
+            dir_i = os.path.dirname(i)
+            if num_reads < 50:
+                shutil.move(dir_i, output[0])
+
+def get_filt_umi(wildcards):
+    barcodes = get_demultiplexed(wildcards)
+    barcodes_shallow = glob_wildcards(checkpoints.exclude_shallow_umi.get(**wildcards).output[0]
+     + "/{barcode, [a-zA-Z]+[0-9]+}/qfilt.fastq").barcode
+    barcodes_shallow = sorted(set(barcodes_shallow))
+    barcodes = [b for b in barcodes if b not in barcodes_shallow]
+    return barcodes
 
 # kmer calculation
 use rule kmer_freqs as kmer_freqs_umi with:
@@ -175,7 +201,7 @@ rule concat_umi:
 
 def get_umifile1(wildcards, kmerbin = True):
     check_val("kmerbin", kmerbin, bool)
-    barcodes = get_demultiplexed(wildcards)
+    barcodes = get_filt_umi(wildcards)
 
     bin2clusters = []
     for i in barcodes:

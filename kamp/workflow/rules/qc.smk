@@ -135,7 +135,6 @@ checkpoint exclude_empty_fqs:
     output: directory("qc/qfilt/empty")
     run:
         import shutil
-        import pandas as pd
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input):
@@ -150,7 +149,7 @@ def get_qced(wildcards):
     barcodes = [b for b in barcodes if b not in barcodes_empty]
     return barcodes
 
-#  pool fqs for sensitivity 
+#  sample pooling to increase sensitivity 
 rule combine_fastq:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced(wc))
     output: temp("qc/qfilt/pooled.fastq")
