@@ -52,7 +52,7 @@ rule bin2clustering:
     log: "logs/clustCon/{barcode}/bin2clust/{c}.log"
     benchmark: "benchmarks/clustCon/{barcode}/bin2clust/{c}.txt"
     shell:
-        "python scripts/binClust.py -p {params.prefix}"
+        "python {workflow.basedir}/scripts/binClust.py -p {params.prefix}"
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 

@@ -65,7 +65,7 @@ use rule umap as umap_umi with:
         rules.kmer_freqs_umi.output
     output: 
         cluster="umi/{barcode}/kmerBin/hdbscan.tsv",
-	      plot="umi/{barcode}/kmerBin/hdbscan.png",
+	    plot="umi/{barcode}/kmerBin/hdbscan.png",
     log: 
         "logs/umi/{barcode}/kmerBin/umap.log"
     benchmark: 
