@@ -250,6 +250,7 @@ rule medaka_consensus:
     threads: config["threads"]["normal"]
     shell:
         """
+        export TF_FORCE_GPU_ALLOW_GROWTH=true
         medaka_consensus -i {input.fastq} \
         -d {input.fna} -o {output._dir} \
         -t {threads} -m {params.m} > {log} 2>&1;
