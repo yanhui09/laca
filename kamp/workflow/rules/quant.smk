@@ -177,7 +177,7 @@ rule count_matrix:
 rule q2_repseqs_import:
     input: rules.rename_fasta_header.output
     output: temp("rep_seqs.qza")
-    conda: "../envs/q2_plugins.yaml"
+    conda: "../envs/q2plugs.yaml"
     log: "logs/chimeraF/q2_repseqs_import.log"
     benchmark: "benchmarks/chimeraF/q2_repseqs_import.txt"
     shell:
@@ -194,7 +194,7 @@ rule q2_ftable_import:
     output: 
         biom = temp("table.biom"),
         qza = temp("table.qza")
-    conda: "../envs/q2_plugins.yaml"
+    conda: "../envs/q2plugs.yaml"
     log: "logs/chimeraF/q2_ftable_import.log"
     benchmark: "benchmarks/chimeraF/q2_ftable_import.txt"
     shell:
@@ -216,7 +216,7 @@ rule q2_uchime_denovo:
         nonchimeras = "chimeraF/nonchimeras.qza",
         chimeras = "chimeraF/chimeras.qza",
         stats = "chimeraF/stats.qza",
-    conda: "../envs/q2_plugins.yaml"
+    conda: "../envs/q2plugs.yaml"
     log: "logs/chimeraF/uchime_denovo.log"
     benchmark: "benchmarks/chimeraF/uchime_denovo.txt"
     shell:
@@ -235,7 +235,7 @@ rule q2_filter_features:
         ftable = rules.q2_ftable_import.output.qza,
         nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
     output: temp("chimeraF/table_nonchimeras.qza")
-    conda: "../envs/q2_plugins.yaml"
+    conda: "../envs/q2plugs.yaml"
     log: "logs/chimeraF/filter_features.log"
     benchmark: "benchmarks/chimeraF/filter_features.txt"
     shell:
@@ -252,7 +252,7 @@ rule q2_filter_seqs:
         repseqs = rules.q2_repseqs_import.output,
         nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
     output: temp("chimeraF/rep_seqs_nonchimeras.qza")
-    conda: "../envs/q2_plugins.yaml"
+    conda: "../envs/q2plugs.yaml"
     log: "logs/chimeraF/filter_seqs.log"
     benchmark: "benchmarks/chimeraF/filter_seqs.txt"
     shell:
@@ -271,7 +271,7 @@ rule q2_ftable_export:
         tsv = "chimeraF/table_nonchimeras.tsv"
     params:
         _dir = "chimeraF"
-    conda: "../envs/q2_plugins.yaml"
+    conda: "../envs/q2plugs.yaml"
     log: "logs/chimeraF/ftable_export.log"
     benchmark: "benchmarks/chimeraF/ftable_export.txt"
     shell:
@@ -287,7 +287,7 @@ rule q2_ftable_export:
 rule q2_repseqs_export:
     input: rules.q2_filter_seqs.output
     output: "chimeraF/rep_seqs_nonchimeras.fasta"
-    conda: "../envs/q2_plugins.yaml"
+    conda: "../envs/q2plugs.yaml"
     params:
         _dir = "chimeraF"
     log: "logs/chimeraF/repseqs_export.log"

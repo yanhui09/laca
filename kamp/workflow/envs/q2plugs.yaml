@@ -1,10 +1,12 @@
 name: q2_plugins
 channels:
-  - qiime2
+  - qiime2/label/r2022.2
+  - https://packages.qiime2.org/qiime2/2022.2/passed/core/
   - conda-forge
   - bioconda
   - defaults
 dependencies:
+  - scipy=1.8.1
   - q2-alignment
   - q2-phylogeny
   - q2-vsearch
