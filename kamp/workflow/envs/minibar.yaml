@@ -1,0 +1,5 @@
+name: minibar
+channels:
+  - bioconda
+dependencies:
+  - python-edlib
