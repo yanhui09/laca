@@ -43,63 +43,63 @@ include: "rules/tree.smk"
 
 rule demultiplex:
     input: lambda wc: expand("qc/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: temp(touch(".demultiplex_DONE"))
+    output: touch(".demultiplex_DONE")
 
 rule qc:
     input: lambda wc: get_filt(wc, pool = config["pool"]),
-    output: temp(touch(".qc_DONE"))
+    output: touch(".qc_DONE")
 
 rule kmerBin:
     input: lambda wc: get_kmerBin(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
-    output: temp(touch(".kmerBin_DONE"))
+    output: touch(".kmerBin_DONE")
 
 rule kmerCon:
     input:
         ".kmerBin_DONE",
         "kmerCon.fna"
-    output: temp(touch(".kmerCon_DONE"))
+    output: touch(".kmerCon_DONE")
 
 rule clustCon:
     input:
         ".kmerBin_DONE",
         "clustCon.fna"
-    output: temp(touch(".clustCon_DONE"))
+    output: touch(".clustCon_DONE")
 
 rule isONclustCon:
     input:
         ".kmerBin_DONE",
         "isONclustCon.fna"
-    output: temp(touch(".isONclustCon_DONE"))
+    output: touch(".isONclustCon_DONE")
 
 rule isONcorCon:
     input: 
         ".kmerBin_DONE",
         "isONcorCon.fna"
-    output: temp(touch(".isONcorCon_DONE"))
+    output: touch(".isONcorCon_DONE")
 
 rule umiCon:
     input: 
         "umiCon.fna"
-    output: temp(touch(".umiCon_DONE"))
+    output: touch(".umiCon_DONE")
 
 rule quant:
     input: chimeraF(config["chimeraF"])
-    output: temp(touch(".quant_DONE"))
+    output: touch(".quant_DONE")
 
 rule taxa: 
     input:
         ["taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
         "taxonomy.tsv",
-    output: temp(touch(".taxa_DONE"))
+    output: touch(".taxa_DONE")
 
 rule tree: 
     input:
         ["tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],
         "tree.nwk",
-    output: temp(touch(".tree_DONE"))
+    output: touch(".tree_DONE")
 
 rule requant:
     input:
         "rep_seqs_requant.fasta",
         "count_matrix_requant.tsv",
-    output: temp(touch(".requant_DONE"))
+    output: touch(".requant_DONE")
