@@ -8,6 +8,7 @@ def init_conf(
     dbdir,
     workdir,
     config="config.yaml",
+    demultiplex = "guppy",
     nreads_m = 1000,
     no_pool=False,
     subsample=False,
@@ -26,6 +27,7 @@ def init_conf(
         dbdir (str): path to the taxonomy database
         workdir (str): path to the working directory
         config (str): the config filename
+        demultiplex (str): the demultiplexing method [default: "guppy"]
         nreads_m (int): minimum number of reads for the demultiplexed fastqs
         no_pool (bool): if True, do not pool the reads [default: False]
         subsample (bool): if True, subsample the reads [default: False]
@@ -47,6 +49,7 @@ def init_conf(
         
     conf["basecalled_dir"] = fqdir
     conf["database_dir"] = dbdir
+    conf["demultiplex"] = demultiplex
     conf["nreads_m"] = nreads_m
     conf["pool"] = not no_pool
     conf["subsample"] = subsample

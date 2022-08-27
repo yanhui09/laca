@@ -174,6 +174,13 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     default=".",
 )
 @click.option(
+    "--demult",
+    type=click.Choice(["guppy", "minibar"]),
+    default=["guppy"],
+    show_default=True,
+    help="Use demultiplexer.",
+)
+@click.option(
     "--fqs-min",
     type=int,
     default=1000,
@@ -239,11 +246,11 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     show_default=True,
     help="Number of jobs for threads-dependent tasks.",
 )
-def run_init(fqdir, dbdir, workdir, fqs_min, no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max):
+def run_init(fqdir, dbdir, workdir, demult, fqs_min, no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max):
     """
     Prepare the config file for Kamp.
     """ 
-    init_conf(fqdir, dbdir, workdir, "config.yaml", fqs_min,
+    init_conf(fqdir, dbdir, workdir, "config.yaml", demult, fqs_min,
               no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max)
 
 if __name__ == "__main__":
