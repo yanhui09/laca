@@ -11,9 +11,11 @@ pool: True
 
 ##############################################################
 # Demultiplex
-demultiplex: minibar # guppy | minbar
-barcode_kits: "SQK16S-GXO192"
-minibar_args: "-p 0.75"
+demultiplex: guppy # guppy | minibar
+guppy:
+  barcode_kits: "SQK16S-GXO192"
+minibar:
+  args: "-p 0.75"
 nreads_m: 1000 # rm barcoded samples with shallow sequencing of less than 1000 reads
 ##############################################################
 # Quality control

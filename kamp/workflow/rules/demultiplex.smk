@@ -5,7 +5,7 @@ rule guppy:
     benchmark: "benchmarks/demultiplex_guppy.txt"
     threads: config["threads"]["large"]
     params:
-        barcode_kits=config["barcode_kits"],
+        barcode_kits=config["guppy"]["barcode_kits"],
         dir=os.path.join(os.getcwd(), "demultiplexed_guppy"),
     shell: "{workflow.basedir}/resources/ont-guppy/bin/guppy_barcoder -i {input} -s {params.dir} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}"
 
@@ -24,7 +24,7 @@ rule minibar_batch:
     conda: "../envs/minibar.yaml"
     params: 
         dir = lambda wildcards: os.path.join(os.getcwd(), "demultiplexed_minibar", os.path.splitext(wildcards.basecalled_fq)[0]),
-        args = config["minibar_args"],
+        args = config["minibar"]["args"],
     log: "logs/minibar/{basecalled_fq}.log"
     benchmark: "benchmarks/minibar/{basecalled_fq}.txt"
     shell: 
