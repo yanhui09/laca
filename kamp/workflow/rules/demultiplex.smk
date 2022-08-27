@@ -9,53 +9,6 @@ rule guppy:
         dir=os.path.join(os.getcwd(), "demultiplexed_guppy"),
     shell: "{workflow.basedir}/resources/ont-guppy/bin/guppy_barcoder -i {input} -s {params.dir} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}"
 
-# consider add minibar? https://github.com/calacademy-research/minibar
-# demultiplex? https://github.com/jfjlaros/demultiplex
-#rule minibar:
-#    input: INPUT_DIR
-#    output: temp(touch(".minibar"))
-#    conda: "../envs/minibar.yaml"
-#    log: "logs/demultiplex_minibar.log"
-#    benchmark: "benchmarks/demultiplex_minibar.txt"
-#    threads: config["threads"]["large"]
-#    params:
-#        dir = os.path.join(os.getcwd(), "demultiplexed_minibar"),
-#        args=config["minibar_args"],
-#    shell: 
-#        """
-#        mkdir -p {params.dir}/unclassified {params.dir}/mult
-#        # create barcode list
-#        cut -f1 {workflow.basedir}/resources/data/index.txt| sed 1d > {params.dir}/barcodes.txt 2> {log}
-#        for i in {input}/*; do 
-#            # skip if without .fastq.gz, .fq.gz, .fastq, or .fq
-#            if [[ $i != *.fastq.gz && $i != *.fq.gz && $i != *.fastq && $i != *.fq ]]; then
-#                continue
-#            fi
-#            batch_file=$(basename $i)
-#            batch_id=${{batch_file%.*}}
-#            mkdir {params.dir}/$batch_id
-#            echo $batch_id >> {log}
-#            python {workflow.basedir}/scripts/minibar.py {workflow.basedir}/resources/data/index.txt $i \
-#            -F -T -P {params.dir}/$batch_id/ {params.args} 2>> {log}
-#            # sample in barcode list in a dir with batchid
-#            while read p; do
-#                # if file exists, mkdir and move file
-#                if [ -f {params.dir}/$batch_id/$p.fastq ]; then
-#                    # if dir not exists, mkdir
-#                    if [ ! -d {params.dir}/$p ]; then
-#                        mkdir {params.dir}/$p 
-#                    fi
-#                    mv {params.dir}/$batch_id/$p.fastq {params.dir}/$p/$batch_id.fastq
-#                fi
-#            done < {params.dir}/barcodes.txt
-#            mv {params.dir}/$batch_id/unk.fastq {params.dir}/unclassified/$batch_id.fastq
-#            mkdir {params.dir}/mult/$batch_id
-#            mv {params.dir}/$batch_id/*.fastq {params.dir}/mult/$batch_id
-#            # rm temp dir
-#            rmdir {params.dir}/$batch_id
-#        done
-#        """
-
 # parallel minibar
 def get_basecalled_fqs(fq_dir):
     basecalled_fqs = []
@@ -117,6 +70,7 @@ rule collect_minibar_batch:
             rm {input} -f
         done
         """
+# demultiplex? https://github.com/jfjlaros/demultiplex
 
 # choose demultiplexer
 def get_demult(demult="guppy", dir=False):
