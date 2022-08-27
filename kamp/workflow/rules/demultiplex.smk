@@ -86,7 +86,6 @@ def get_demult(demult="guppy", dir=False):
 
 checkpoint demultiplex_check:
     input: ancient(get_demult(demult=config["demultiplex"], dir=False))
-    #input: ancient(".minibar")
     output: directory("demultiplexed")
     log: "logs/demultiplex_check.log"
     benchmark: "benchmarks/demultiplex_check.txt"

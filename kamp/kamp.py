@@ -138,9 +138,12 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
         sf = "workflow/Snakefile" 
     snakefile = get_snakefile(sf)
     configfile = os.path.join(workdir, "config.yaml")
-    run_smk(
-        workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile
-    )
+    run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile)
+    # a compromise for https://github.com/snakemake/snakemake/issues/823
+    # if not dry run repeat run for snakemake early exit
+    # kmerBin, kmerCon, clustCon, isONclustCon, isONcorCon, umiCon, all
+    if not dryrun and workflow in ["kmerBin", "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon", "all"]:
+        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile)        
 
 # kamp init
 # initialize config file
