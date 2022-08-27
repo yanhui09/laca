@@ -16,9 +16,7 @@ def get_snakefile(file="workflow/Snakefile"):
         sys.exit("Unable to locate the Snakemake workflow file; tried %s" % sf)
     return sf
 
-def run_smk(
-    workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile,
-):
+def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error):
     """
     Run Kamp workflow to proceess long read amplicons.
     Most snakemake arguments can be appended, for more info see 'snakemake --help'
@@ -64,7 +62,8 @@ def run_smk(
         subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as e:
         logger.critical(e)
-        exit(1)
+        if exit_on_error is True:
+            exit(1)
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(
@@ -138,12 +137,12 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
         sf = "workflow/Snakefile" 
     snakefile = get_snakefile(sf)
     configfile = os.path.join(workdir, "config.yaml")
-    run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile)
     # a compromise for https://github.com/snakemake/snakemake/issues/823
     # if not dry run repeat run for snakemake early exit
     # kmerBin, kmerCon, clustCon, isONclustCon, isONcorCon, umiCon, all
     if not dryrun and workflow in ["kmerBin", "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon", "all"]:
-        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile)        
+        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=False)        
+    run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True)
 
 # kamp init
 # initialize config file
