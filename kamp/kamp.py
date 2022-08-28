@@ -6,7 +6,6 @@ from .log import logger
 from .config import init_conf
 
 from snakemake import load_configfile
-#from snakemake.utils import validate
 from .__init__ import __version__
 
 
@@ -16,24 +15,19 @@ def get_snakefile(file="workflow/Snakefile"):
         sys.exit("Unable to locate the Snakemake workflow file; tried %s" % sf)
     return sf
 
-def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error):
+def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error, suppress):
     """
     Run Kamp workflow to proceess long read amplicons.
     Most snakemake arguments can be appended, for more info see 'snakemake --help'
     """
-    
-    logger.info(f"Kamp version: {__version__}")
-    
+    if not suppress:
+        logger.info(f"Kamp version: {__version__}")
     if not os.path.exists(configfile):
-        logger.critical(
-            f"Config file not found: {configfile}\nGenerate a config file using 'kamp init'"
-        )
+        logger.critical(f"Config file not found: {configfile}\nGenerate a config file using 'kamp init'")
         exit(1)
     
     conf = load_configfile(configfile)
-
     db_dir = conf["database_dir"]
-
     cmd = (
         "snakemake "
         "{wf} "
@@ -57,9 +51,14 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
         args=" ".join(snake_args),
     )
-    logger.debug("Executing: %s" % cmd)
+    if not suppress:
+        logger.debug("Executing: %s" % cmd)
+    
     try:
-        subprocess.check_call(cmd, shell=True)
+        if suppress:
+            subprocess.check_call(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.check_call(cmd, shell=True)
     except subprocess.CalledProcessError as e:
         logger.critical(e)
         if exit_on_error is True:
@@ -141,8 +140,8 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     # if not dry run repeat run for snakemake early exit
     # kmerBin, kmerCon, clustCon, isONclustCon, isONcorCon, umiCon, all
     if not dryrun and workflow in ["kmerBin", "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon", "all"]:
-        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=False)        
-    run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True)
+        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=False, suppress=True)        
+    run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)
 
 # kamp init
 # initialize config file
