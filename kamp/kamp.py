@@ -245,12 +245,31 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     show_default=True,
     help="Number of jobs for threads-dependent tasks.",
 )
-def run_init(fqdir, dbdir, workdir, demult, fqs_min, no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max):
+@click.option(
+    "--clean-flags",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Clean flag files by Kamp.",
+)
+def run_init(fqdir, dbdir, workdir, demult, fqs_min, no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, clean_flags):
     """
     Prepare the config file for Kamp.
     """ 
+    logger.info(f"Kamp version: {__version__}")
     init_conf(fqdir, dbdir, workdir, "config.yaml", demult, fqs_min,
               no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max)
-
+    # clean flags if requested
+    if clean_flags:
+        # rm .*_DONE in workdir
+        flags = [".guppy_DONE", ".minibar_DONE", ".demultiplex_DONE", ".qc_DONE", ".kmerBin_DONE", 
+                 ".kmerCon_DONE", ".clustCon_DONE", ".isONclustCon_DONE", ".isONcorCon_DONE", ".umiCon_DONE", 
+                 ".quant_DONE", ".taxa_DONE", ".tree_DONE", ".requant_DONE", ".all_DONE", ".nanosim_DONE"]
+        for flag in flags:
+            file = os.path.join(workdir, flag)
+            if os.path.exists(file):
+                os.remove(file)
+        logger.warning(f"All flags files (.*_DONE) in {workdir} are removed.")
+    
 if __name__ == "__main__":
     cli()

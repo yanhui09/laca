@@ -104,13 +104,13 @@ def sim_demult_flag(demult="guppy"):
     # if demult != "guppy" | "minibar" | "nanosim", raise value error
     if demult != "guppy" and demult != "minibar":
         raise ValueError("Demultiplexer not recognized. Choose guppy or minibar in config.")
-    return "." + demult
+    return "." + demult + "_DONE"
 
 # pseudo demultiplex
 rule nanosim:
     input: expand("nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
     output: 
-        temp(touch(".simulated_DONE")),
+        touch(".simulated_DONE"),
         directory("demultiplexed"),
         touch(sim_demult_flag(config["demultiplex"])),
     run:

@@ -1,6 +1,6 @@
 rule guppy:
     input: INPUT_DIR
-    output: temp(touch(".guppy"))
+    output: touch(".guppy_DONE")
     log: "logs/demultiplex_guppy.log"
     benchmark: "benchmarks/demultiplex_guppy.txt"
     threads: config["threads"]["large"]
@@ -36,7 +36,7 @@ rule minibar_batch:
 
 rule collect_minibar_batch:
     input: expand("demultiplexed_minibar/.demult_{basecalled_fq}", basecalled_fq=get_basecalled_fqs(INPUT_DIR)) 
-    output: temp(touch(".minibar"))
+    output: touch(".minibar_DONE")
     params:
         dir = os.path.join(os.getcwd(), "demultiplexed_minibar"),
     log: "logs/collect_minibar_batch.log"
@@ -78,7 +78,7 @@ def get_demult(demult="guppy", dir=False):
     if demult != "guppy" and demult != "minibar":
         raise ValueError("Demultiplexer not recognized. Choose guppy or minibar in config.")
     demult_dir = os.path.join(os.getcwd(), "demultiplexed_" + demult)
-    demult_flag = "." + demult
+    demult_flag = "." + demult + "_DONE"
     if dir:
         return demult_dir
     else:
