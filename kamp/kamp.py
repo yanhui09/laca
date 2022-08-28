@@ -175,7 +175,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
 @click.option(
     "--demult",
     type=click.Choice(["guppy", "minibar"]),
-    default=["guppy"],
+    default="guppy",
     show_default=True,
     help="Use demultiplexer.",
 )
