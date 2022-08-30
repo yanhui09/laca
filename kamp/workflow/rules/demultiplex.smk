@@ -62,9 +62,15 @@ rule collect_minibar_batch:
                     mv {params.dir}/$batch_id/$p.fastq {params.dir}/$p/$batch_id.fastq
                 fi
             done < {params.dir}/barcodes.txt
-            mv {params.dir}/$batch_id/unk.fastq {params.dir}/unclassified/$batch_id.fastq
+            # if file exists, mv to unclassified
+            if [ -f {params.dir}/$batch_id/unk.fastq ]; then
+               mv {params.dir}/$batch_id/unk.fastq {params.dir}/unclassified/$batch_id.fastq
+            fi
             mkdir {params.dir}/mult/$batch_id
-            mv {params.dir}/$batch_id/*.fastq {params.dir}/mult/$batch_id
+            # if .fastq file exists, mv to mult
+            if [ -n "$(ls -A {params.dir}/$batch_id/*.fastq 2>/dev/null)" ]; then
+               mv {params.dir}/$batch_id/*.fastq {params.dir}/mult/$batch_id
+            fi
             # rm temp dir
             rmdir {params.dir}/$batch_id
             rm {input} -f
