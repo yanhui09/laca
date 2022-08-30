@@ -4,8 +4,9 @@
 # expand list from comma separated string
 def exp_list(x):
     return [y.strip() for y in x.split(",")]
-IDS = exp_list(config["nanosim"]["id"])
-NS = exp_list(config["nanosim"]["simulator"]["n"])
+minids = exp_list(config["nanosim"]["min_seq_id"])
+maxids = exp_list(config["nanosim"]["max_seq_id"])
+ns = exp_list(config["nanosim"]["simulator"]["n"])
 
 rule read_analysis:
     output: "nanosim/model/training_model_profile"
@@ -21,6 +22,45 @@ rule read_analysis:
         "-o {params.prefix} -a minimap2 -t {threads} "
         "> {log} 2>&1 "
 
+# link to download database
+dict_db = {
+    #"greengene": "https://gg-sg-web.s3-us-west-2.amazonaws.com/downloads/greengenes_database/gg_13_5/gg_13_5_tax_with_hOTUs_99_reps.fasta",
+    "silva": "https://www.arb-silva.de/fileadmin/silva_databases/release_138_1/Exports/SILVA_138.1_SSURef_NR99_tax_silva_trunc.fasta.gz"
+}
+
+def get_val(key, dict_i):
+    return dict_i[key]
+
+rule download_markerDB:
+    output: temp("nanosim/{db}/rep.fna")
+    params:
+        _dir = lambda wc: os.path.join(os.getcwd() + "nanosim", wc.db),
+        db_links = lambda wc: get_val(wc.db, dict_db),
+    log: "logs/nanosim/{db}/download_markerDB.log"
+    benchmark: "benchmarks/nanosim/{db}/download_markerDB.txt"
+    shell:
+        """
+        mkdir -p {params._dir}
+        wget -P {params._dir} {params.db_links} > {log} 2>&1
+        
+        file=$(ls {params._dir})
+        if [[ $file == *.gz ]]
+        then
+            gunzip {params._dir}/$file
+            file=$(ls {params._dir})
+        fi
+        mv {params._dir}/$file {output}
+        """
+
+rule rna2dna:
+    input: rules.download_markerDB.output
+    output: "nanosim/{db}/repDNA.fna"
+    conda: "../envs/seqkit.yaml"
+    log: "logs/nanosim/{db}/rna2dna.log"
+    benchmark: OUTPUT_DIR + "benchmarks/nanosim/{db}/rna2dna.txt"
+    shell: "seqkit seq -w 0 --rna2dna {input} > {output} 2> {log}"
+
+# two round clustering to select refs; today I stop here.
 # cluster ref by identity
 rule cls_ref:
     output: 
@@ -108,7 +148,7 @@ def sim_demult_flag(demult="guppy"):
 
 # pseudo demultiplex
 rule nanosim:
-    input: expand("nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=IDS, n=NS)
+    input: expand("nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=minids, n=ns)
     output: 
         touch(".simulated_DONE"),
         directory("demultiplexed"),
