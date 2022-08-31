@@ -1,3 +1,4 @@
+# use tensoflow-gpu conda environment for missing libcuda.so.1
 rule guppy:
     input: INPUT_DIR
     output: touch(".guppy_DONE")
