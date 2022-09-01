@@ -34,7 +34,7 @@ pip install --editable .
 ```
 
 At this moment, `Kamp` uses a compiled but tailored `guppy` for barcode demultiplexing (in our lab).<br>
-**Remember to revise the config file in `guppy` if new barcodes are introduced.**
+**Remember to prepare the barcoding files in `guppy` if new barcodes are introduced.** [Click me](kamp/workflow/resources/README.md)
 
 # Example
 ```
