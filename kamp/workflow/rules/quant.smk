@@ -76,7 +76,7 @@ rule dict:
 
 rule minimap_rep_seqs:
     input:
-        fq = rules.q_filter.output,
+        fq = get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"]),
         mmi = rules.index.output,
         dict = rules.dict.output,
     output: temp("quant/mapped/{barcode}.bam")

@@ -15,7 +15,7 @@ demultiplex: guppy # guppy | minibar
 guppy:
   barcode_kits: "SQK16S-GXO192"
 minibar:
-  args: "-p 0.75"
+  args: "-p 0.75 -l 160"
 nreads_m: 1000 # rm barcoded samples in shallow sequencing
 ##############################################################
 # Quality control
