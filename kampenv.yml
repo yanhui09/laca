@@ -5,9 +5,10 @@ channels:
 dependencies:
   - python
   - mamba
-  - snakemake-minimal=7.12.1
+  - snakemake-minimal=7.14.0
   - pip
   - click
   - versioneer
   - pandas
   - ruamel.yaml
+  - singularity
