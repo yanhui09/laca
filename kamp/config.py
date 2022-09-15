@@ -56,7 +56,7 @@ def init_conf(
     conf["trim"] = not no_trim
     conf["kmerbin"] = kmerbin
     conf["cluster"] = list(cluster)
-    conf["chimerF"] = chimer_filter
+    conf["chimeraF"] = chimer_filter
     conf["threads"]["normal"] = jobs_m
     conf["threads"]["large"] = jobs_M
     
