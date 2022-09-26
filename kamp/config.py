@@ -56,9 +56,9 @@ def init_conf(
     conf["trim"] = not no_trim
     conf["kmerbin"] = kmerbin
     conf["cluster"] = list(cluster)
-    conf["chimer_filter"] = chimer_filter
-    conf["jobs_m"] = jobs_m
-    conf["jobs_M"] = jobs_M
+    conf["chimeraF"] = chimer_filter
+    conf["threads"]["normal"] = jobs_m
+    conf["threads"]["large"] = jobs_M
     
     if os.path.exists(os.path.join(workdir, config)):
         logger.warning(f"Config file [{config}] already exists in {workdir}.")

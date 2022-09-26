@@ -37,8 +37,6 @@ rule subsample:
     benchmark: "benchmarks/subsample/{barcode}.txt"
     threads: 1
     shell:
-        # I don't know why pipe fails, 
-        # portion subsampling (required by seqkit sample by number) as temp file instead.
         """
         seqkit sample -p {params.p} -j {threads} {input} -o {output.p} 2> {log}
         seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} 2>> {log}
@@ -119,7 +117,7 @@ def trim_check(trim, subsample, p, n):
 rule q_filter:
     input:
         trim_check(config["trim"], config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
-    output: "qc/qfilt/{barcode}.fastq"
+    output: temp("qc/qfilt/{barcode}.fastq")
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min-qual"],

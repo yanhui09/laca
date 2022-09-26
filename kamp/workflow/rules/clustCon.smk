@@ -24,7 +24,7 @@ rule spoa:
         g = config["spoa"]["g"],
     log: "logs/isONclustCon/{barcode}/{c}/0/spoa_consensus.log"
     benchmark: "benchmarks/isONclustCon/{barcode}/{c}/0/spoa_consensus.txt"
-    shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} > {output} 2> {log}"
+    shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}"
 
 # split kmerbins
 # clustCon

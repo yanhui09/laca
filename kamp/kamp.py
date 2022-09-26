@@ -35,6 +35,8 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         "--snakefile {snakefile} "
         "--configfile '{configfile}' "
         "--use-conda {conda_prefix} "
+        "--use-singularity {singularity_prefix} "
+        "--singularity-args '{singularity_args}' "
         "{dryrun} "
         "--rerun-triggers mtime --rerun-incomplete "
         "--jobs {jobs} --nolock "
@@ -46,6 +48,8 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         snakefile=snakefile,
         configfile=configfile,
         conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
+        singularity_prefix="--singularity-prefix " + os.path.join(db_dir, "singularity_envs"),
+        singularity_args='--bind ' + os.path.dirname(snakefile) + '/resources/guppy_barcoding/:/opt/ont/guppy/data/barcoding/',
         dryrun="--dryrun" if dryrun else "",
         jobs=int(jobs) if jobs is not None else 1,
         max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
@@ -140,7 +144,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     # if not dry run repeat run for snakemake early exit
     # kmerBin, kmerCon, clustCon, isONclustCon, isONcorCon, umiCon, all
     if not dryrun and workflow in ["kmerBin", "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon", "all"]:
-        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=False, suppress=True)        
+        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)        
     run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)
 
 # kamp init

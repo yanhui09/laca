@@ -15,8 +15,8 @@ demultiplex: guppy # guppy | minibar
 guppy:
   barcode_kits: "SQK16S-GXO192"
 minibar:
-  args: "-p 0.75"
-nreads_m: 1000 # rm barcoded samples with shallow sequencing of less than 1000 reads
+  args: "-p 0.75 -l 160"
+nreads_m: 1000 # rm barcoded samples in shallow sequencing
 ##############################################################
 # Quality control
 # Subsample raw reads if with inadequate memory
@@ -29,7 +29,7 @@ seqkit:
   max-len: 1500
   # subsampling params
   p: 0.9 # subsampling portion, upper it if with uneven library [float]
-  n: 50 # subsampling number [int]
+  n: 5000 # subsampling number [int]
 
 # trim primers
 trim: True
@@ -72,9 +72,9 @@ umap:
   metric: cosine
   n_components: 2 # n reduced dimensions passed to hdbscan clustering
 hdbscan:
-  min_bin_size: 10 # Define the smallest size to bin
-  min_samples: 10 # Increase this for more conservative clustering - more points as noise
-  epsilon: 0 # Lower this for more micro-clusters
+  min_bin_size: 100 # Define the smallest size to bin
+  min_samples: 100 # Increase this for more conservative clustering - more points as noise
+  epsilon: 0.5 # Lower this for more micro-clusters
 
 ##############################################################
 # cluster within kmer bins
@@ -88,7 +88,7 @@ cluster:
   #- isONcorCon
   #- umiCon
   - isONclustCon
-min_cluster_size: 8
+min_cluster_size: 20
 
 clustCon:
   min_score_frac: 0.8
@@ -105,7 +105,7 @@ medaka:
   m: r941_min_hac_g507
 
 spoa:
-  l: 0
+  l: 1 # global alignment (1) for multi-primer amplicons; local alignment (0) for common amplicons
   r: 0
   g: -2
 
@@ -137,7 +137,7 @@ mmseqs:
 kraken2:
   # Find prebuilt database: https://benlangmead.github.io/aws-indexes/k2
   prebuilt: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz"
-  classify_cmd: "--confidence 0.01" # use --confidence 0.01 for standard database 
+  classify_cmd: "--confidence 0.05" # use --confidence 0.05 for standard database 
 
 ##############################################################
 # Build a de novo phylogenetic tree
