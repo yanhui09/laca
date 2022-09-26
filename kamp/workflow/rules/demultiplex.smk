@@ -1,5 +1,6 @@
 rule guppy:
-    input: INPUT_DIR
+    # need to bind INPUT_DIR if not in workdir
+    input: INPUT_DIR 
     output: touch(".guppy_DONE")
     singularity: "docker://genomicpariscentre/guppy:3.3.3"
     log: "logs/demultiplex_guppy.log"

@@ -137,7 +137,7 @@ mmseqs:
 kraken2:
   # Find prebuilt database: https://benlangmead.github.io/aws-indexes/k2
   prebuilt: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz"
-  classify_cmd: "--confidence 0.01" # use --confidence 0.01 for standard database 
+  classify_cmd: "--confidence 0.05" # use --confidence 0.05 for standard database 
 
 ##############################################################
 # Build a de novo phylogenetic tree
