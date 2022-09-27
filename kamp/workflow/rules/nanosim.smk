@@ -73,15 +73,15 @@ rule cls_ref1:
     conda: "../envs/mmseqs2.yaml"
     params:
         minid = lambda wc: int(wc.minid) * 0.01,
-        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}/mmseqs".format(minid=wc.minid, db=wc.db),
+        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}/mmseqs".format(db=wc.db, minid=wc.minid),
         c = 1,
     log: "logs/nanosim/{db}_cls_ref/id_{minid}.log"
     benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}.txt"
     threads: config["threads"]["large"]
     shell:
         "mmseqs easy-cluster {input} "
-        "{params.prefix} {output.tmp} --cluster-reassign"
-        "--threads {threads} --min-seq-id {params.minid} -c {params.c} > {log} 2>&1"
+        "{params.prefix} {output.tmp} "
+        "--threads {threads} --min-seq-id {params.minid} -c {params.c} --cluster-reassign > {log} 2>&1"
 
 # take the largest cluster for seconda clustering (min id)
 rule cls_pick:
@@ -120,7 +120,7 @@ use rule cls_ref1 as cls_ref2 with:
         tsv = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_cluster.tsv"),
         tmp = temp(directory("nanosim/tmp/{db}_cls_ref/id_{minid}_{maxid}")),
     params:
-        minid = lambda wc: int(wc.minid) * 0.01,
+        minid = lambda wc: int(wc.maxid) * 0.01,
         prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs".format(db = wc.db, minid=wc.minid, maxid=wc.maxid),
         c = 1,
     log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}.log"
