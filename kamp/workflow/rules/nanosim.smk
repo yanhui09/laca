@@ -57,42 +57,100 @@ rule rna2dna:
     output: "nanosim/{db}/repDNA.fna"
     conda: "../envs/seqkit.yaml"
     log: "logs/nanosim/{db}/rna2dna.log"
-    benchmark: OUTPUT_DIR + "benchmarks/nanosim/{db}/rna2dna.txt"
+    benchmark: "benchmarks/nanosim/{db}/rna2dna.txt"
     shell: "seqkit seq -w 0 --rna2dna {input} > {output} 2> {log}"
 
-# two round clustering to select refs; today I stop here.
-# cluster ref by identity
-rule cls_ref:
-    output: 
-        rep = temp("nanosim/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
-        all_by_cluster = temp("nanosim/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
-        tsv = temp("nanosim/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
-        tmp = temp(directory("nanosim/tmp/cls_ref/id_{minid}")),
+# two round clustering to select refs
+# first round: pick seqs in the same cluster, with min identity
+# second round: pick representatives of each clusters, with max identity
+rule cls_ref1:
+    input: rules.rna2dna.output
+    output:
+        rep = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
+        all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
+        tsv = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
+        tmp = temp(directory("nanosim/tmp/{db}_cls_ref/id_{minid}")),
     conda: "../envs/mmseqs2.yaml"
     params:
         minid = lambda wc: int(wc.minid) * 0.01,
-        prefix = lambda wc: "nanosim/cls_ref/id_{minid}/mmseqs".format(minid=wc.minid),
+        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}/mmseqs".format(minid=wc.minid, db=wc.db),
         c = 1,
-    log: "logs/nanosim/id_{minid}/cls_ref.log"
-    benchmark: "benchmarks/nanosim/id_{minid}/cls_ref.txt"
+    log: "logs/nanosim/{db}_cls_ref/id_{minid}.log"
+    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}.txt"
     threads: config["threads"]["large"]
     shell:
-        "mmseqs easy-cluster {workflow.basedir}/../resources/data/silva_id100subs1000.fna "
-        "{params.prefix} {output.tmp} "
+        "mmseqs easy-cluster {input} "
+        "{params.prefix} {output.tmp} --cluster-reassign"
         "--threads {threads} --min-seq-id {params.minid} -c {params.c} > {log} 2>&1"
 
-# subsample clustered ref
+# take the largest cluster for seconda clustering (min id)
+rule cls_pick:
+    input: rules.cls_ref1.output.all_by_cluster
+    output: temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_cluster_top.fasta")
+    run:
+       # fasta: two lines per sequence: header with ">" and sequence;
+       # only one line header suggests a new cluster append to dictory
+       with open(input[0], "r") as f:
+            d = {}
+            header = []
+            for line in f:
+                if line.startswith(">"):
+                    line1 = line
+                    line2 = next(f)
+                    if line2.startswith(">"):
+                        header.append(line1)
+                        d[header[-1]] = line2 + next(f)
+                    else:
+                        d[header[-1]] += line1 + line2
+                 
+            # get the largest cluster， "/n" in the values and return the key
+            max_cluster = max(d.values(), key=lambda x: x.count("\n"))           
+            # get the header of the largest cluster
+            max_cluster_header = [k for k, v in d.items() if v == max_cluster]
+            # write to output
+            with open(output[0], "w") as f2:
+                f2.write(d[max_cluster_header[0]])
+                
+# take representatives from 2nd clustering, (max id)
+use rule cls_ref1 as cls_ref2 with:
+    input: rules.cls_pick.output
+    output: 
+        rep = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_rep_seq.fasta"),
+        all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_all_seqs.fasta"),
+        tsv = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_cluster.tsv"),
+        tmp = temp(directory("nanosim/tmp/{db}_cls_ref/id_{minid}_{maxid}")),
+    params:
+        minid = lambda wc: int(wc.minid) * 0.01,
+        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs".format(db = wc.db, minid=wc.minid, maxid=wc.maxid),
+        c = 1,
+    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}.log"
+    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}.txt"
+
+# set a length range
+rule filter_ref_len:
+    input: rules.cls_ref2.output.rep    
+    output: temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_rep_seq_f.fasta")
+    conda: "../envs/seqkit.yaml"
+    params:
+        m = config["nanosim"]["min_len"],
+        M = config["nanosim"]["max_len"],
+    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}_filter_len.log"  
+    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}_filter_len.txt"
+    threads: config["threads"]["normal"]
+    shell: "cat {input} | seqkit seq -j {threads} -m {params.m} -M {params.M} -i > {output} 2> {log}"
+
+# subsample ref
 rule subsample_cls_ref:
-    input: rules.cls_ref.output.rep
+    input: rules.filter_ref_len.output
     output:
-        p = temp("nanosim/cls_ref/id_{minid}/subsampled_p.fasta"),
-        n = temp("nanosim/cls_ref/id_{minid}/subsampled.fasta"),
+        p = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/subsampled_p.fasta"),
+        n = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/subsampled.fasta"),
     conda: "../envs/seqkit.yaml"
     params:
         p = 1,
         n = config["nanosim"]["subsample_n"],
-    log: "logs/nanosim/id_{minid}/subsample_cls_ref.log"
-    benchmark: "benchmarks/nanosim/id_{minid}/subsample_cls_ref.txt"
+    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}/subsample_cls_ref.log"
+    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}/subsample_cls_ref.txt"
     threads: 1
     shell:
         """
@@ -103,9 +161,9 @@ rule subsample_cls_ref:
 # keep fasta header unique
 rule reheader:
     input: rules.subsample_cls_ref.output.n
-    output: "nanosim/cls_ref/id_{minid}/ref.fasta"
-    log: "logs/nanosim/cls_ref/id_{minid}/reheader.log"
-    benchmark: "benchmarks/nanosim/cls_ref/id_{minid}/reheader.txt"
+    output: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/ref.fasta"
+    log: "logs/nanosim/{db}/cls_ref/id_{minid}_{maxid}/reheader.log"
+    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}/reheader.txt"
     run:
         with open(output[0], "w") as out:
             with open (input[0], "r") as inp:
@@ -123,15 +181,15 @@ rule read_simulate:
         ref = rules.reheader.output,
     output: 
         expand(
-            "nanosim/simulate/{{minid}}_{{n}}/simulated{suffix}",
+            "nanosim/{{db}}/simulate/{{minid}}_{{maxid}}_{{n}}/simulated{suffix}",
             suffix=["_aligned_error_profile", "_aligned_reads.fastq", "_unaligned_reads.fastq"]
         )
     conda: "../envs/nanosim.yaml"
     params:
-        o = lambda wc: "nanosim/simulate/{minid}_{n}/simulated".format(minid=wc.minid, n=wc.n),
+        o = lambda wc: "nanosim/{db}/simulate/{minid}_{maxid}_{n}/simulated".format(db=wc.db, minid=wc.minid, maxid=wc.maxid, n=wc.n),
         n = lambda wc: int(wc.n),
-    log: "logs/nanosim/read_simulate/{minid}_{n}.log"
-    benchmark: "benchmarks/nanosim/read_simulate/{minid}_{n}.txt"
+    log: "logs/nanosim/{db}_read_simulate/{minid}_{maxid}_{n}.log"
+    benchmark: "benchmarks/nanosim/{db}_read_simulate/{minid}_{maxid}_{n}.txt"
     threads: config["threads"]["large"]
     shell:
         """
@@ -148,7 +206,7 @@ def sim_demult_flag(demult="guppy"):
 
 # pseudo demultiplex
 rule nanosim:
-    input: expand("nanosim/simulate/{minid}_{n}/simulated_aligned_reads.fastq", minid=minids, n=ns)
+    input: expand("nanosim/{db}/simulate/{mixid}_{n}/simulated_aligned_reads.fastq", db = [k for k in dict_db.keys()], mixid = [f"{minid}_{maxid}" for (minid, maxid) in zip(minids, maxids)], n=ns)
     output: 
         touch(".simulated_DONE"),
         directory("demultiplexed"),
