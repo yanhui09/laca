@@ -35,7 +35,7 @@ r_pattern = r_pattern1 + ' ' + r_pattern2
 # Retain primer and linker for following umi finding steps
 use rule q_filter as qfilter_umi with:
     input:
-        get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
+        get_raw(config["subsample"], config["seqkit"]["n"])
     output:
         "umi/{barcode}/qfilt.fastq"
     params:

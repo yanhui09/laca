@@ -31,7 +31,7 @@ rule subsample:
         n = temp("qc/subsampled/{barcode}.fastq"),
     conda: "../envs/seqkit.yaml"
     params:
-        p = config["seqkit"]["p"],
+        p = 1,
         n = config["seqkit"]["n"],
     log: "logs/subsample/{barcode}.log"
     benchmark: "benchmarks/subsample/{barcode}.txt"
@@ -42,9 +42,8 @@ rule subsample:
         seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} 2>> {log}
         """
 
-def get_raw(subsample, p, n):
+def get_raw(subsample, n):
     check_val("subsample", subsample, bool)
-    check_val("p[seqkit]", p, float)
     check_val("n[seqkit]", n, int)
     if subsample is True:
         return rules.subsample.output.n
@@ -54,7 +53,7 @@ def get_raw(subsample, p, n):
 # trim primers 
 # process two strands differently
 rule trim_primers:
-    input: get_raw(config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
+    input: get_raw(config["subsample"], config["seqkit"]["n"])
     output: 
         trimmed = temp("qc/primers_trimmed/{barcode}F.fastq"),
         untrimmed = temp("qc/primers_untrimmed/{barcode}F.fastq"),
@@ -84,7 +83,7 @@ use rule trim_primers as trim_primersR with:
         rules.trim_primers.output.untrimmed
     output:
         trimmed = temp("qc/primers_trimmed/{barcode}R.fastq"),
-        untrimmed = "qc/primers_untrimmed/{barcode}.fastq",
+        untrimmed = temp("qc/primers_untrimmed/{barcode}.fastq"),
     params:
         f = f5_pattern2,
         e = config["cutadapt"]["max_errors"],
@@ -106,17 +105,17 @@ rule revcomp_fq:
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
 # trim primers or not
-def trim_check(trim, subsample, p, n):
+def trim_check(trim, subsample, n):
     check_val("trim", trim, bool)
     out = [rules.trim_primers.output.trimmed, rules.revcomp_fq.output]
     if trim is False:
-        out = get_raw(subsample, p, n)
+        out = get_raw(subsample, n)
     return out
 
 # quality filter
 rule q_filter:
     input:
-        trim_check(config["trim"], config["subsample"], config["seqkit"]["p"], config["seqkit"]["n"])
+        trim_check(config["trim"], config["subsample"], config["seqkit"]["n"])
     output: temp("qc/qfilt/{barcode}.fastq")
     conda: "../envs/seqkit.yaml"
     params:

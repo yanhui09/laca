@@ -28,7 +28,6 @@ seqkit:
   min-len: 800
   max-len: 1500
   # subsampling params
-  p: 0.9 # subsampling portion, upper it if with uneven library [float]
   n: 5000 # subsampling number [int]
 
 # trim primers
