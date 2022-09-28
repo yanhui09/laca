@@ -34,7 +34,7 @@ def get_val(key, dict_i):
 rule download_markerDB:
     output: temp("nanosim/{db}/rep.fna")
     params:
-        _dir = lambda wc: os.path.join(os.getcwd() + "nanosim", wc.db),
+        _dir = lambda wc: os.path.join(os.getcwd() + "/nanosim", wc.db),
         db_links = lambda wc: get_val(wc.db, dict_db),
     log: "logs/nanosim/{db}/download_markerDB.log"
     benchmark: "benchmarks/nanosim/{db}/download_markerDB.txt"
