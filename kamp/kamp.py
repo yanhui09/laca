@@ -28,6 +28,7 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
     
     conf = load_configfile(configfile)
     db_dir = conf["database_dir"]
+    basecalled_dir = conf["basecalled_dir"]
     cmd = (
         "snakemake "
         "{wf} "
@@ -49,7 +50,7 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         configfile=configfile,
         conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
         singularity_prefix="--singularity-prefix " + os.path.join(db_dir, "singularity_envs"),
-        singularity_args='--bind ' + os.path.dirname(snakefile) + '/resources/guppy_barcoding/:/opt/ont/guppy/data/barcoding/',
+        singularity_args='--bind ' + os.path.dirname(snakefile) + '/resources/guppy_barcoding/:/opt/ont/guppy/data/barcoding/,' + basecalled_dir,
         dryrun="--dryrun" if dryrun else "",
         jobs=int(jobs) if jobs is not None else 1,
         max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
