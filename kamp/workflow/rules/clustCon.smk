@@ -26,7 +26,6 @@ rule spoa:
     benchmark: "benchmarks/isONclustCon/{barcode}/{c}/0/spoa_consensus.txt"
     shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}"
 
-# split kmerbins
 # clustCon
 # draw draft with max average score from pairwise alignments
 rule minimap2clust:

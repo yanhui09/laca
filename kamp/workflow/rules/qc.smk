@@ -1,14 +1,9 @@
-# linker and primer info
+# primer info
 fprimers = config["fprimer"]
 rprimers = config["rprimer"]
 
-# reverse complementation
 def revcomp(seq):
     return seq.translate(str.maketrans('ACGTacgtRYMKrymkVBHDvbhd', 'TGCAtgcaYRKMyrkmBVDHbvdh'))[::-1]
-fprimersR = {k: revcomp(v) for k, v in fprimers.items()}
-rprimersR = {k: revcomp(v) for k, v in rprimers.items()}
-
-# pattern search for umi using cutadapt
 # nanopore possibly sequences either strand
 def seqs_join(primer1, primer2):
     joined = '-g ' + primer1 + '...' + revcomp(primer2)
@@ -18,11 +13,9 @@ def linked_pattern(primers1, primers2):
     primers2_values = list(primers2.values())
     linked = [seqs_join(primer1, primer2) for primer1 in primers1_values for primer2 in primers2_values]
     return ' '.join(linked)
-
 # pattern
 f5_pattern1 = linked_pattern(fprimers, rprimers)
 f5_pattern2 = linked_pattern(rprimers, fprimers)
-#---------
 
 rule subsample:
     input: rules.collect_fastq.output
@@ -50,8 +43,7 @@ def get_raw(subsample, n):
     else:
         return rules.collect_fastq.output
 
-# trim primers 
-# process two strands differently
+# trim primers, process two strands differently
 rule trim_primers:
     input: get_raw(config["subsample"], config["seqkit"]["n"])
     output: 
@@ -104,7 +96,7 @@ rule revcomp_fq:
     threads: config["threads"]["normal"]
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
-# trim primers or not
+# option to trim or not
 def trim_check(trim, subsample, n):
     check_val("trim", trim, bool)
     out = [rules.trim_primers.output.trimmed, rules.revcomp_fq.output]
@@ -112,7 +104,6 @@ def trim_check(trim, subsample, n):
         out = get_raw(subsample, n)
     return out
 
-# quality filter
 rule q_filter:
     input:
         trim_check(config["trim"], config["subsample"], config["seqkit"]["n"])

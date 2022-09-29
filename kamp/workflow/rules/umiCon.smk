@@ -74,7 +74,6 @@ def get_filt_umi(wildcards):
     barcodes = [b for b in barcodes if b not in barcodes_shallow]
     return barcodes
 
-# kmer calculation
 use rule kmer_freqs as kmer_freqs_umi with:
     input: 
         "umi/{barcode}/qfilt.fastq"

@@ -1,4 +1,3 @@
-# kmer calculation
 rule kmer_freqs:
     input: "qc/qfilt/{barcode}.fastq"
     output: "kmerBin/{barcode}/kmer_freqs.txt"
@@ -15,9 +14,8 @@ rule kmer_freqs:
         " 2> {log} > {output}"
 
 def get_batch_size(batch_size, ram, kmer_file):
-    # necessary in dry run
     if not os.path.exists(kmer_file):
-        return -1 # pesduo
+        return -1
     # total input read size
     with open(kmer_file) as f:
         total = sum(1 for line in f) -1
@@ -42,7 +40,6 @@ def get_batch_size(batch_size, ram, kmer_file):
                 batch_size = est_size
     return batch_size
 
-# check whether to split the kmer freqs in batches
 checkpoint shuffle_batch:
     input: rules.kmer_freqs.output
     output: directory("kmerBin/{barcode}/batch_check")
@@ -61,34 +58,6 @@ checkpoint shuffle_batch:
         rm -f {output}/header {output}/shuffled
         """
 
-# kmer binning
-#rule umap:
-#    input: rules.kmer_freqs.output
-#    output: 
-#        cluster="kmerBin/{barcode}/hdbscan.tsv",
-#	    plot="kmerBin/{barcode}/hdbscan.png",
-#    conda: "../envs/kmerBin.yaml"
-#    params:
-#        n_neighbors = config["umap"]["n_neighbors"],
-#        min_dist = config["umap"]["min_dist"],
-#        metric = config["umap"]["metric"],
-#        n_components = config["umap"]["n_components"],
-#	    min_bin_size = config["hdbscan"]["min_bin_size"],
-#        min_samples = config["hdbscan"]["min_samples"],
-#	    epsilon = config["hdbscan"]["epsilon"],
-#    log: "logs/kmerBin/{barcode}/umap.log"
-#    benchmark: "benchmarks/kmerBin/{barcode}/umap.txt"
-#    threads: config["threads"]["large"]
-#    resources:
-#        mem_mb = config["bin_mem"] * 1024
-#    shell:
-#       "NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/kmerBin.py -k {input}"
-#       " -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components}"
-#       " -s {params.min_bin_size} -m {params.min_samples} -e {params.epsilon}"
-#       " -c {output.cluster} -p"
-#       " > {log} 2>&1" 
-
-# batch binning
 rule umap:
     input: 
         "kmerBin/{barcode}/batch_check/{batch}.tsv",

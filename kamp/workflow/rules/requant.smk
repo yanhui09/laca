@@ -79,7 +79,7 @@ use rule rename_fasta_header as rename_fasta_header_re with:
     benchmark: 
         "benchmarks/requant/rename_fasta.txt"
 
-# create abundance matrix with minimap
+# create abundance matrix with minimap2
 use rule index as index_re with:
     input: 
         rules.rename_fasta_header_re.output,

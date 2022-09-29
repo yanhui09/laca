@@ -14,7 +14,6 @@ rule guppy:
         guppy_barcoder -i {input} -s {params.dir} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}
         """
     
-# parallel minibar
 def get_basecalled_fqs(fq_dir):
     basecalled_fqs = []
     suffixes = (".fastq.gz", ".fq.gz", ".fastq", ".fq")
@@ -81,11 +80,9 @@ rule collect_minibar_batch:
             rm {input} -f
         done
         """
-# demultiplex? https://github.com/jfjlaros/demultiplex
 
 # choose demultiplexer
 def get_demult(demult="guppy", dir=False):
-    # if demult != "guppy" | "minibar", raise value error
     if demult != "guppy" and demult != "minibar":
         raise ValueError("Demultiplexer not recognized. Choose guppy or minibar in config.")
     demult_dir = os.path.join(os.getcwd(), "demultiplexed_" + demult)
@@ -124,7 +121,6 @@ checkpoint demultiplex_check:
         done
         """
 
-# collect demultiplexed files
 rule collect_fastq:
     input:  "demultiplexed/{barcode}"
     output: temp("qc/{barcode}.fastq")

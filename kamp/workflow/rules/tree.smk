@@ -21,7 +21,6 @@ rule trim_repseqs:
     threads: config["threads"]["normal"]
     shell: "cutadapt -j {threads} {params.f} -o {output} {input} > {log} 2>&1"
 
-# trim primers or not
 def trim_check2(trim, chimera_check):
     check_val("trim", trim, bool)
     out = rules.trim_repseqs.output
@@ -30,7 +29,6 @@ def trim_check2(trim, chimera_check):
     return out
 
 rule q2_repseqs:
-    #input: rules.trim_repseqs.output
     input: trim_check2(config["trim"], config["chimeraF"])
     output: temp("tree/rep_seqs.qza")
     conda: "../envs/q2plugs.yaml"

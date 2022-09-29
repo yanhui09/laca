@@ -53,7 +53,7 @@ rule rename_fasta_header:
                         i += 1 
                     out.write(line)
 
-# create abundance matrix with minimap
+# create abundance matrix with minimap2
 rule index:
     input: rules.rename_fasta_header.output,
     output: temp("rep_seqs.mmi")
