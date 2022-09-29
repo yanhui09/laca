@@ -118,7 +118,7 @@ rule samtools_index:
         "samtools index -m {params.m} -@ 1 {input} {output} 2>{log}"
 
 def get_qout(wildcards, type_o):
-    barcodes = get_qced(wildcards)
+    barcodes = get_demultiplexed(wildcards)
     if type_o == "bam":
         output = expand("quant/mapped/{barcode}.sorted.bam", barcode=barcodes)
     elif type_o == "bai":

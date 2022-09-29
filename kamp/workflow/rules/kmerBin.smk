@@ -135,7 +135,7 @@ checkpoint cls_kmerbin:
                     header = False, index = False)
         
 rule split_bin:
-    input: 
+    input:
         cluster = "kmerBin/clusters/{barcode}_{c}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
     output: "kmerBin/{barcode}/split/{c}.fastq",
