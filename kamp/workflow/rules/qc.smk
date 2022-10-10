@@ -107,7 +107,7 @@ def trim_check(trim, subsample, n):
 rule q_filter:
     input:
         trim_check(config["trim"], config["subsample"], config["seqkit"]["n"])
-    output: temp("qc/qfilt/{barcode}.fastq")
+    output: "qc/qfilt/{barcode}.fastq"
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min-qual"],
