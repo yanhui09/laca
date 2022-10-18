@@ -58,7 +58,7 @@ rule rna2dna:
     conda: "../envs/seqkit.yaml"
     log: "logs/nanosim/{db}/rna2dna.log"
     benchmark: "benchmarks/nanosim/{db}/rna2dna.txt"
-    shell: "seqkit seq -w 0 --rna2dna {input} > {output} 2> {log}"
+    shell: "seqkit seq -w0 --rna2dna {input} > {output} 2> {log}"
 
 # two round clustering to select refs
 # first round: pick seqs in the same cluster, with min identity
@@ -137,7 +137,7 @@ rule filter_ref_len:
     log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}_filter_len.log"  
     benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}_filter_len.txt"
     threads: config["threads"]["normal"]
-    shell: "cat {input} | seqkit seq -j {threads} -m {params.m} -M {params.M} -i > {output} 2> {log}"
+    shell: "cat {input} | seqkit seq -j {threads} -m {params.m} -M {params.M} -i -w0 > {output} 2> {log}"
 
 # subsample ref
 rule subsample_cls_ref:
@@ -154,8 +154,8 @@ rule subsample_cls_ref:
     threads: 1
     shell:
         """
-        seqkit sample -p {params.p} -j {threads} {input} -o {output.p} 2> {log}
-        seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} 2>> {log}
+        seqkit sample -p {params.p} -j {threads} {input} -w0 -o {output.p} 2> {log}
+        seqkit head -n {params.n} -j {threads} {output.p} -w0 -o {output.n} 2>> {log}
         """
 
 # keep fasta header unique
