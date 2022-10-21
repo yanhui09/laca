@@ -182,8 +182,9 @@ rule read_simulate:
     output: 
         expand(
             "nanosim/{{db}}/simulate/{{minid}}_{{maxid}}_{{n}}/simulated{suffix}",
-            suffix=["_aligned_error_profile", "_aligned_reads.fastq", "_unaligned_reads.fastq"]
-        )
+            suffix=["_aligned_error_profile", "_aligned_reads.fastq"]
+        ),
+        directory("nanosim/{db}/simulate/{minid}_{maxid}_{n}"),
     conda: "../envs/nanosim.yaml"
     params:
         o = lambda wc: "nanosim/{db}/simulate/{minid}_{maxid}_{n}/simulated".format(db=wc.db, minid=wc.minid, maxid=wc.maxid, n=wc.n),
