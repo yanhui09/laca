@@ -40,7 +40,7 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         "--singularity-args '{singularity_args}' "
         "{dryrun} "
         "--rerun-triggers mtime --rerun-incomplete "
-        "--jobs {jobs} --nolock --keep-going "
+        "--jobs {jobs} --nolock "
         " {max_mem} "
         " {args} "
     ).format(
@@ -141,11 +141,6 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
         sf = "workflow/Snakefile" 
     snakefile = get_snakefile(sf)
     configfile = os.path.join(workdir, "config.yaml")
-    # a compromise for https://github.com/snakemake/snakemake/issues/823
-    # if not dry run repeat run for snakemake early exit
-    # kmerBin, kmerCon, clustCon, isONclustCon, isONcorCon, umiCon, all
-    if not dryrun and workflow in ["kmerBin", "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon", "all"]:
-        run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)        
     run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)
 
 # kamp init
