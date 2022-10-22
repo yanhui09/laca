@@ -198,8 +198,7 @@ rule read_simulate:
         """
         MODEL={input[0]}
         c=${{MODEL//_model_profile/}}
-        simulator.py genome -rg {input.ref} -c "$c" -o {params.o} -n {params.n} -b guppy --fastq -t {threads} \ 
-        -dna_type linear --seed 123 -max {params.max_len} -min {params.min_len} > {log} 2>&1
+        simulator.py genome -rg {input.ref} -c "$c" -o {params.o} -n {params.n} -b guppy --fastq -t {threads} -dna_type linear --seed 123 -max {params.max_len} -min {params.min_len} > {log} 2>&1
         """
 
 def sim_demult_flag(demult="guppy"):
