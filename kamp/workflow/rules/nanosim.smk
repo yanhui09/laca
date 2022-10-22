@@ -149,8 +149,8 @@ rule subsample_cls_ref:
     params:
         p = 1,
         n = config["nanosim"]["subsample_n"],
-    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}/subsample_cls_ref.log"
-    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}/subsample_cls_ref.txt"
+    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}_subsample.log"
+    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}_subsample.txt"
     threads: 1
     shell:
         """
@@ -162,8 +162,8 @@ rule subsample_cls_ref:
 rule reheader:
     input: rules.subsample_cls_ref.output.n
     output: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/ref.fasta"
-    log: "logs/nanosim/{db}/cls_ref/id_{minid}_{maxid}/reheader.log"
-    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}/reheader.txt"
+    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}_reheader.log"
+    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}_reheader.txt"
     run:
         with open(output[0], "w") as out:
             with open (input[0], "r") as inp:
