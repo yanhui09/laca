@@ -69,14 +69,14 @@ rule cls_ref1:
         rep = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
         tsv = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
-        tmp = temp(directory("nanosim/tmp/{db}_cls_ref/id_{minid}")),
+        tmp = temp(directory("nanosim/tmp/{db}/cls_ref/id_{minid}")),
     conda: "../envs/mmseqs2.yaml"
     params:
         minid = lambda wc: int(wc.minid) * 0.01,
         prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}/mmseqs".format(db=wc.db, minid=wc.minid),
         c = 1,
-    log: "logs/nanosim/{db}_cls_ref/id_{minid}.log"
-    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}.txt"
+    log: "logs/nanosim/{db}/cls_ref/id_{minid}.log"
+    benchmark: "benchmarks/nanosim/{db}/cls_ref/id_{minid}.txt"
     threads: config["threads"]["large"]
     shell:
         "mmseqs easy-cluster {input} "
@@ -118,13 +118,13 @@ use rule cls_ref1 as cls_ref2 with:
         rep = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_all_seqs.fasta"),
         tsv = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_cluster.tsv"),
-        tmp = temp(directory("nanosim/tmp/{db}_cls_ref/id_{minid}_{maxid}")),
+        tmp = temp(directory("nanosim/tmp/{db}/cls_ref/id_{minid}_{maxid}")),
     params:
         minid = lambda wc: int(wc.maxid) * 0.01,
         prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs".format(db = wc.db, minid=wc.minid, maxid=wc.maxid),
         c = 1,
-    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}.log"
-    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}.txt"
+    log: "logs/nanosim/{db}/cls_ref/id_{minid}_{maxid}.log"
+    benchmark: "benchmarks/nanosim/{db}/cls_ref/id_{minid}_{maxid}.txt"
 
 # set a length range
 rule filter_ref_len:
@@ -134,8 +134,8 @@ rule filter_ref_len:
     params:
         m = config["nanosim"]["min_len"],
         M = config["nanosim"]["max_len"],
-    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}_filter_len.log"  
-    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}_filter_len.txt"
+    log: "logs/nanosim/{db}/cls_ref/id_{minid}_{maxid}_filter_len.log"  
+    benchmark: "benchmarks/nanosim/{db}/cls_ref/id_{minid}_{maxid}_filter_len.txt"
     threads: config["threads"]["normal"]
     shell: "cat {input} | seqkit seq -j {threads} -m {params.m} -M {params.M} -i -w0 > {output} 2> {log}"
 
@@ -149,8 +149,8 @@ rule subsample_cls_ref:
     params:
         p = 1,
         n = config["nanosim"]["subsample_n"],
-    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}_subsample.log"
-    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}_subsample.txt"
+    log: "logs/nanosim/{db}/cls_ref/id_{minid}_{maxid}_subsample.log"
+    benchmark: "benchmarks/nanosim/{db}/cls_ref/id_{minid}_{maxid}_subsample.txt"
     threads: 1
     shell:
         """
@@ -162,8 +162,8 @@ rule subsample_cls_ref:
 rule reheader:
     input: rules.subsample_cls_ref.output.n
     output: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/ref.fasta"
-    log: "logs/nanosim/{db}_cls_ref/id_{minid}_{maxid}_reheader.log"
-    benchmark: "benchmarks/nanosim/{db}_cls_ref/id_{minid}_{maxid}_reheader.txt"
+    log: "logs/nanosim/{db}/cls_ref/id_{minid}_{maxid}_reheader.log"
+    benchmark: "benchmarks/nanosim/{db}/cls_ref/id_{minid}_{maxid}_reheader.txt"
     run:
         with open(output[0], "w") as out:
             with open (input[0], "r") as inp:
@@ -191,8 +191,8 @@ rule read_simulate:
         n = lambda wc: int(wc.n),
         min_len = int(config["nanosim"]["min_len"]) - 100,
         max_len = int(config["nanosim"]["max_len"]) + 100,
-    log: "logs/nanosim/{db}_read_simulate/{minid}_{maxid}_{n}.log"
-    benchmark: "benchmarks/nanosim/{db}_read_simulate/{minid}_{maxid}_{n}.txt"
+    log: "logs/nanosim/{db}/read_simulate/{minid}_{maxid}_{n}.log"
+    benchmark: "benchmarks/nanosim/{db}/read_simulate/{minid}_{maxid}_{n}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
