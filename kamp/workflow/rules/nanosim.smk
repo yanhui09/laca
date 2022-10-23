@@ -182,9 +182,8 @@ rule read_simulate:
     output: 
         expand(
             "nanosim/{{db}}/simulate/{{minid}}_{{maxid}}_{{n}}/simulated{suffix}",
-            suffix=["_aligned_error_profile", "_aligned_reads.fastq"]
-        ),
-        directory("nanosim/{db}/simulate/{minid}_{maxid}_{n}"),
+            suffix=["_aligned_error_profile", "_aligned_reads.fastq", "_unaligned_reads.fastq"]
+        )
     conda: "../envs/nanosim.yaml"
     params:
         o = lambda wc: "nanosim/{db}/simulate/{minid}_{maxid}_{n}/simulated".format(db=wc.db, minid=wc.minid, maxid=wc.maxid, n=wc.n),
@@ -220,12 +219,17 @@ rule nanosim:
         if not os.path.exists(output[1]):
             os.makedirs(output[1])
         for fq in input:
-            fname = os.path.basename(fq)
             # last second directory name
             dirname = os.path.basename(os.path.dirname(fq))
             # remove "_"
             dirname = dirname.replace("_", "")
             dirname = os.path.join(output[1], "si" + dirname)
             os.makedirs(dirname)
-            shutil.copy(fq, os.path.join(dirname, fname))
-
+            # concatnate all .fastq files in dirname_input to dirname
+            for fq2 in os.listdir(os.path.dirname(fq)):
+                if fq2.endswith(".fastq"):
+                    with open(os.path.join(dirname_input, fq2), "r") as inp:
+                        with open(os.path.join(dirname, "simulated.fastq"), "a") as out:
+                            for line in inp:
+                                out.write(line)
+                    
