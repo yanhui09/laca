@@ -188,8 +188,6 @@ rule read_simulate:
     params:
         o = lambda wc: "nanosim/{db}/simulate/{minid}_{maxid}_{n}/simulated".format(db=wc.db, minid=wc.minid, maxid=wc.maxid, n=wc.n),
         n = lambda wc: int(wc.n),
-        min_len = int(config["nanosim"]["min_len"]) - 100,
-        max_len = int(config["nanosim"]["max_len"]) + 100,
     log: "logs/nanosim/{db}/read_simulate/{minid}_{maxid}_{n}.log"
     benchmark: "benchmarks/nanosim/{db}/read_simulate/{minid}_{maxid}_{n}.txt"
     threads: config["threads"]["normal"]
@@ -197,7 +195,7 @@ rule read_simulate:
         """
         MODEL={input[0]}
         c=${{MODEL//_model_profile/}}
-        simulator.py genome -rg {input.ref} -c "$c" -o {params.o} -n {params.n} -b guppy --fastq -t {threads} -dna_type linear --seed 123 -max {params.max_len} -min {params.min_len} > {log} 2>&1
+        simulator.py genome -rg {input.ref} -c "$c" -o {params.o} -n {params.n} -b guppy --fastq -t {threads} -dna_type linear --seed 123 > {log} 2>&1
         """
 
 def sim_demult_flag(demult="guppy"):

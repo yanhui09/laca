@@ -195,10 +195,10 @@ rlinker: "GTCTCGTGGGCTCGG"
 nanosim:
   min_seq_id: 80,90,90,95,95,97,97,97,98,98,99
   max_seq_id: 90,100,95,100,97,100,99,98,100,99,100
-  min_len: 1000 
-  max_len: 1600
+  min_len: -1 # -1 infinite 
+  max_len: -1
   subsample_n: 10 # 1000 uniq sequences in ref
   simulator: 
-    n: 50,100,200,400,600,800,1000
+    n: 50,100,200,400,600,800,1000,2000
     dna_type: linear
         
