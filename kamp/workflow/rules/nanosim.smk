@@ -212,7 +212,6 @@ rule nanosim:
         directory("demultiplexed"),
         touch(sim_demult_flag(config["demultiplex"])),
     run:
-        import shutil
         # replace fqs to follow demultiplexing wildcards
         if not os.path.exists(output[1]):
             os.makedirs(output[1])
