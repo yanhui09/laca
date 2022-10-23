@@ -225,7 +225,7 @@ rule nanosim:
             # concatnate all .fastq files in dirname_input to dirname
             for fq2 in os.listdir(os.path.dirname(fq)):
                 if fq2.endswith(".fastq"):
-                    with open(os.path,join(os.path.dirname(fq), fq2), "r") as f:
+                    with open(os.path.join(os.path.dirname(fq), fq2), "r") as f:
                         with open(os.path.join(dirname, "simulated.fastq"), "a") as out:
                             for line in inp:
                                 out.write(line)
