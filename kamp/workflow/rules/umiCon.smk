@@ -283,7 +283,7 @@ rule check_umi:
         pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
     log: "logs/umi/{barcode}/{c}/check_umi.log"
     benchmark: "benchmarks/umi/{barcode}/{c}/check_umi.txt"
-    shell: "grep -B1 -E {params.pattern} {input} > {output} 2> {log}"
+    shell: "grep -B1 -E {params.pattern} {input} | sed '/--$/d' > {output} 2> {log}"
 
 # cluster UMIs
 rule cluster_umi:
@@ -845,8 +845,8 @@ checkpoint bin_info:
         
 use rule split_bin as split_umibin with:
     input: 
-        clusters = "umi/{barcode}/{c}/bin/binned/{umi_id}.txt",
-        fastq = rules.qfilter_umi.output,
+        cluster = "umi/{barcode}/{c}/bin/binned/{umi_id}.txt",
+        fqs = rules.qfilter_umi.output,
     output:
         "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq"
     log:
@@ -962,14 +962,69 @@ rule collect_umiCon:
                         out.write(line)
 
 # trim primers 
-use rule trim_primers as trim_umiCon with:
-    input: 
-        rules.collect_umiCon.output
+rule trim_primers_umi:
+    input: rules.collect_umiCon.output
     output: 
-        trimmed = "umiCon.fna",
+        trimmed = temp("umi/umiCon_trimmedF.fna"),
+        untrimmed = temp("umi/umiCon_untrimmedF.fna"),
+    conda: "../envs/cutadapt.yaml"
+    params:
+        f = f5_pattern1,
+        e = 0.1,
+        O = 3,
+        m = config["umi"]["seqkit"]["min-len"],
+        M = config["umi"]["seqkit"]["max-len"],
+    threads: config["threads"]["normal"]
+    log: "logs/umi/trim_primers_umi.log"
+    benchmark: "benchmarks/umi/trim_primers_umi.txt"
+    shell:
+        """
+        cutadapt \
+        -j {threads} \
+        -e {params.e} -O {params.O} -m {params.m} -M {params.M} \
+        {params.f} \
+        --untrimmed-output {output.untrimmed} \
+        -o {output.trimmed} \
+        {input} \
+        > {log} 2>&1
+        """
+
+use rule trim_primers_umi as trim_primers_umiR with:
+    input: 
+        rules.trim_primers_umi.output.untrimmed
+    output: 
+        trimmed = temp("umi/umiCon_trimmedR.fna"),
         untrimmed = "umi/umiCon_untrimmed.fna"
+    params:
+        f = f5_pattern2,
+        e = 0.1,
+        O = 3,
+        m = config["umi"]["seqkit"]["min-len"],
+        M = config["umi"]["seqkit"]["max-len"],
     log: 
-        "logs/umi/trim_umiCon.log"
+        "logs/umi/trim_primers_umiR.log"
     benchmark: 
-        "benchmarks/umi/trim_umiCon.txt"
-    
+        "benchmarks/umi/trim_primers_umiR.txt"
+
+# reverse complement for reverse strand
+use rule revcomp_fq as revcomp_fq_umi with:
+    input: 
+        rules.trim_primers_umiR.output.trimmed
+    output: 
+        temp("umi/umiCon_trimmedR_revcomp.fna")
+    log: 
+        "logs/umi/umiCon_trimmedR_revcomp.log"
+    benchmark: 
+        "benchmarks/umi/umiCon_trimmedR_revcomp.txt"
+
+rule collect_umiCon_trimmed:
+    input: 
+        rules.trim_primers_umi.output.trimmed,
+        rules.revcomp_fq_umi.output
+    output: "umiCon.fna"
+    run: 
+        with open(output[0], "w") as out:
+            for i in input:
+                with open(i, "r") as inp:
+                    for line in inp:
+                        out.write(line)
