@@ -1,0 +1,199 @@
+# This file should contain everything to configure the workflow on a global scale.
+basecalled_dir: /mnt/md0/UMI16S/zymock/test
+database_dir: /mnt/md0/Database/Kamp
+
+threads:
+  normal: 2   # common tasks
+  large: 6   # threads-dependent tasks
+
+# Pooling samples for denoise [TRUE|FALSE]
+pool: false
+
+##############################################################
+# Demultiplex
+demultiplex: guppy # guppy | minibar
+guppy:
+  barcode_kits: SQK16S-GXO192
+minibar:
+  args: -p 0.75 -l 160
+nreads_m: 0    # rm barcoded samples in shallow sequencing
+##############################################################
+# Quality control
+# Subsample raw reads if with inadequate memory
+subsample: False
+
+# Quality filtering
+seqkit:
+  min-qual: 7
+  min-len: 400
+  max-len: 1500
+  # subsampling params
+  p: 1 # subsampling portion, upper it if with uneven library [float]
+  n: 10000 # subsampling number [int]
+
+# trim primers
+trim: true
+# order matters
+fprimer:
+  F: AGRGTTYGATYMTGGCTCAG
+
+rprimer:
+  R: CGACATCGAGGTGCCAAAC
+
+cutadapt:
+  max_errors: 0.3
+  min_overlap: 5
+  minimum-length: 1
+
+##############################################################
+# kmer binning
+kmerbin: False
+bin_mem: 55 # GB
+# Bool, whether to bin or not; TRUE is highly recommened in clustCon mode,
+# considering the massive pairwise alignments inside.
+
+# To mitagate the memory bottleneck of umap in pooling mode,
+# batch mode is induced. kmer binning is done in batches and
+# all unbinned reads will be re-collected for re-binning. 
+# It's an alternative for users with limited computing resources.
+batch_size: auto
+# zero or negative values to bin all reads together; 
+# use manual postive value to bin in batches due to limited rams 
+# or choose auto estimation with "auto"
+kmer_size: 5
+# umap reduction and hdbscan cluster
+umap:
+  n_neighbors: 15 # Increase this for global structure
+  min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
+  metric: cosine
+  n_components: 2 # n reduced dimensions passed to hdbscan clustering
+hdbscan:
+  min_bin_size: 100 # Define the smallest size to bin
+  min_samples: 100 # Increase this for more conservative clustering - more points as noise
+  epsilon: 0.5 # Lower this for more micro-clusters
+
+##############################################################
+# cluster within kmer bins
+# mode for cluster consensus [ClustCon|isONclustCon|isONcorCon]
+# ClustCon: cluster based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
+# isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
+# isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
+cluster:
+  #- kmerCon # the first for the final kOTUs
+  #- clustCon 
+  #- isONcorCon
+  #- umiCon
+- isONclustCon
+min_cluster_size: 20
+
+clustCon:
+  min_score_frac: 0.8
+  max_recursion: -1 # set to non-zero value to override python's max recursion depth
+
+racon:
+  iter: 3
+  m: 8
+  x: -6
+  g: -8
+  w: 500
+
+medaka:
+  m: r941_min_high_g330
+
+spoa:
+  l: 1 # global alignment (1) for multi-primer amplicons; local alignment (0) for common amplicons
+  r: 0
+  g: -2
+
+minimap:
+  x: map-ont
+  index_size: 4G
+
+samtools:
+  m: 3G
+
+# chimera identification 
+chimeraF: false
+
+##############################################################
+# Taxonomy assignment
+classifier:
+- kraken2   # the first to be final taxonomy
+  #- mmseqs2
+
+mmseqs:
+  min-seq-id: 0.99
+  c: 0.9 # the fraction of aligned residues
+  taxdb: SILVA # predefined taxonomy database name in `mmseqs databases`; The provided NT database do not have taxonomy info yet.
+  # make a custom seqTaxDB using local blast databases;
+  #blastdb_ftp: "ftp://ftp.ncbi.nlm.nih.gov/blast/db/refseq_rna.??.tar.gz"
+  blastdb_alias: refseq_rna   # alias for blast database; leave this as empty string [""] if you want to use the default database by mmseqs2
+  lca-mode: 3 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [3]
+
+kraken2:
+  # Find prebuilt database: https://benlangmead.github.io/aws-indexes/k2
+  prebuilt: https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz
+  classify_cmd: --confidence 0.05   # use --confidence 0.05 for standard database 
+
+##############################################################
+# Build a de novo phylogenetic tree
+# trim possible primers on representative sequences for multi-primer PCR
+fprimer_max:
+  F: AGRGTTYGATYMTGGCTCAG
+rprimer_min:
+  R: CGACATCGAGGTGCCAAAC
+
+phylogen:
+- FastTree   # the first to be final taxonomy; You can enable the other two, which are more time consuming.
+  #- IQ-TREE
+  #- RAxML
+
+q2-phylogen:
+  # supplementary parameters for q2_phylogen pipeline `align-to-tree-mafft-{fasttree, iqtree, raxml}`
+  # https://docs.qiime2.org/2021.11/plugins/available/phylogeny/
+  fasttree: ''
+  iqtree: ''
+  raxml: ''
+
+##############################################################
+# umi extraction with seqkit and cutadapt
+umi:
+  seqkit:
+    min-qual: -1
+    min-len: 3500
+    max-len: 6000
+  # keep it loose for putative UMIs in tolerated error
+  loc: 200 # robust location containing the adaptor-UMI-primer pattern, leaving only the start/end regions to find UMIs
+  len: 18 # base length of umi on 5' and 3' side. Their length shall be the same.
+  # concatenated UMI regions on both sides, whitespaces will be trimmed automatically in Kamp
+  # use IUPAC code https://www.bioinformatics.org/sms/iupac.html
+  pattern: NNNYRNNNYRNNNYRNNN NNNYRNNNYRNNNYRNNN
+  max_err: 0.2 # cutadapt -e, high error tolerance for nanopore 
+  min_overlap: 11 # cutadapt -O
+  cl_identity: 0.9 # umi cluster similarity
+  # keep it conservative for trusted UMI bins
+  s: 90 # Check start of read up to s bp for validated UMIs.
+  e: 90 # Check end of read up to f bp for validated UMIs.
+  # params to filter umi bins, inherited from 
+  # https://github.com/SorenKarst/longread_umi/blob/master/scripts/nanopore_pipeline.sh
+  # https://github.com/SorenKarst/longread_umi/blob/master/scripts/umi_binning.sh
+  u: 3.5 # UMI match error filter
+  U: 30  # UMI match error SD filter
+  O: 0.20 # Min read orientation fraction
+  N: 10000 # Maximum number of reads +/-
+  S: 10 # UMI bin size/UMI cluster size cutoff.
+# linker and primer for umi extraction
+flinker: CAAGCAGAAGACGGCATACGAGAT
+rlinker: AATGATACGGCGACCACCGAGATC
+
+#########################################################################################
+# in silico test with NanoSim
+nanosim:
+  min_seq_id: 80,90,90,95,95,97,97,97,98,98,99
+  max_seq_id: 90,100,95,100,97,100,99,98,100,99,100
+  min_len: -1 # -1 infinite 
+  max_len: -1
+  subsample_n: 10 # 1000 uniq sequences in ref
+  simulator: 
+    n: 50,100,200,400,600,800,1000,2000
+    dna_type: linear
