@@ -241,7 +241,9 @@ rule medaka_consensus:
         expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka/consensus{ext}",
         ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"]),
         expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka/calls{ext}",
-        ext = ["_to_draft.bam", "_to_draft.bam.bai"])
+        ext = ["_to_draft.bam", "_to_draft.bam.bai"]),
+        expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/draft/racon_{iter}.fna{ext}", 
+        iter = config["racon"]["iter"], ext = [".fai", ".map-ont.mmi"]),
     message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka [{wildcards.cls}]"
     params:
         m = config["medaka"]["m"],

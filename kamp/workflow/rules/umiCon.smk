@@ -80,9 +80,9 @@ use rule kmer_freqs as kmer_freqs_umi with:
     output: 
         "umi/{barcode}/kmerBin/kmer_freqs.txt"
     log: 
-        "logs/{barcode}/kmerBin/kmer_freqs.log"
+        "logs/umi/{barcode}/kmerBin/kmer_freqs.log"
     benchmark: 
-        "benchmarks/{barcode}/kmerBin/kmer_freqs.txt"
+        "benchmarks/umi/{barcode}/kmerBin/kmer_freqs.txt"
 
 # kmer binning
 use rule umap as umap_umi with:
@@ -599,7 +599,7 @@ use rule bwa_aln as aln_umi with:
         umip = "umi/{barcode}/{c}/bin/barcodes_{umi}.fa",
         ref = "umi/{barcode}/{c}/bin/reads_{umi}.fa",
     output:
-        "umi/{barcode}/{c}/bin/{umi}_map.sai",
+        temp("umi/{barcode}/{c}/bin/{umi}_map.sai"),
     params:
         n = 3,
     log:
@@ -613,7 +613,7 @@ use rule bwa_samse as samse_umi with:
         ref = "umi/{barcode}/{c}/bin/reads_{umi}.fa",
         sai = "umi/{barcode}/{c}/bin/{umi}_map.sai",
     output:
-        "umi/{barcode}/{c}/bin/{umi}_map.sam",
+        temp("umi/{barcode}/{c}/bin/{umi}_map.sam"),
     params:
         F = 20,
     log: 
@@ -939,7 +939,9 @@ use rule medaka_consensus as medaka_consensus_umi with:
         temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/consensus{ext}",
         ext = [".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
         temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/calls{ext}",
-        ext = ["_to_draft.bam", "_to_draft.bam.bai"]))
+        ext = ["_to_draft.bam", "_to_draft.bam.bai"])),
+        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/draft/racon_{iter}.fna{ext}", 
+        iter = config["racon"]["iter"], ext = [".fai", ".map-ont.mmi"])),
     message: 
         "Generate umi consensus [id={wildcards.umi_id}] in {wildcards.c} with medaka [{wildcards.barcode}]"
     params:
