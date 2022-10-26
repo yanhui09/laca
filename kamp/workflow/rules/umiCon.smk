@@ -78,7 +78,7 @@ use rule kmer_freqs as kmer_freqs_umi with:
     input: 
         "umi/{barcode}/qfilt.fastq"
     output: 
-        "umi/{barcode}/kmerBin/kmer_freqs.txt"
+        temp("umi/{barcode}/kmerBin/kmer_freqs.txt")
     log: 
         "logs/umi/{barcode}/kmerBin/kmer_freqs.log"
     benchmark: 
@@ -101,7 +101,7 @@ checkpoint cls_kmerbin_umi:
     input: 
         rules.umap_umi.output.cluster,
         rules.qfilter_umi.output,
-    output: directory("umi/{barcode}/kmerBin/clusters"),
+    output: directory("umi/{barcode}/kmerBin/clusters")
     log: "logs/umi/{barcode}/kmerBin/clusters.log"
     benchmark: "benchmarks/umi/{barcode}/kmerBin/clusters.txt"
     run:
@@ -118,7 +118,7 @@ use rule split_bin as split_bin_umi with:
         cluster = "umi/{barcode}/kmerBin/clusters/{c}.txt",
         fqs = rules.qfilter_umi.output,
     output: 
-        "umi/{barcode}/kmerBin/clusters/{c}.fastq"
+        temp("umi/{barcode}/kmerBin/clusters/{c}.fastq")
     log: 
         "logs/umi/{barcode}/kmerBin/clusters/{c}.log"
     benchmark: 
@@ -128,7 +128,7 @@ use rule skip_bin as skip_bin_umi with:
     input: 
         rules.qfilter_umi.output
     output: 
-        "umi/{barcode}/kmerBin/clusters/all.fastq"
+        temp("umi/{barcode}/kmerBin/clusters/all.fastq")
     log: 
         "logs/umi/{barcode}/kmerBin/clusters/skip_bin.log"
 
@@ -166,8 +166,8 @@ rule extract_umi:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        umi1 = "umi/{barcode}/{c}/umi1.fastq",
-        umi2 = "umi/{barcode}/{c}/umi2.fastq",
+        umi1 = temp("umi/{barcode}/{c}/umi1.fastq"),
+        umi2 = temp("umi/{barcode}/{c}/umi2.fastq"),
     conda: "../envs/cutadapt.yaml"
     params:
         f = f_pattern,
@@ -194,7 +194,7 @@ rule concat_umi:
     input:
         umi1 = rules.extract_umi.output.umi1,
         umi2 = rules.extract_umi.output.umi2,
-    output: "umi/{barcode}/{c}/umi.fasta"
+    output: temp("umi/{barcode}/{c}/umi.fasta")
     conda: "../envs/seqkit.yaml"
     log: "logs/umi/{barcode}/{c}/concat_umi.log"
     benchmark: "benchmarks/umi/{barcode}/{c}/concat_umi.txt"
@@ -217,7 +217,7 @@ def get_umifile1(wildcards, kmerbin = True):
 checkpoint umi_check1:
     input: 
         lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"]),
-        lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc))
+        lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc)),
     output: temp(directory("umi/check1"))
     run:
         import shutil
@@ -282,7 +282,7 @@ def get_umi_pattern(umi_pattern, length):
 
 rule check_umi:
     input: "umi/check1/{barcode}_{c}.fa"
-    output: "umi/{barcode}/{c}/umif.fasta"
+    output: temp("umi/{barcode}/{c}/umif.fasta")
     params:
         pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
     log: "logs/umi/{barcode}/{c}/check_umi.log"
@@ -291,7 +291,7 @@ rule check_umi:
 # cluster UMIs
 rule cluster_umi:
     input: rules.check_umi.output
-    output: "umi/{barcode}/{c}/centroid.fasta"
+    output: temp("umi/{barcode}/{c}/centroid.fasta")
     conda: "../envs/vsearch.yaml"
     params:
         cl_identity = config["umi"]["cl_identity"],
@@ -310,7 +310,7 @@ rule cluster_umi:
 
 rule rename_umi_centroid:
     input: rules.cluster_umi.output
-    output: "umi/{barcode}/{c}/umi_centroid.fasta"
+    output: temp("umi/{barcode}/{c}/umi_centroid.fasta")
     conda: "../envs/seqkit.yaml"
     log: "logs/umi/{barcode}/{c}/rename_umi_centroid.log"
     benchmark: "benchmarks/umi/{barcode}/{c}/rename_umi_centroid.txt"
@@ -338,8 +338,8 @@ rule extract_umip:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        umi1 = "umi/{barcode}/{c}/umi1p.fastq",
-        umi2 = "umi/{barcode}/{c}/umi2p.fastq",
+        umi1 = temp("umi/{barcode}/{c}/umi1p.fastq"),
+        umi2 = temp("umi/{barcode}/{c}/umi2p.fastq"),
     params:
         f = fprimers_trim,
         r = rprimers_trim,
@@ -364,7 +364,7 @@ rule concat_umip:
     input:
         umi1=rules.extract_umip.output.umi1,
         umi2=rules.extract_umip.output.umi2,
-    output: "umi/{barcode}/{c}/umip.fastq"
+    output: temp("umi/{barcode}/{c}/umip.fastq")
     conda: "../envs/seqkit.yaml"
     log: "logs/umi/{barcode}/{c}/concat_umip.log"
     benchmark: "benchmarks/umi/{barcode}/{c}/concat_umip.txt"
@@ -375,7 +375,7 @@ rule concat_umip:
 rule bwa_index:
     input: rules.rename_umi_centroid.output,
     output:
-        multiext("umi/{barcode}/{c}/umi_centroid.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        temp(multiext("umi/{barcode}/{c}/umi_centroid.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"))
     conda: "../envs/bwa.yaml"
     log: "logs/umi/{barcode}/{c}/bwa_index.log"
     benchmark: "benchmarks/umi/{barcode}/{c}/bwa_index.txt"
@@ -386,7 +386,7 @@ rule bwa_aln:
         rules.bwa_index.output,
         umip = rules.concat_umip.output,
         ref = rules.rename_umi_centroid.output,
-    output: "umi/{barcode}/{c}/umip.sai",
+    output: temp("umi/{barcode}/{c}/umip.sai")
     conda: "../envs/bwa.yaml"
     params:
         n = 6,
@@ -397,10 +397,11 @@ rule bwa_aln:
 
 rule bwa_samse:
     input:
+        rules.bwa_index.output,
         umip = rules.concat_umip.output,
         ref = rules.rename_umi_centroid.output,
         sai = rules.bwa_aln.output,
-    output: "umi/{barcode}/{c}/umip.sam",
+    output: temp("umi/{barcode}/{c}/umip.sam")
     conda: "../envs/bwa.yaml"
     params:
         F = 4,
@@ -414,7 +415,7 @@ rule umi_filter:
     input:
         sam = rules.bwa_samse.output,
         ref = rules.rename_umi_centroid.output,
-    output: "umi/{barcode}/{c}/umicf.fa",
+    output: temp("umi/{barcode}/{c}/umicf.fa")
     conda: "../envs/umi.yaml"
     log: "logs/umi/{barcode}/{c}/umi_filter.log"
     benchmark: "benchmarks/umi/{barcode}/{c}/umi_filter.txt"
@@ -471,8 +472,8 @@ checkpoint umi_check2:
 rule rm_chimera:
     input: "umi/check2/{barcode}_{c}.fa",
     output:
-        ref = "umi/{barcode}/{c}/umi_ref.txt",
-        fa = "umi/{barcode}/{c}/umi_ref.fa",
+        ref = temp("umi/{barcode}/{c}/umi_ref.txt"),
+        fa = temp("umi/{barcode}/{c}/umi_ref.fa"),
     conda: "../envs/umi.yaml"
     params:
         umip_len = config["umi"]["len"],
@@ -539,8 +540,8 @@ rule umi_loc2:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        start = "umi/{barcode}/{c}/bin/reads_umi1.fa",
-        end = "umi/{barcode}/{c}/bin/reads_umi2.fa",
+        start = temp("umi/{barcode}/{c}/bin/reads_umi1.fa"),
+        end = temp("umi/{barcode}/{c}/bin/reads_umi2.fa"),
     conda: "../envs/seqkit.yaml"
     params:
         s = config["umi"]["s"],
@@ -557,8 +558,8 @@ rule umi_loc2:
 rule split_umi_ref:
     input: rules.rm_chimera.output.fa
     output:
-        umi1 = "umi/{barcode}/{c}/bin/barcodes_umi1.fa",
-        umi2 = "umi/{barcode}/{c}/bin/barcodes_umi2.fa",
+        umi1 = temp("umi/{barcode}/{c}/bin/barcodes_umi1.fa"),
+        umi2 = temp("umi/{barcode}/{c}/bin/barcodes_umi2.fa"),
     conda: "../envs/umi.yaml"
     params:
         umi_len = config["umi"]["len"],
@@ -587,7 +588,7 @@ use rule bwa_index as index_umi with:
     input:
         ref = "umi/{barcode}/{c}/bin/reads_{umi}.fa",
     output:
-        multiext("umi/{barcode}/{c}/bin/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        temp(multiext("umi/{barcode}/{c}/bin/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa")),
     log:
         "logs/umi/{barcode}/{c}/bin/index_{umi}.log"
     benchmark:
@@ -609,6 +610,7 @@ use rule bwa_aln as aln_umi with:
 
 use rule bwa_samse as samse_umi with:
     input:
+        multiext("umi/{barcode}/{c}/bin/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
         umip = "umi/{barcode}/{c}/bin/barcodes_{umi}.fa",
         ref = "umi/{barcode}/{c}/bin/reads_{umi}.fa",
         sai = "umi/{barcode}/{c}/bin/{umi}_map.sai",
