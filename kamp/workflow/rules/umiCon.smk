@@ -37,7 +37,7 @@ use rule q_filter as qfilter_umi with:
     input:
         get_raw(config["subsample"], config["seqkit"]["n"])
     output:
-        "umi/{barcode}/qfilt.fastq"
+        temp("umi/{barcode}/qfilt.fastq")
     params:
         Q = config["umi"]["seqkit"]["min-qual"],
         m = config["umi"]["seqkit"]["min-len"],
@@ -98,7 +98,9 @@ use rule umap as umap_umi with:
     
 # split reads by cluster
 checkpoint cls_kmerbin_umi:
-    input: rules.umap_umi.output.cluster,
+    input: 
+        rules.umap_umi.output.cluster,
+        rules.qfilter_umi.output,
     output: directory("umi/{barcode}/kmerBin/clusters"),
     log: "logs/umi/{barcode}/kmerBin/clusters.log"
     benchmark: "benchmarks/umi/{barcode}/kmerBin/clusters.txt"
@@ -114,7 +116,7 @@ checkpoint cls_kmerbin_umi:
 use rule split_bin as split_bin_umi with:
     input: 
         cluster = "umi/{barcode}/kmerBin/clusters/{c}.txt",
-        fqs = "umi/{barcode}/qfilt.fastq",
+        fqs = rules.qfilter_umi.output,
     output: 
         "umi/{barcode}/kmerBin/clusters/{c}.fastq",
     log: 
@@ -124,7 +126,7 @@ use rule split_bin as split_bin_umi with:
 
 use rule skip_bin as skip_bin_umi with:
     input: 
-        "umi/{barcode}/qfilt.fastq"
+        rules.qfilter_umi.output
     output: 
         "umi/{barcode}/kmerBin/clusters/all.fastq"
     log: 
@@ -213,7 +215,9 @@ def get_umifile1(wildcards, kmerbin = True):
     return bin2clusters
 
 checkpoint umi_check1:
-    input: lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"])
+    input: 
+        lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"]),
+        lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc))
     output: directory("umi/check1")
     run:
         import shutil
@@ -282,7 +286,6 @@ rule check_umi:
     params:
         pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
     log: "logs/umi/{barcode}/{c}/check_umi.log"
-    benchmark: "benchmarks/umi/{barcode}/{c}/check_umi.txt"
     shell: "grep -B1 -E {params.pattern} {input} | sed '/--$/d' > {output} 2> {log}"
 
 # cluster UMIs
@@ -448,15 +451,17 @@ def get_umifile2(wildcards, kmerbin = True):
         b, c = i.split("_")
         bin2clusters.append("umi/{barcode}/{c}/umicf.fa".format(barcode=b, c=c))
     return bin2clusters
- 
+
 checkpoint umi_check2:
-    input: lambda wc: get_umifile2(wc, kmerbin = config["kmerbin"])
+    input: 
+        umifiles = lambda wc: get_umifile2(wc, kmerbin = config["kmerbin"]),
+        fqs = lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc)),
     output: directory("umi/check2")
     run:
         import shutil
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
-        for i in list(input):
+        for i in list(input.umifiles):
             num_lines = sum(1 for line in open(i))
             if num_lines > 1:
                 barcode, c = [ i.split("/")[index] for index in [-3, -2] ]
@@ -831,7 +836,9 @@ rule umi_binning:
  
 # split reads by umi bins
 checkpoint bin_info:
-    input: rules.umi_binning.output.bin_map
+    input: 
+        rules.umi_binning.output.bin_map,
+        rules.qfilter_umi.output,
     output: directory("umi/{barcode}/{c}/bin/binned")
     log: "logs/kmerBin/{barcode}/{c}/bin/bin_info.log"
     benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/bin_info.txt"
