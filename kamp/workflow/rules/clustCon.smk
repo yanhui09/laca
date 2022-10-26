@@ -238,11 +238,14 @@ rule medaka_consensus:
         iter = config["racon"]["iter"]),
         fastq = "{cls}/{barcode}/{c}/split/{clust_id}.fastq",
     output: 
-        fasta = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka/consensus.fasta",
-        _dir = directory("{cls}/{barcode}/{c}/polish/{clust_id}/medaka"),
+        expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka/consensus{ext}",
+        ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"]),
+        expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka/calls{ext}",
+        ext = ["_to_draft.bam", "_to_draft.bam.bai"])
     message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka [{wildcards.cls}]"
     params:
         m = config["medaka"]["m"],
+        _dir = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka",
     conda: "../envs/medaka.yaml"
     log: "logs/{cls}/{barcode}/{c}/{clust_id}/medaka.log"
     benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/medaka.txt"
@@ -251,7 +254,7 @@ rule medaka_consensus:
         """
         export TF_FORCE_GPU_ALLOW_GROWTH=true
         medaka_consensus -i {input.fastq} \
-        -d {input.fna} -o {output._dir} \
+        -d {input.fna} -o {params._dir} \
         -t {threads} -m {params.m} > {log} 2>&1;
         """
 

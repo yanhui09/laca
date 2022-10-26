@@ -55,7 +55,7 @@ use rule q_filter as qfilter_umi with:
 # Remove samples in shallow sequencing
 checkpoint exclude_shallow_umi:
     input: lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_demultiplexed(wc))
-    output: directory("umi/shallow")
+    output: temp(directory("umi/shallow"))
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -118,7 +118,7 @@ use rule split_bin as split_bin_umi with:
         cluster = "umi/{barcode}/kmerBin/clusters/{c}.txt",
         fqs = rules.qfilter_umi.output,
     output: 
-        "umi/{barcode}/kmerBin/clusters/{c}.fastq",
+        "umi/{barcode}/kmerBin/clusters/{c}.fastq"
     log: 
         "logs/umi/{barcode}/kmerBin/clusters/{c}.log"
     benchmark: 
@@ -218,7 +218,7 @@ checkpoint umi_check1:
     input: 
         lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"]),
         lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc))
-    output: directory("umi/check1")
+    output: temp(directory("umi/check1"))
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -456,7 +456,7 @@ checkpoint umi_check2:
     input: 
         umifiles = lambda wc: get_umifile2(wc, kmerbin = config["kmerbin"]),
         fqs = lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc)),
-    output: directory("umi/check2")
+    output: temp(directory("umi/check2"))
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -855,7 +855,7 @@ use rule split_bin as split_umibin with:
         cluster = "umi/{barcode}/{c}/bin/binned/{umi_id}.txt",
         fqs = rules.qfilter_umi.output,
     output:
-        "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq"
+        temp("umi/{barcode}/{c}/bin/binned/{umi_id}.fastq")
     log:
         "logs/kmerBin/{barcode}/{c}/bin/split_by_{umi_id}.log"
     benchmark:
@@ -864,7 +864,7 @@ use rule split_bin as split_umibin with:
 # find the seed read
 rule fq2fa_umi:
     input: rules.split_umibin.output
-    output: "umi/{barcode}/{c}/bin/binned/{umi_id}.fna"
+    output: temp("umi/{barcode}/{c}/bin/binned/{umi_id}.fna")
     conda: "../envs/seqkit.yaml"
     log: "logs/kmerBin/{barcode}/{c}/bin/fq2fa_{umi_id}.log"
     benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/fq2fa_{umi_id}.txt"
@@ -872,7 +872,7 @@ rule fq2fa_umi:
 
 rule get_centroids_umifa:
     input: rules.fq2fa_umi.output
-    output: "umi/{barcode}/{c}/bin/binned/{umi_id}_centroid.fna",
+    output: temp("umi/{barcode}/{c}/bin/binned/{umi_id}_centroid.fna"),
     conda: "../envs/vsearch.yaml"
     log: "logs/kmerBin/{barcode}/{c}/bin/get_centroids_{umi_id}.log"
     benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/get_centroids_{umi_id}.txt"
@@ -885,7 +885,7 @@ rule get_centroids_umifa:
 
 rule take_seedfa:
     input: rules.get_centroids_umifa.output
-    output: "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/raw.fna"
+    output: temp("umi/{barcode}/{c}/bin/polish/{umi_id}/draft/raw.fna")
     conda: "../envs/seqkit.yaml"
     log: "logs/kmerBin/{barcode}/{c}/bin/polish/{umi_id}/take_seedfa.log"
     benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/polish/{umi_id}/take_seedfa.txt"
@@ -898,7 +898,7 @@ use rule minimap2polish as minimap2polish_umi with:
         ref = "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/{assembly}.fna",
         fastq = "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
     output: 
-        "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/{assembly}.paf",
+        temp("umi/{barcode}/{c}/bin/polish/{umi_id}/draft/{assembly}.paf")
     message: 
         "Polish umi [id={wildcards.umi_id}]: alignments against {wildcards.assembly} assembly [{wildcards.barcode}]"
     log: 
@@ -921,7 +921,7 @@ use rule racon as racon_umi with:
         "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
         get_racon_input_umi,
     output: 
-        "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}.fna"
+        temp("umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}.fna")
     message: 
         "Polish {wildcards.c} draft [id={wildcards.umi_id}] with racon, round={wildcards.iter} [{wildcards.barcode}]"
     log: 
@@ -935,10 +935,16 @@ use rule medaka_consensus as medaka_consensus_umi with:
         iter = config["racon"]["iter"]),
         fastq = "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
     output: 
-        fasta = "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka/consensus.fasta",
-        _dir = directory("umi/{barcode}/{c}/bin/polish/{umi_id}/medaka"),
+        "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka/consensus.fasta",
+        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/consensus{ext}",
+        ext = [".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
+        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/calls{ext}",
+        ext = ["_to_draft.bam", "_to_draft.bam.bai"]))
     message: 
         "Generate umi consensus [id={wildcards.umi_id}] in {wildcards.c} with medaka [{wildcards.barcode}]"
+    params:
+        m = config["medaka"]["m"],
+        _dir = "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka",
     log: 
         "logs/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.log"
     benchmark: 
