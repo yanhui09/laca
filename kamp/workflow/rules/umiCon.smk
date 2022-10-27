@@ -98,10 +98,8 @@ use rule umap as umap_umi with:
     
 # split reads by cluster
 checkpoint cls_kmerbin_umi:
-    input: 
-        rules.umap_umi.output.cluster,
-        rules.qfilter_umi.output,
-    output: directory("umi/{barcode}/kmerBin/clusters")
+    input: rules.umap_umi.output.cluster
+    output: temp(directory("umi/{barcode}/kmerBin/clusters"))
     log: "logs/umi/{barcode}/kmerBin/clusters.log"
     benchmark: "benchmarks/umi/{barcode}/kmerBin/clusters.txt"
     run:
@@ -144,8 +142,8 @@ def get_fq4Con_umi(kmerbin = True):
 rule umi_loc:
     input: get_fq4Con_umi(config["kmerbin"])
     output:
-        start = "umi/{barcode}/{c}/start.fastq",
-        end = "umi/{barcode}/{c}/end.fastq",
+        start = temp("umi/{barcode}/{c}/start.fastq"),
+        end = temp("umi/{barcode}/{c}/end.fastq"),
     conda: "../envs/seqkit.yaml"
     params:
         umi_loc=config["umi"]["loc"]
@@ -200,24 +198,29 @@ rule concat_umi:
     benchmark: "benchmarks/umi/{barcode}/{c}/concat_umi.txt"
     shell: "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -o {output} 2>> {log}"
 
-def get_umifile1(wildcards, kmerbin = True):
+# extend list with umi_loc fqs
+def get_umifile1(wildcards, kmerbin = True, extend=False):
     check_val("kmerbin", kmerbin, bool)
     barcodes = get_filt_umi(wildcards)
 
-    bin2clusters = []
+    fs = []
+    if kmerbin == True and extend == True:
+        fs.extend(["umi/{barcode}/kmerBin/clusters".format(barcode = i) for i in barcodes])
     for i in barcodes:
         if kmerbin == True:
             cs = glob_wildcards(checkpoints.cls_kmerbin_umi.get(barcode=i).output[0] + "/{c}.txt").c
         else:
             cs = ["all"]
         for c in cs:
-            bin2clusters.append("umi/{barcode}/{c}/umi.fasta".format(barcode=i, c=c))
-    return bin2clusters
+            fs.append("umi/{barcode}/{c}/umi.fasta".format(barcode=i, c=c))
+            if extend == True:
+                fs.extend(["umi/{barcode}/{c}/{loc}.fastq".format(barcode=i, c=c, loc=j) for j in ["start", "end"]])
+    return fs
 
 checkpoint umi_check1:
     input: 
-        lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"]),
-        lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc)),
+        lambda wc: get_umifile1(wc, kmerbin = config["kmerbin"], extend=True),
+        "umi/shallow",
     output: temp(directory("umi/check1"))
     run:
         import shutil
@@ -445,24 +448,28 @@ rule umi_filter:
         > {output} 2> {log} 
         """
 
-def get_umifile2(wildcards, kmerbin = True):
+# extend list with umi_loc fqs
+def get_umifile2(wildcards, kmerbin = True, extend = False):
     b_cs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{b_c}.fa").b_c
-    bin2clusters = []
+    fs = []
     for i in b_cs:
         b, c = i.split("_")
-        bin2clusters.append("umi/{barcode}/{c}/umicf.fa".format(barcode=b, c=c))
-    return bin2clusters
+        fs.append("umi/{barcode}/{c}/umicf.fa".format(barcode=b, c=c))
+        if extend == True:
+            fs.extend(["umi/{barcode}/{c}/{loc}.fastq".format(barcode=b, c=c, loc=j) for j in ["start", "end"]])
+    return fs
 
 checkpoint umi_check2:
     input: 
-        umifiles = lambda wc: get_umifile2(wc, kmerbin = config["kmerbin"]),
-        fqs = lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc)),
+        "umi/check1",
+        lambda wc: get_umifile2(wc, kmerbin = config["kmerbin"], extend = True),
     output: temp(directory("umi/check2"))
     run:
         import shutil
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
-        for i in list(input.umifiles):
+        fs = get_umifile2(wildcards, kmerbin = config["kmerbin"])
+        for i in list(fs):
             num_lines = sum(1 for line in open(i))
             if num_lines > 1:
                 barcode, c = [ i.split("/")[index] for index in [-3, -2] ]
@@ -840,8 +847,8 @@ rule umi_binning:
 checkpoint bin_info:
     input: 
         rules.umi_binning.output.bin_map,
-        rules.qfilter_umi.output,
-    output: directory("umi/{barcode}/{c}/bin/binned")
+        "umi/check2",
+    output: temp(directory("umi/{barcode}/{c}/bin/binned"))
     log: "logs/kmerBin/{barcode}/{c}/bin/bin_info.log"
     benchmark: "benchmarks/kmerBin/{barcode}/{c}/bin/bin_info.txt"
     run:
@@ -937,9 +944,8 @@ use rule medaka_consensus as medaka_consensus_umi with:
         iter = config["racon"]["iter"]),
         fastq = "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
     output: 
-        "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka/consensus.fasta",
         temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/consensus{ext}",
-        ext = [".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
+        ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
         temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/calls{ext}",
         ext = ["_to_draft.bam", "_to_draft.bam.bai"])),
         temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/draft/racon_{iter}.fna{ext}", 
@@ -966,11 +972,15 @@ def get_umiCon(wildcards):
     return fnas
 
 rule collect_umiCon:
-    input: lambda wc: get_umiCon(wc),
+    input:
+        "umi/check2",
+        lambda wc: ["umi/{b_c}/bin/binned".format(b_c = i.replace("_","/")) for i in glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{b_c}.fa").b_c],
+        lambda wc: expand("umi/{barcode}/qfilt.fastq", barcode=get_filt_umi(wc)),
+        fa = lambda wc: get_umiCon(wc),
     output: "umi/umiCon_full.fna"
     run: 
         with open(output[0], "w") as out:
-            for i in input:
+            for i in input.fa:
                 barcode_i, c_i, uid_i = [ i.split("/")[index] for index in [-7, -6, -3] ]
                 with open(i, "r") as inp:
                     for line in inp:
