@@ -1,6 +1,6 @@
 rule kmer_freqs:
     input: "qc/qfilt/{barcode}.fastq"
-    output: "kmerBin/{barcode}/kmer_freqs.txt"
+    output: temp("kmerBin/{barcode}/kmer_freqs.txt")
     conda: "../envs/kmerBin.yaml"
     params: 
         kmer_size = config["kmer_size"],
@@ -42,7 +42,7 @@ def get_batch_size(batch_size, ram, kmer_file):
 
 checkpoint shuffle_batch:
     input: rules.kmer_freqs.output
-    output: directory("kmerBin/{barcode}/batch_check")
+    output: temp(directory("kmerBin/{barcode}/batch_check"))
     conda: "../envs/coreutils.yaml"
     params:
         batch_size = lambda wc, input: get_batch_size(config["batch_size"], config["bin_mem"], input[0]),
@@ -62,7 +62,7 @@ rule umap:
     input: 
         "kmerBin/{barcode}/batch_check/{batch}.tsv",
     output: 
-        cluster="kmerBin/{barcode}/{batch}/hdbscan.tsv",
+        cluster=temp("kmerBin/{barcode}/{batch}/hdbscan.tsv"),
 	    plot="kmerBin/{barcode}/{batch}/hdbscan.png",
     conda: "../envs/kmerBin.yaml"
     params:
@@ -92,12 +92,14 @@ def get_kmerbatch(wildcards):
     return expand("kmerBin/{{barcode}}/{batch}/hdbscan.tsv", batch=batches)
 
 rule col_kmerbatch:
-    input: get_kmerbatch
+    input: 
+        "kmerBin/{barcode}/batch_check",
+        batch = lambda wc: get_kmerbatch(wc)
     output: "kmerBin/{barcode}/hdbscan.tsv"
     run:
         with open(output[0], "w") as out:
             out.write("read\tlength\tD1\tD2\tbin_id\tbatch_id\n")
-            for i in input:
+            for i in input.batch:
                 batch = i.split("/")[-2].replace('batch', 'b')
                 with open(i) as f:
                     next(f)
@@ -114,13 +116,16 @@ def get_bin(wildcards, pool = True):
 
 # split reads by kmerbin
 checkpoint cls_kmerbin:
-    input: lambda wildcards: get_bin(wildcards, pool = config["pool"])
-    output: directory("kmerBin/clusters"),
+    input:
+        "qc/qfilt/empty",
+        lambda wc: get_filt(wc, pool = config["pool"]), 
+        bin = lambda wildcards: get_bin(wildcards, pool = config["pool"])
+    output: temp(directory("kmerBin/clusters")),
     run:
         import pandas as pd
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
-        for i in list(input):
+        for i in list(input.bin):
             barcode = i.split("/")[-2]
             df_i = pd.read_csv(i, sep="\t")
             # unclustered reads are assigned to bin -1, drop
@@ -137,7 +142,7 @@ rule split_bin:
     input:
         cluster = "kmerBin/clusters/{barcode}_{c}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
-    output: "kmerBin/{barcode}/split/{c}.fastq",
+    output: temp("kmerBin/{barcode}/split/{c}.fastq"),
     conda: "../envs/seqkit.yaml"
     log: "logs/kmerBin/{barcode}/split/{c}.log"
     benchmark: "benchmarks/kmerBin/{barcode}/split/{c}.txt"
@@ -146,7 +151,7 @@ rule split_bin:
 
 rule skip_bin:
     input: "qc/qfilt/{barcode}.fastq"
-    output: "kmerBin/{barcode}/all.fastq"
+    output: temp("kmerBin/{barcode}/all.fastq")
     log: "logs/kmerBin/{barcode}/skip_bin.log"
     shell: "cp -p {input} {output} 2> {log}"
 

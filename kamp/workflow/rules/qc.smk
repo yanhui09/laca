@@ -107,7 +107,7 @@ def trim_check(trim, subsample, n):
 rule q_filter:
     input:
         trim_check(config["trim"], config["subsample"], config["seqkit"]["n"])
-    output: "qc/qfilt/{barcode}.fastq"
+    output: temp("qc/qfilt/{barcode}.fastq")
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min-qual"],
@@ -120,7 +120,7 @@ rule q_filter:
 
 checkpoint exclude_empty_fqs:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: directory("qc/qfilt/empty")
+    output: temp(directory("qc/qfilt/empty"))
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -140,7 +140,7 @@ def get_qced(wildcards):
 #  sample pooling to increase sensitivity 
 rule combine_fastq:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced(wc))
-    output: "qc/qfilt/pooled.fastq"
+    output: temp("qc/qfilt/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
