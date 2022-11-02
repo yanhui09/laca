@@ -59,14 +59,14 @@ def get_clust(wildcards, pool = True, kmerbin = True):
     check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
         
-    if kmerbin is True:
+    if kmerbin == True:
         bin2cls = []
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
             bin2cls.append("clustCon/{bc}/avr_aln/{kb}/bin2clust.csv".format(bc=bc, kb=kb))
     else:
-        if pool is True:
+        if pool == True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
@@ -135,14 +135,14 @@ def get_isONclust(wildcards, pool = True, kmerbin = True):
     check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
         
-    if kmerbin is True:
+    if kmerbin == True:
         bin2cls = []
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
             bin2cls.append("isONclustCon/{bc}/{kb}/final_clusters.tsv".format(bc=bc, kb=kb))
     else:
-        if pool is True:
+        if pool == True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
