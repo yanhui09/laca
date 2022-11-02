@@ -121,15 +121,17 @@ rule get_fqs_split2:
 rule isONclust:
     input: get_fq4Con(config["kmerbin"])
     output:
-        _dir = directory("isONclustCon/{barcode}/{c}"),
-        tsv = "isONclustCon/{barcode}/{c}/final_clusters.tsv"
+        _dir = temp(directory("isONclustCon/{barcode}/{c}")),
+        tsv = temp("isONclustCon/{barcode}/{c}_clusters.tsv")
     conda: "../envs/isONcorCon.yaml"
     log: "logs/isONclustCon/{barcode}/{c}/isONclust.log"
     benchmark: "benchmarks/isONclustCon/{barcode}/{c}/isONclust.txt"
     threads: config["threads"]["large"]
     shell:
-        "isONclust --ont --fastq {input} "
-        "--outfolder {output._dir} --t {threads} > {log} 2>&1"
+        """
+        isONclust --ont --fastq {input} --outfolder {output._dir} --t {threads} > {log} 2>&1
+        mv {output._dir}/final_clusters.tsv {output.tsv}
+        """
 
 def get_isONclust(wildcards, pool = True, kmerbin = True):
     check_val("pool", pool, bool)
@@ -140,13 +142,13 @@ def get_isONclust(wildcards, pool = True, kmerbin = True):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            bin2cls.append("isONclustCon/{bc}/{kb}/final_clusters.tsv".format(bc=bc, kb=kb))
+            bin2cls.append("isONclustCon/{bc}/{kb}_clusters.tsv".format(bc=bc, kb=kb))
     else:
         if pool == True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
-        bin2cls = expand("isONclustCon/{bc}/all/final_clusters.tsv", bc=bcs)
+        bin2cls = expand("isONclustCon/{bc}/all_clusters.tsv", bc=bcs)
     return bin2cls
 
 checkpoint cls_isONclust:
@@ -162,7 +164,7 @@ checkpoint cls_isONclust:
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input.cls):
-            barcode, c = [ i.split('/')[index] for index in [-3, -2] ]
+            barcode, c = [ i.removesuffix("_clusters.tsv").split('/')[index] for index in [-2, -1] ]
             df_i = pd.read_csv(i, sep = '\t', header = None)
             df_i.columns = ['cluster', 'seqid']
             for clust_id, df_clust in df_i.groupby('cluster'):
@@ -272,8 +274,8 @@ rule medaka_consensus:
 rule isONcorrect:
     input: rules.get_fqs_split3.output,
     output:
-        _dir = directory("isONcorCon/{barcode}/{c}/{clust_id}/isONcor"), 
-        fq = temp("isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq")
+        _dir = temp(directory("isONcorCon/{barcode}/{c}/{clust_id}/isONcor")), 
+        fq = temp("isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"),
     conda: "../envs/isONcorCon.yaml"
     params:
         _dir = "isONcorCon/{barcode}/{c}/{clust_id}",
@@ -299,15 +301,23 @@ rule isONcorrect:
         """
 
 rule isoCon:
-    input: rules.isONcorrect.output.fq
+    input: 
+        "isONcorCon/{barcode}/{c}/{clust_id}/isONcor", 
+        fq = rules.isONcorrect.output.fq
     output:
-        _dir = directory("isONcorCon/{barcode}/{c}/{clust_id}/isoCon"),
-        fna = temp("isONcorCon/{barcode}/{c}/{clust_id}/isoCon/final_candidates.fa"),
+        _dir = temp(directory("isONcorCon/{barcode}/{c}/{clust_id}/isoCon")),
+        cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}_isoCon.tsv",
+        fna = temp("isONcorCon/{barcode}/{c}/{clust_id}/isoCon_candidates.fa"),
     conda: "../envs/isONcorCon.yaml"
     log: "logs/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.log"
     benchmark: "benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.txt"
     threads: config["threads"]["normal"]
-    shell: "IsoCon pipeline -fl_reads {input} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1"
+    shell: 
+        """
+        IsoCon pipeline -fl_reads {input.fq} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1
+        mv {output._dir}/final_candidates.fa {output.fna}
+        mv {output._dir}/cluster_info.tsv {output.cls} 
+        """
  
 # get polished asembly
 # kmerCon
@@ -388,7 +398,7 @@ def get_isONcorCon(wildcards):
     fnas = []
     for i in bc_kb_cis:
         bc, kb, ci = i.split("_")
-        fnas.append("isONcorCon/{bc}/{kb}/{ci}/isoCon/final_candidates.fa".format(bc=bc, kb=kb, ci=ci))
+        fnas.append("isONcorCon/{bc}/{kb}/{ci}/isoCon_candidates.fa".format(bc=bc, kb=kb, ci=ci))
     return fnas
 
 rule collect_isONcorCon:
