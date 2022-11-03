@@ -120,7 +120,7 @@ checkpoint cls_kmerbin:
         "qc/qfilt/empty",
         lambda wc: get_filt(wc, pool = config["pool"]), 
         bin = lambda wildcards: get_bin(wildcards, pool = config["pool"])
-    output: temp(directory("kmerBin/clusters")),
+    output: directory("kmerBin/clusters"),
     run:
         import pandas as pd
         if not os.path.exists(output[0]):

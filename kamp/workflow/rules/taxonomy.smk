@@ -102,7 +102,7 @@ rule classify_kraken2:
     input:
         ancient(DATABASE_DIR + "/.initDB_DONE"),
         ancient(expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"])), 
-        fna = chimeraF(config["chimeraF"])[1]
+        fna = ancient(chimeraF(config["chimeraF"])[1]),
     output: temp("taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
     params:
