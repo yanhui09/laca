@@ -39,7 +39,7 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         "--use-singularity {singularity_prefix} "
         "--singularity-args '{singularity_args}' "
         "{dryrun} "
-        "--rerun-triggers mtime --rerun-incomplete "
+        "--rerun-triggers mtime --rerun-incomplete --scheduler greedy "
         "--jobs {jobs} --nolock "
         " {max_mem} "
         " {args} "
