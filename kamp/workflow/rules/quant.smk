@@ -74,7 +74,7 @@ rule dict:
     benchmark: "benchmarks/quant/dict.txt"
     shell: "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
 
-rule minimap_rep_seqs:
+rule minimap2_rep_seqs:
     input:
         fq = get_raw(config["subsample"], config["seqkit"]["n"]),
         mmi = rules.index.output,
@@ -84,8 +84,8 @@ rule minimap_rep_seqs:
     params:
         x = config["minimap"]["x"]
     conda: "../envs/minimap2.yaml"
-    log: "logs/quant/minimap/{barcode}.log"
-    benchmark: "benchmarks/quant/minimap/{barcode}.txt"
+    log: "logs/quant/minimap2/{barcode}.log"
+    benchmark: "benchmarks/quant/minimap2/{barcode}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -95,7 +95,7 @@ rule minimap_rep_seqs:
         """
 
 rule sort:
-    input: rules.minimap_rep_seqs.output
+    input: rules.minimap2_rep_seqs.output
     output: temp("quant/mapped/{barcode}.sorted.bam")
     params:
         prefix = "quant/mapped/tmp.{barcode}",

@@ -26,8 +26,8 @@ rule subsample:
     params:
         p = 1,
         n = config["seqkit"]["n"],
-    log: "logs/subsample/{barcode}.log"
-    benchmark: "benchmarks/subsample/{barcode}.txt"
+    log: "logs/qc/subsample/{barcode}.log"
+    benchmark: "benchmarks/qc/subsample/{barcode}.txt"
     threads: 1
     shell:
         """
@@ -55,8 +55,8 @@ rule trim_primers:
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
         m = config["cutadapt"]["minimum-length"],
-    log: "logs/qc/{barcode}/trim_primersF.log"
-    benchmark: "benchmarks/qc/{barcode}/trim_primersF.txt"
+    log: "logs/qc/trim_primersF/{barcode}.log"
+    benchmark: "benchmarks/qc/trim_primersF/{barcode}.txt"
     threads: config["threads"]["large"]
     shell:
         """
@@ -82,17 +82,17 @@ use rule trim_primers as trim_primersR with:
         O = config["cutadapt"]["min_overlap"],
         m = config["cutadapt"]["minimum-length"],
     log: 
-        "logs/qc/{barcode}/trim_primersR.log"
+        "logs/qc/trim_primersR/{barcode}.log"
     benchmark: 
-        "benchmarks/qc/{barcode}/trim_primersR.txt"
+        "benchmarks/qc/trim_primersR/{barcode}.txt"
 
 # reverse complement for reverse strand
 rule revcomp_fq:
     input: rules.trim_primersR.output.trimmed
     output: temp("qc/primers_trimmed/{barcode}R_revcomp.fastq")
     conda: "../envs/seqkit.yaml"
-    log: "logs/qc/{barcode}/revcomp_fq.log"
-    benchmark: "benchmarks/qc/{barcode}/revcomp_fq.txt"
+    log: "logs/qc/revcomp_fq/{barcode}.log"
+    benchmark: "benchmarks/qc/revcomp_fq/{barcode}.txt"
     threads: config["threads"]["normal"]
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
@@ -113,8 +113,8 @@ rule q_filter:
         Q = config["seqkit"]["min-qual"],
         m = config["seqkit"]["min-len"],
         M = config["seqkit"]["max-len"],
-    log: "logs/qc/{barcode}/q_filter.log"
-    benchmark: "benchmarks/qc/{barcode}/q_filter.txt"
+    log: "logs/qc/q_filter/{barcode}.log"
+    benchmark: "benchmarks/qc/q_filter/{barcode}.txt"
     threads: config["threads"]["normal"]
     shell: "cat {input} | seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i > {output} 2> {log}"
 

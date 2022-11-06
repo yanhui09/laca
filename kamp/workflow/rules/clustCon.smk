@@ -10,8 +10,8 @@ def get_fq4Con(kmerbin = True):
 rule get_fqs_split:
     input: get_fq4Con(config["kmerbin"]),
     output: temp("kmerCon/{barcode}/{c}/split/0.fastq"),
-    log: "logs/kmerCon/{barcode}/{c}/0/get_fqs_split.log"
-    benchmark: "benchmarks/kmerCon/{barcode}/{c}/0/get_fqs_split.txt"
+    log: "logs/kmerCon/{barcode}_{c}_0/get_fqs_split.log"
+    benchmark: "benchmarks/kmerCon/{barcode}_{c}_0/get_fqs_split.txt"
     shell: "cp -f {input} {output} 2> {log}"
 
 rule spoa:
@@ -22,8 +22,8 @@ rule spoa:
         l = config["spoa"]["l"],
         r = config["spoa"]["r"],
         g = config["spoa"]["g"],
-    log: "logs/isONclustCon/{barcode}/{c}/0/spoa_consensus.log"
-    benchmark: "benchmarks/isONclustCon/{barcode}/{c}/0/spoa_consensus.txt"
+    log: "logs/kmerCon/{barcode}_{c}_0/spoa.log"
+    benchmark: "benchmarks/kmerCon/{barcode}_{c}_0/spoa.txt"
     shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}"
 
 # clustCon
@@ -32,8 +32,8 @@ rule minimap2clust:
     input: get_fq4Con(config["kmerbin"])
     output: temp("clustCon/{barcode}/avr_aln/{c}/minimap2clust.paf")
     conda: '../envs/minimap2.yaml'
-    log: "logs/clustCon/{barcode}/minimap2clust/{c}.log"
-    benchmark: "benchmarks/clustCon/{barcode}/minimap2clust/{c}.txt"
+    log: "logs/clustCon/minimap2clust/{barcode}_{c}.log"
+    benchmark: "benchmarks/clustCon/minimap2clust/{barcode}_{c}.txt"
     threads: config["threads"]["large"]
     shell:
         "minimap2 -t {threads} -x ava-ont --no-long-join -r100"
@@ -48,8 +48,8 @@ rule bin2clustering:
         min_score_frac = config["clustCon"]["min_score_frac"],
         min_reads = config["min_cluster_size"],
         max_recurs = config["clustCon"]["max_recursion"],
-    log: "logs/clustCon/{barcode}/bin2clust/{c}.log"
-    benchmark: "benchmarks/clustCon/{barcode}/bin2clust/{c}.txt"
+    log: "logs/clustCon/bin2clust/{barcode}_{c}.log"
+    benchmark: "benchmarks/clustCon/bin2clust/{barcode}_{c}.txt"
     shell:
         "python {workflow.basedir}/scripts/binClust.py -p {params.prefix}"
         " -R {params.max_recurs}"
@@ -108,8 +108,8 @@ rule get_fqs_split2:
         pool = temp("clustCon/{barcode}/{c}/split/{clust_id}.fastq"),
         ref = temp("clustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna"),
     conda: '../envs/seqkit.yaml'
-    log: "logs/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split.log"
-    benchmark: "benchmarks/clustCon/{barcode}/{c}/{clust_id}/get_fqs_split.txt"
+    log: "logs/clustCon/{barcode}_{c}_{clust_id}/get_fqs_split.log"
+    benchmark: "benchmarks/clustCon/{barcode}_{c}_{clust_id}/get_fqs_split.txt"
     shell:
         """
         seqkit grep -f {input.pool} {input.binned} -o {output.pool} --quiet 2> {log}
@@ -124,8 +124,8 @@ rule isONclust:
         _dir = temp(directory("isONclustCon/{barcode}/{c}")),
         tsv = temp("isONclustCon/{barcode}/{c}_clusters.tsv")
     conda: "../envs/isONcorCon.yaml"
-    log: "logs/isONclustCon/{barcode}/{c}/isONclust.log"
-    benchmark: "benchmarks/isONclustCon/{barcode}/{c}/isONclust.txt"
+    log: "logs/isONclustCon/isONclust/{barcode}_{c}.log"
+    benchmark: "benchmarks/isONclustCon/isONclust/{barcode}_{c}.txt"
     threads: config["threads"]["large"]
     shell:
         """
@@ -178,8 +178,8 @@ rule get_fqs_split3:
         binned = get_fq4Con(config["kmerbin"]),
     output: temp("isONclustCon/{barcode}/{c}/split/{clust_id}.fastq"),
     conda: '../envs/seqkit.yaml'
-    log: "logs/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split.log"
-    benchmark: "benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/get_fqs_split.txt"
+    log: "logs/isONclustCon/{barcode}_{c}_{clust_id}/get_fqs_split.log"
+    benchmark: "benchmarks/isONclustCon/{barcode}_{c}_{clust_id}/get_fqs_split.txt"
     shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
 
 use rule spoa as spoa2 with:
@@ -188,9 +188,9 @@ use rule spoa as spoa2 with:
     output: 
         temp("isONclustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna")
     log: 
-        "logs/isONclustCon/{barcode}/{c}/{clust_id}/spoa.log"
+        "logs/isONclustCon/{barcode}_{c}_{clust_id}/spoa.log"
     benchmark: 
-        "benchmarks/isONclustCon/{barcode}/{c}/{clust_id}/spoa.txt"
+        "benchmarks/isONclustCon/{barcode}_{c}_{clust_id}/spoa.txt"
 
 # polish with racon and medaka
 # reused in racon iterations
@@ -203,8 +203,8 @@ rule minimap2polish:
     params:
         x = config["minimap"]["x"]
     conda: "../envs/minimap2.yaml"
-    log: "logs/{cls}/{barcode}/{c}/{clust_id}/minimap2polish/{assembly}.log"
-    benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/minimap2polish/{assembly}.txt"
+    log: "logs/{cls}/{barcode}_{c}_{clust_id}/minimap2_{assembly}.log"
+    benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/minimap2_{assembly}.txt"
     threads: config["threads"]["normal"]
     shell:
         "minimap2 -t {threads} -x {params.x}"
@@ -231,8 +231,8 @@ rule racon:
         g = config["racon"]["g"],
         w = config["racon"]["w"],
     conda: "../envs/racon.yaml"
-    log: "logs/{cls}/{barcode}/{c}/{clust_id}/racon/round{iter}.log"
-    benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/racon/round{iter}.txt"
+    log: "logs/{cls}/{barcode}_{c}_{clust_id}/racon_{iter}.log"
+    benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/racon_{iter}.txt"
     threads: config["threads"]["normal"]
     shell:
         "racon -m {params.m} -x {params.x}"
@@ -267,8 +267,8 @@ rule medaka_consensus:
         _dir = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka_{iter2}",
         inedxs = lambda wc: get_medaka_files(wc, index = True),
     conda: "../envs/medaka.yaml"
-    log: "logs/{cls}/{barcode}/{c}/{clust_id}/medaka_{iter2}.log"
-    benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/medaka_{iter2}.txt"
+    log: "logs/{cls}/{barcode}_{c}_{clust_id}/medaka_{iter2}.log"
+    benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/medaka_{iter2}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -291,8 +291,8 @@ rule isONcorrect:
     params:
         _dir = "isONcorCon/{barcode}/{c}/{clust_id}",
         max_seqs = 2000,
-    log: "logs/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.log"
-    benchmark: "benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isONcorrect.txt"
+    log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -320,8 +320,8 @@ rule isoCon:
         cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}_isoCon.tsv",
         fna = temp("isONcorCon/{barcode}/{c}/{clust_id}/isoCon_candidates.fa"),
     conda: "../envs/isONcorCon.yaml"
-    log: "logs/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.log"
-    benchmark: "benchmarks/isONcorCon/{barcode}/{c}/{clust_id}/isoCon.txt"
+    log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
     shell: 
         """

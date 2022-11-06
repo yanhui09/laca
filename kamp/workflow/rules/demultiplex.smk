@@ -3,8 +3,8 @@ rule guppy:
     input: INPUT_DIR 
     output: touch(".guppy_DONE")
     singularity: "docker://genomicpariscentre/guppy:3.3.3"
-    log: "logs/demultiplex_guppy.log"
-    benchmark: "benchmarks/demultiplex_guppy.txt"
+    log: "logs/demultiplex/guppy.log"
+    benchmark: "benchmarks/demultiplex/guppy.txt"
     threads: config["threads"]["large"]
     params:
         barcode_kits=config["guppy"]["barcode_kits"],
@@ -29,8 +29,8 @@ rule minibar_batch:
     params: 
         dir = lambda wildcards: os.path.join(os.getcwd(), "demultiplexed_minibar", os.path.splitext(wildcards.basecalled_fq)[0]),
         args = config["minibar"]["args"],
-    log: "logs/minibar/{basecalled_fq}.log"
-    benchmark: "benchmarks/minibar/{basecalled_fq}.txt"
+    log: "logs/demultiplex/minibar/{basecalled_fq}.log"
+    benchmark: "benchmarks/demultiplex/minibar/{basecalled_fq}.txt"
     shell: 
         """
         mkdir -p {params.dir}
@@ -43,8 +43,8 @@ rule collect_minibar_batch:
     output: touch(".minibar_DONE")
     params:
         dir = os.path.join(os.getcwd(), "demultiplexed_minibar"),
-    log: "logs/collect_minibar_batch.log"
-    benchmark: "benchmarks/collect_minibar_batch.txt"
+    log: "logs/demultiplex/minibar/collect_batch.log"
+    benchmark: "benchmarks/demultiplex/minibar/collect_batch.txt"
     shell:
         """
         mkdir -p {params.dir}/unclassified {params.dir}/mult
@@ -95,8 +95,8 @@ def get_demult(demult="guppy", dir=False):
 checkpoint demultiplex_check:
     input: ancient(get_demult(demult=config["demultiplex"], dir=False))
     output: directory("demultiplexed")
-    log: "logs/demultiplex_check.log"
-    benchmark: "benchmarks/demultiplex_check.txt"
+    log: "logs/demultiplex/check.log"
+    benchmark: "benchmarks/demultiplex/check.txt"
     params:
         dir=get_demult(demult=config["demultiplex"], dir=True),
         nreads_m=config["nreads_m"],

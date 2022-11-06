@@ -100,7 +100,7 @@ use rule dict as dict_re with:
     benchmark: 
         "benchmarks/requant/dict.txt"
 
-use rule minimap_rep_seqs as minimap_rep_seqs_re with:
+use rule minimap2_rep_seqs as minimap2_rep_seqs_re with:
     input:
         fq = "f2requant/{barcode}.fastq",
         mmi = rules.index_re.output,
@@ -108,13 +108,13 @@ use rule minimap_rep_seqs as minimap_rep_seqs_re with:
     output: 
         temp("requant/mapped/{barcode}.bam")
     log: 
-        "logs/requant/minimap/{barcode}.log"
+        "logs/requant/minimap2/{barcode}.log"
     benchmark: 
-        "benchmarks/requant/minimap/{barcode}.txt"
+        "benchmarks/requant/minimap2/{barcode}.txt"
 
 use rule sort as sort_re with:
     input: 
-        rules.minimap_rep_seqs_re.output
+        rules.minimap2_rep_seqs_re.output
     output: 
         temp("requant/mapped/{barcode}.sorted.bam")
     log: 

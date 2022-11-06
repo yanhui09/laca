@@ -4,8 +4,8 @@ rule kmer_freqs:
     conda: "../envs/kmerBin.yaml"
     params: 
         kmer_size = config["kmer_size"],
-    log: "logs/kmerBin/{barcode}/kmer_freqs.log"
-    benchmark: "benchmarks/kmerBin/{barcode}/kmer_freqs.txt"
+    log: "logs/kmerBin/kmer_freqs/{barcode}.log"
+    benchmark: "benchmarks/kmerBin/kmer_freqs/{barcode}.txt"
     threads: config["threads"]["large"]
     shell:
         "python {workflow.basedir}/scripts/kmerFreqs.py"
@@ -46,8 +46,8 @@ checkpoint shuffle_batch:
     conda: "../envs/coreutils.yaml"
     params:
         batch_size = lambda wc, input: get_batch_size(config["batch_size"], config["bin_mem"], input[0]),
-    log: "logs/kmerBin/{barcode}/shuffle_batch.log"
-    benchmark: "benchmarks/kmerBin/{barcode}/shuffle_batch.txt"
+    log: "logs/kmerBin/shuffle_batch/{barcode}.log"
+    benchmark: "benchmarks/kmerBin/shuffle_batch/{barcode}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -74,9 +74,9 @@ rule umap:
         min_samples = config["hdbscan"]["min_samples"],
 	    epsilon = config["hdbscan"]["epsilon"],
     log: 
-        "logs/kmerBin/{barcode}/{batch}/umap.log"
+        "logs/kmerBin/umap/{barcode}_{batch}.log"
     benchmark: 
-        "benchmarks/kmerBin/{barcode}/{batch}/umap.txt"
+        "benchmarks/kmerBin/umap/{barcode}_{batch}.txt"
     threads: config["threads"]["large"]
     resources:
         mem_mb = config["bin_mem"] * 1024
@@ -144,15 +144,15 @@ rule split_bin:
         fqs = "qc/qfilt/{barcode}.fastq",
     output: temp("kmerBin/{barcode}/split/{c}.fastq"),
     conda: "../envs/seqkit.yaml"
-    log: "logs/kmerBin/{barcode}/split/{c}.log"
-    benchmark: "benchmarks/kmerBin/{barcode}/split/{c}.txt"
+    log: "logs/kmerBin/fqs_split/{barcode}_{c}.log"
+    benchmark: "benchmarks/kmerBin/fqs_split/{barcode}_{c}.txt"
     shell:
         "seqkit grep {input.fqs} -f {input.cluster} -o {output} 2> {log}"
 
 rule skip_bin:
     input: "qc/qfilt/{barcode}.fastq"
     output: temp("kmerBin/{barcode}/all.fastq")
-    log: "logs/kmerBin/{barcode}/skip_bin.log"
+    log: "logs/kmerBin/skip_bin/{barcode}.log"
     shell: "cp -p {input} {output} 2> {log}"
 
 # get {barcode} {c} from chekckpoint
