@@ -938,29 +938,40 @@ use rule racon as racon_umi with:
     benchmark: 
         "benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/racon/round{iter}.txt"
 
+# add iter for medaka
+def get_medaka_files_umi(wildcards, racon_iter = config["racon"]["iter"], index = False):
+    if int(wildcards.iter2) == 1:
+        fna = "umi/{barcode}/{c}/bin/polish/{umi_id}/draft/racon_{iter}.fna".format(
+            barcode=wildcards.barcode, c=wildcards.c, umi_id=wildcards.umi_id, iter=racon_iter)
+    else:
+        fna = "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka_{iter}/consensus.fasta".format(
+            barcode=wildcards.barcode, c=wildcards.c, umi_id=wildcards.umi_id, iter=str(int(wildcards.iter2) - 1))
+    if index == True:
+        return(fna + ".fai", fna + ".map-ont.mmi")
+    else:
+        return(fna)
+
 use rule medaka_consensus as medaka_consensus_umi with:
     input:
-        fna = expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/draft/racon_{iter}.fna", 
-        iter = config["racon"]["iter"]),
+        fna = lambda wc: get_medaka_files_umi(wc),
         fastq = "umi/{barcode}/{c}/bin/binned/{umi_id}.fastq",
     output: 
-        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/consensus{ext}",
+        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka_{{iter2}}/consensus{ext}",
         ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
-        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka/calls{ext}",
+        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/medaka_{{iter2}}/calls{ext}",
         ext = ["_to_draft.bam", "_to_draft.bam.bai"])),
-        temp(expand("umi/{{barcode}}/{{c}}/bin/polish/{{umi_id}}/draft/racon_{iter}.fna{ext}", 
-        iter = config["racon"]["iter"], ext = [".fai", ".map-ont.mmi"])),
     message: 
-        "Generate umi consensus [id={wildcards.umi_id}] in {wildcards.c} with medaka [{wildcards.barcode}]"
+        "Generate umi consensus [id={wildcards.umi_id}] in {wildcards.c} with medaka, round={wildcards.iter2} [{wildcards.barcode}]"
     params:
         m = config["medaka"]["m"],
-        _dir = "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka",
+        _dir = "umi/{barcode}/{c}/bin/polish/{umi_id}/medaka_{iter2}",
+        inedxs = lambda wc: get_medaka_files_umi(wc, index = True),
     log: 
-        "logs/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.log"
+        "logs/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka_{iter2}.log"
     benchmark: 
-        "benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka.txt"
+        "benchmarks/umi/{barcode}/{c}/bin/polish/{umi_id}/medaka_{iter2}.txt"
 
-def get_umiCon(wildcards):
+def get_umiCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     b_cs = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{b_c}.fa").b_c
     
     fnas = []
@@ -968,7 +979,7 @@ def get_umiCon(wildcards):
         b, c = i.split("_")
         uids = glob_wildcards(checkpoints.bin_info.get(barcode=b, c=c).output[0] + "/{uid}.txt").uid
         for j in uids:
-            fnas.append("umi/{barcode}/{c}/bin/polish/{uid}/medaka/consensus.fasta".format(barcode=b, c=c, uid=j))
+            fnas.append("umi/{barcode}/{c}/bin/polish/{uid}/medaka_{iter}/consensus.fasta".format(barcode=b, c=c, uid=j, iter=medaka_iter))
     return fnas
 
 rule collect_umiCon:

@@ -214,11 +214,10 @@ def get_racon_input(wildcards):
     # adjust input based on racon iteritions
     if int(wildcards.iter) == 1:
         prefix = "{cls}/{barcode}/{c}/polish/{clust_id}/draft/raw"
-        return(prefix + ".paf", prefix + ".fna")
     else:
         prefix = "{cls}/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}".format(cls=wildcards.cls,
          barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=str(int(wildcards.iter) - 1))
-        return(prefix + ".paf", prefix + ".fna")
+    return(prefix + ".paf", prefix + ".fna")
 
 rule racon:
     input:
@@ -240,25 +239,36 @@ rule racon:
         " -g {params.g} -w {params.w} -t {threads}"
         " {input} > {output} 2> {log}"
 
+# add iter for medaka
+def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = False):
+    if int(wildcards.iter2) == 1:
+        fna = "{cls}/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}.fna".format(
+            cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=racon_iter)
+    else:
+        fna = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka_{iter}/consensus.fasta".format(
+            cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=str(int(wildcards.iter2) - 1))
+    if index == True:
+        return(fna + ".fai", fna + ".map-ont.mmi")
+    else:
+        return(fna)
+
 rule medaka_consensus:
     input:
-        fna = expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/draft/racon_{iter}.fna", 
-        iter = config["racon"]["iter"]),
+        fna = lambda wc: get_medaka_files(wc),
         fastq = "{cls}/{barcode}/{c}/split/{clust_id}.fastq",
     output: 
-        temp(expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka/consensus{ext}",
+        temp(expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka_{{iter2}}/consensus{ext}",
         ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
-        temp(expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka/calls{ext}",
+        temp(expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka_{{iter2}}/calls{ext}",
         ext = ["_to_draft.bam", "_to_draft.bam.bai"])),
-        temp(expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/draft/racon_{iter}.fna{ext}", 
-        iter = config["racon"]["iter"], ext = [".fai", ".map-ont.mmi"])),
-    message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka [{wildcards.cls}]"
+    message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka, round ={wildcards.iter2} [{wildcards.cls}]"
     params:
         m = config["medaka"]["m"],
-        _dir = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka",
+        _dir = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka_{iter2}",
+        inedxs = lambda wc: get_medaka_files(wc, index = True),
     conda: "../envs/medaka.yaml"
-    log: "logs/{cls}/{barcode}/{c}/{clust_id}/medaka.log"
-    benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/medaka.txt"
+    log: "logs/{cls}/{barcode}/{c}/{clust_id}/medaka_{iter2}.log"
+    benchmark: "benchmarks/{cls}/{barcode}/{c}/{clust_id}/medaka_{iter2}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
@@ -266,6 +276,7 @@ rule medaka_consensus:
         medaka_consensus -i {input.fastq} \
         -d {input.fna} -o {params._dir} \
         -t {threads} -m {params.m} > {log} 2>&1;
+        rm -f {params.inedxs}
         """
 
 # isONcorCon
@@ -321,12 +332,12 @@ rule isoCon:
  
 # get polished asembly
 # kmerCon
-def get_kmerCon(wildcards):
+def get_kmerCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
     fnas = []
     for i in bc_kbs:
         bc, kb, = i.split("_")
-        fnas.append("kmerCon/{bc}/{kb}/polish/0/medaka/consensus.fasta".format(bc=bc, kb=kb))
+        fnas.append("kmerCon/{bc}/{kb}/polish/0/medaka_{iter}/consensus.fasta".format(bc=bc, kb=kb, iter=medaka_iter))
     return fnas
 
 rule collect_kmerCon:
@@ -345,12 +356,12 @@ rule collect_kmerCon:
                         out.write(line)
 
 # clustCon
-def get_clustCon(wildcards):
+def get_clustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
         bc, kb, ci = i.split("_")
-        fnas.append("clustCon/{bc}/{kb}/polish/{ci}/medaka/consensus.fasta".format(bc=bc, kb=kb, ci=ci))
+        fnas.append("clustCon/{bc}/{kb}/polish/{ci}/medaka_{iter}/consensus.fasta".format(bc=bc, kb=kb, ci=ci, iter=medaka_iter))
     return fnas
 
 rule collect_clustCon:
@@ -369,12 +380,12 @@ rule collect_clustCon:
                         out.write(line)
 
 # isONclustCon
-def get_isONclustCon(wildcards):
+def get_isONclustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
         bc, kb, ci = i.split("_")
-        fnas.append("isONclustCon/{bc}/{kb}/polish/{ci}/medaka/consensus.fasta".format(bc=bc, kb=kb, ci=ci))
+        fnas.append("isONclustCon/{bc}/{kb}/polish/{ci}/medaka_{iter}/consensus.fasta".format(bc=bc, kb=kb, ci=ci, iter=medaka_iter))
     return fnas
 
 rule collect_isONclustCon:

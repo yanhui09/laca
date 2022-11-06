@@ -101,6 +101,7 @@ racon:
   w: 500
   
 medaka:
+  iter: 1 
   m: r941_min_hac_g507
 
 spoa:
