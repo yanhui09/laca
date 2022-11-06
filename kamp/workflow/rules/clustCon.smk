@@ -9,14 +9,14 @@ def get_fq4Con(kmerbin = True):
 # kmerCon
 rule get_fqs_split:
     input: get_fq4Con(config["kmerbin"]),
-    output: temp("kmerCon/{barcode}/{c}/split/0.fastq"),
+    output: temp("kmerCon/split/{barcode}_{c}_0.fastq"),
     log: "logs/kmerCon/{barcode}_{c}_0/get_fqs_split.log"
     benchmark: "benchmarks/kmerCon/{barcode}_{c}_0/get_fqs_split.txt"
     shell: "cp -f {input} {output} 2> {log}"
 
 rule spoa:
     input: rules.get_fqs_split.output
-    output: temp("kmerCon/{barcode}/{c}/polish/0/draft/raw.fna")
+    output: temp("kmerCon/polish/{barcode}_{c}_0/minimap2/raw.fna")
     conda: '../envs/spoa.yaml'
     params:
         l = config["spoa"]["l"],
@@ -28,28 +28,28 @@ rule spoa:
 
 # clustCon
 # draw draft with max average score from pairwise alignments
-rule minimap2clust:
+rule minimap2aln:
     input: get_fq4Con(config["kmerbin"])
-    output: temp("clustCon/{barcode}/avr_aln/{c}/minimap2clust.paf")
+    output: temp("clustCon/minimap2aln/{barcode}_{c}.paf")
     conda: '../envs/minimap2.yaml'
-    log: "logs/clustCon/minimap2clust/{barcode}_{c}.log"
-    benchmark: "benchmarks/clustCon/minimap2clust/{barcode}_{c}.txt"
+    log: "logs/clustCon/minimap2aln/{barcode}_{c}.log"
+    benchmark: "benchmarks/clustCon/minimap2aln/{barcode}_{c}.txt"
     threads: config["threads"]["large"]
     shell:
         "minimap2 -t {threads} -x ava-ont --no-long-join -r100"
         " {input} {input} > {output} 2> {log}"
 
-rule bin2clustering:
-    input: "clustCon/{barcode}/avr_aln/{c}/minimap2clust.paf"
-    output: temp("clustCon/{barcode}/avr_aln/{c}/bin2clust.csv")
+rule aln2clust:
+    input: rules.minimap2aln.output
+    output: temp("clustCon/aln2clust/{barcode}_{c}.csv")
     conda: "../envs/clustCon.yaml"
     params:
-        prefix = "clustCon/{barcode}/avr_aln/{c}/bin2clust",
+        prefix = "clustCon/aln2clust/{barcode}_{c}",
         min_score_frac = config["clustCon"]["min_score_frac"],
         min_reads = config["min_cluster_size"],
         max_recurs = config["clustCon"]["max_recursion"],
-    log: "logs/clustCon/bin2clust/{barcode}_{c}.log"
-    benchmark: "benchmarks/clustCon/bin2clust/{barcode}_{c}.txt"
+    log: "logs/clustCon/aln2clust/{barcode}_{c}.log"
+    benchmark: "benchmarks/clustCon/aln2clust/{barcode}_{c}.txt"
     shell:
         "python {workflow.basedir}/scripts/binClust.py -p {params.prefix}"
         " -R {params.max_recurs}"
@@ -64,13 +64,13 @@ def get_clust(wildcards, pool = True, kmerbin = True):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            bin2cls.append("clustCon/{bc}/avr_aln/{kb}/bin2clust.csv".format(bc=bc, kb=kb))
+            bin2cls.append("clustCon/aln2clust/{bc}_{kb}.csv".format(bc=bc, kb=kb))
     else:
         if pool == True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
-        bin2cls = expand("clustCon/{bc}/avr_aln/all/bin2clust.csv", bc=bcs)
+        bin2cls = expand("clustCon/aln2clust/{bc}_all.csv", bc=bcs)
     return bin2cls
 
 checkpoint cls_clustCon:
@@ -82,14 +82,13 @@ checkpoint cls_clustCon:
     params:
         min_size = config["min_cluster_size"],
     run:
-        import shutil
         import pandas as pd
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input.cls):
             num_lines = sum(1 for line in open(i))
             if num_lines > params.min_size:
-                barcode, c = [ i.split("/")[index] for index in [-4, -2] ]
+                barcode, c = [ i.split("/")[-1].removesuffix(".csv").split("_")[index] for index in [-2, -1] ]
                 df = pd.read_csv(i)
                 for clust_id, df_clust in df.groupby('cluster'):
                     if len(df_clust) >= params.min_size:
@@ -105,8 +104,8 @@ rule get_fqs_split2:
         ref = "clustCon/clusters/{barcode}_{c}_{clust_id}.ref",
         binned = get_fq4Con(config["kmerbin"]),
     output:
-        pool = temp("clustCon/{barcode}/{c}/split/{clust_id}.fastq"),
-        ref = temp("clustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna"),
+        pool = temp("clustCon/split/{barcode}_{c}_{clust_id}.fastq"),
+        ref = temp("clustCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna"),
     conda: '../envs/seqkit.yaml'
     log: "logs/clustCon/{barcode}_{c}_{clust_id}/get_fqs_split.log"
     benchmark: "benchmarks/clustCon/{barcode}_{c}_{clust_id}/get_fqs_split.txt"
@@ -121,8 +120,8 @@ rule get_fqs_split2:
 rule isONclust:
     input: get_fq4Con(config["kmerbin"])
     output:
-        _dir = temp(directory("isONclustCon/{barcode}/{c}")),
-        tsv = temp("isONclustCon/{barcode}/{c}_clusters.tsv")
+        _dir = temp(directory("isONclustCon/isONclust/{barcode}_{c}")),
+        tsv = temp("isONclustCon/isONclust/{barcode}_{c}.tsv")
     conda: "../envs/isONcorCon.yaml"
     log: "logs/isONclustCon/isONclust/{barcode}_{c}.log"
     benchmark: "benchmarks/isONclustCon/isONclust/{barcode}_{c}.txt"
@@ -142,13 +141,13 @@ def get_isONclust(wildcards, pool = True, kmerbin = True):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            bin2cls.append("isONclustCon/{bc}/{kb}_clusters.tsv".format(bc=bc, kb=kb))
+            bin2cls.append("isONclustCon/isONclust/{bc}_{kb}.tsv".format(bc=bc, kb=kb))
     else:
         if pool == True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
-        bin2cls = expand("isONclustCon/{bc}/all_clusters.tsv", bc=bcs)
+        bin2cls = expand("isONclustCon/isONclust/{bc}_all.tsv", bc=bcs)
     return bin2cls
 
 checkpoint cls_isONclust:
@@ -164,7 +163,7 @@ checkpoint cls_isONclust:
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input.cls):
-            barcode, c = [ i.removesuffix("_clusters.tsv").split('/')[index] for index in [-2, -1] ]
+            barcode, c = [ i.split('/')[-1].removesuffix(".tsv").split('_')[index] for index in [-2, -1] ]
             df_i = pd.read_csv(i, sep = '\t', header = None)
             df_i.columns = ['cluster', 'seqid']
             for clust_id, df_clust in df_i.groupby('cluster'):
@@ -176,7 +175,7 @@ rule get_fqs_split3:
     input:
         bin2clust = "isONclustCon/clusters/{barcode}_{c}_{clust_id}.csv",
         binned = get_fq4Con(config["kmerbin"]),
-    output: temp("isONclustCon/{barcode}/{c}/split/{clust_id}.fastq"),
+    output: temp("isONclustCon/split/{barcode}_{c}_{clust_id}.fastq"),
     conda: '../envs/seqkit.yaml'
     log: "logs/isONclustCon/{barcode}_{c}_{clust_id}/get_fqs_split.log"
     benchmark: "benchmarks/isONclustCon/{barcode}_{c}_{clust_id}/get_fqs_split.txt"
@@ -186,7 +185,7 @@ use rule spoa as spoa2 with:
     input:
         rules.get_fqs_split3.output
     output: 
-        temp("isONclustCon/{barcode}/{c}/polish/{clust_id}/draft/raw.fna")
+        temp("isONclustCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
     log: 
         "logs/isONclustCon/{barcode}_{c}_{clust_id}/spoa.log"
     benchmark: 
@@ -196,9 +195,9 @@ use rule spoa as spoa2 with:
 # reused in racon iterations
 rule minimap2polish:
     input: 
-      ref = "{cls}/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.fna",
-      fastq = "{cls}/{barcode}/{c}/split/{clust_id}.fastq",
-    output: temp("{cls}/{barcode}/{c}/polish/{clust_id}/draft/{assembly}.paf"),
+      ref = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/{assembly}.fna",
+      fastq = "{cls}/split/{barcode}_{c}_{clust_id}.fastq",
+    output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/{assembly}.paf"),
     message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.cls}]"
     params:
         x = config["minimap"]["x"]
@@ -213,17 +212,17 @@ rule minimap2polish:
 def get_racon_input(wildcards):
     # adjust input based on racon iteritions
     if int(wildcards.iter) == 1:
-        prefix = "{cls}/{barcode}/{c}/polish/{clust_id}/draft/raw"
+        prefix = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/raw"
     else:
-        prefix = "{cls}/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}".format(cls=wildcards.cls,
+        prefix = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/racon_{iter}".format(cls=wildcards.cls,
          barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=str(int(wildcards.iter) - 1))
     return(prefix + ".paf", prefix + ".fna")
 
 rule racon:
     input:
-        "{cls}/{barcode}/{c}/split/{clust_id}.fastq",
+        "{cls}/split/{barcode}_{c}_{clust_id}.fastq",
         lambda wc: get_racon_input(wc),
-    output: temp("{cls}/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}.fna")
+    output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/racon_{iter}.fna")
     message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with racon, round={wildcards.iter} [{wildcards.cls}]"
     params:
         m = config["racon"]["m"],
@@ -242,10 +241,10 @@ rule racon:
 # add iter for medaka
 def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = False):
     if int(wildcards.iter2) == 1:
-        fna = "{cls}/{barcode}/{c}/polish/{clust_id}/draft/racon_{iter}.fna".format(
+        fna = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/racon_{iter}.fna".format(
             cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=racon_iter)
     else:
-        fna = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka_{iter}/consensus.fasta".format(
+        fna = "{cls}/polish/{barcode}_{c}_{clust_id}/medaka_{iter}/consensus.fasta".format(
             cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=str(int(wildcards.iter2) - 1))
     if index == True:
         return(fna + ".fai", fna + ".map-ont.mmi")
@@ -255,16 +254,16 @@ def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = Fa
 rule medaka_consensus:
     input:
         fna = lambda wc: get_medaka_files(wc),
-        fastq = "{cls}/{barcode}/{c}/split/{clust_id}.fastq",
+        fastq = "{cls}/split/{barcode}_{c}_{clust_id}.fastq",
     output: 
-        temp(expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka_{{iter2}}/consensus{ext}",
+        temp(expand("{{cls}}/polish/{{barcode}}_{{c}}_{{clust_id}}/medaka_{{iter2}}/consensus{ext}",
         ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
-        temp(expand("{{cls}}/{{barcode}}/{{c}}/polish/{{clust_id}}/medaka_{{iter2}}/calls{ext}",
+        temp(expand("{{cls}}/polish/{{barcode}}_{{c}}_{{clust_id}}/medaka_{{iter2}}/calls{ext}",
         ext = ["_to_draft.bam", "_to_draft.bam.bai"])),
-    message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka, round ={wildcards.iter2} [{wildcards.cls}]"
+    message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka, round={wildcards.iter2} [{wildcards.cls}]"
     params:
         m = config["medaka"]["m"],
-        _dir = "{cls}/{barcode}/{c}/polish/{clust_id}/medaka_{iter2}",
+        _dir = "{cls}/polish/{barcode}_{c}_{clust_id}/medaka_{iter2}",
         inedxs = lambda wc: get_medaka_files(wc, index = True),
     conda: "../envs/medaka.yaml"
     log: "logs/{cls}/{barcode}_{c}_{clust_id}/medaka_{iter2}.log"
@@ -285,19 +284,20 @@ rule medaka_consensus:
 rule isONcorrect:
     input: rules.get_fqs_split3.output,
     output:
-        _dir = temp(directory("isONcorCon/{barcode}/{c}/{clust_id}/isONcor")), 
-        fq = temp("isONcorCon/{barcode}/{c}/{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"),
+        _dir = temp(directory("isONcorCon/{barcode}_{c}_{clust_id}/isONcor")), 
+        fq = temp("isONcorCon/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"),
     conda: "../envs/isONcorCon.yaml"
     params:
-        _dir = "isONcorCon/{barcode}/{c}/{clust_id}",
+        _dir = "isONcorCon/{barcode}_{c}_{clust_id}",
         max_seqs = 2000,
+        clust_id = "{clust_id}",
     log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
     shell:
         """
         mkdir -p {params._dir}/isONclust
-        cp {input} {params._dir}/isONclust
+        cp {input} {params._dir}/isONclust/{params.clust_id}.fastq
         # number of reads in fastqs
         nlines=$(cat {params._dir}/isONclust/* | wc -l)
         nreads=$((nlines / 4))
@@ -313,12 +313,12 @@ rule isONcorrect:
 
 rule isoCon:
     input: 
-        "isONcorCon/{barcode}/{c}/{clust_id}/isONcor", 
+        rules.isONcorrect.output._dir, 
         fq = rules.isONcorrect.output.fq
     output:
-        _dir = temp(directory("isONcorCon/{barcode}/{c}/{clust_id}/isoCon")),
-        cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}_isoCon.tsv",
-        fna = temp("isONcorCon/{barcode}/{c}/{clust_id}/isoCon_candidates.fa"),
+        _dir = temp(directory("isONcorCon/{barcode}_{c}_{clust_id}/isoCon")),
+        cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}.tsv",
+        fna = temp("isONcorCon/{barcode}_{c}_{clust_id}/candidates.fasta"),
     conda: "../envs/isONcorCon.yaml"
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
@@ -336,8 +336,7 @@ def get_kmerCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
     fnas = []
     for i in bc_kbs:
-        bc, kb, = i.split("_")
-        fnas.append("kmerCon/{bc}/{kb}/polish/0/medaka_{iter}/consensus.fasta".format(bc=bc, kb=kb, iter=medaka_iter))
+        fnas.append("kmerCon/polish/{bc_kb}_0/medaka_{iter}/consensus.fasta".format(bc_kb=i, iter=medaka_iter))
     return fnas
 
 rule collect_kmerCon:
@@ -348,11 +347,11 @@ rule collect_kmerCon:
     run: 
         with open(output[0], "w") as out:
             for i in input.fna:
-                barcode_i, c_i = [ i.split("/")[index] for index in [-6, -5] ]
+                barcode_i, c_i, id_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
                 with open(i, "r") as inp:
                     for line in inp:
                         if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + c_i + "\n"
+                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "\n"
                         out.write(line)
 
 # clustCon
@@ -360,8 +359,7 @@ def get_clustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
-        bc, kb, ci = i.split("_")
-        fnas.append("clustCon/{bc}/{kb}/polish/{ci}/medaka_{iter}/consensus.fasta".format(bc=bc, kb=kb, ci=ci, iter=medaka_iter))
+        fnas.append("clustCon/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta".format(bc_kb_ci=i, iter=medaka_iter))
     return fnas
 
 rule collect_clustCon:
@@ -372,7 +370,7 @@ rule collect_clustCon:
     run: 
         with open(output[0], "w") as out:
             for i in input.fna:
-                barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-6, -5, -3] ]
+                barcode_i, c_i, id_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
                 with open(i, "r") as inp:
                     for line in inp:
                         if line.startswith(">"):
@@ -384,8 +382,7 @@ def get_isONclustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
-        bc, kb, ci = i.split("_")
-        fnas.append("isONclustCon/{bc}/{kb}/polish/{ci}/medaka_{iter}/consensus.fasta".format(bc=bc, kb=kb, ci=ci, iter=medaka_iter))
+        fnas.append("isONclustCon/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta".format(bc_kb_ci=i, iter=medaka_iter))
     return fnas
 
 rule collect_isONclustCon:
@@ -396,7 +393,7 @@ rule collect_isONclustCon:
     run: 
         with open(output[0], "w") as out:
             for i in input.fna:
-                bc_i, kb_i, ci_i = [ i.split("/")[index] for index in [-6, -5, -3] ]
+                bc_i, kb_i, ci_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
                 with open(i, "r") as inp:
                     for line in inp:
                         if line.startswith(">"):
@@ -408,8 +405,7 @@ def get_isONcorCon(wildcards):
     bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
-        bc, kb, ci = i.split("_")
-        fnas.append("isONcorCon/{bc}/{kb}/{ci}/isoCon_candidates.fa".format(bc=bc, kb=kb, ci=ci))
+        fnas.append("isONcorCon/{bc_kb_ci}/candidates.fasta".format(bc_kb_ci=i))
     return fnas
 
 rule collect_isONcorCon:
@@ -420,7 +416,7 @@ rule collect_isONcorCon:
     run: 
         with open(output[0], "w") as out:
             for i in input.fna:
-                barcode_i, c_i, id_i = [ i.split("/")[index] for index in [-5, -4, -3] ]
+                barcode_i, c_i, id_i = [ i.split("/")[-2].split("_")[index] for index in [-3, -2, -1] ]
                 with open(i, "r") as inp:
                     j = 0
                     for line in inp:

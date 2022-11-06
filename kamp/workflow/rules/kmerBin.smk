@@ -142,7 +142,7 @@ rule split_bin:
     input:
         cluster = "kmerBin/clusters/{barcode}_{c}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
-    output: temp("kmerBin/{barcode}/split/{c}.fastq"),
+    output: temp("kmerBin/split/{barcode}_{c}.fastq"),
     conda: "../envs/seqkit.yaml"
     log: "logs/kmerBin/fqs_split/{barcode}_{c}.log"
     benchmark: "benchmarks/kmerBin/fqs_split/{barcode}_{c}.txt"
@@ -165,7 +165,7 @@ def get_kmerBin(wildcards, pool = True, kmerbin = True):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            fqs.append("kmerBin/{bc}/split/{kb}.fastq".format(bc=bc, kb=kb))
+            fqs.append("kmerBin/split/{bc}_{kb}.fastq".format(bc=bc, kb=kb))
     else:
         if pool is True:
            bcs = ["pooled"]
