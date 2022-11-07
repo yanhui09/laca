@@ -136,8 +136,8 @@ checkpoint cls_kmerbin:
                  df_i['bin_id'] = df_i['bin_id'].astype(str) + df_i['batch_id'].astype(str)
             df_i = df_i[["read", "bin_id"]]
             for clust_id, df_clust in df_i.groupby('bin_id'):
-                df_clust['read'].to_csv(output[0] + "/{barcode}_{c}.csv".format(barcode=barcode, c=clust_id),
-                    header = False, index = False)
+                df_clust['read'].to_csv(output[0] + "/{barcode}_{c}.csv".format(
+                    barcode=barcode, c=clust_id), header = False, index = False)
 rule split_bin:
     input:
         cluster = "kmerBin/clusters/{barcode}_{c}.csv",
