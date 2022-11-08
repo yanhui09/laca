@@ -198,19 +198,11 @@ rule read_simulate:
         simulator.py genome -rg {input.ref} -c "$c" -o {params.o} -n {params.n} -b guppy --fastq -t {threads} -dna_type linear --seed 123 > {log} 2>&1
         """
 
-def sim_demult_flag(demult="guppy"):
-    # if demult != "guppy" | "minibar" | "nanosim", raise value error
-    if demult != "guppy" and demult != "minibar":
-        raise ValueError("Demultiplexer not recognized. Choose guppy or minibar in config.")
-    return "." + demult + "_DONE"
-
-# pseudo demultiplex
 rule nanosim:
     input: expand("nanosim/{db}/simulate/{mixid}_{n}/simulated_aligned_reads.fastq", db = [k for k in dict_db.keys()], mixid = [f"{minid}_{maxid}" for (minid, maxid) in zip(minids, maxids)], n=ns)
     output: 
         touch(".simulated_DONE"),
         directory("demultiplexed"),
-        touch(sim_demult_flag(config["demultiplex"])),
     run:
         # replace fqs to follow demultiplexing wildcards
         if not os.path.exists(output[1]):

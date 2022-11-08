@@ -262,9 +262,7 @@ def run_init(fqdir, dbdir, workdir, demult, fqs_min, no_pool, subsample, no_trim
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir
-        flags = [".guppy_DONE", ".minibar_DONE", ".demultiplex_DONE", ".qc_DONE", ".kmerBin_DONE", 
-                 ".kmerCon_DONE", ".clustCon_DONE", ".isONclustCon_DONE", ".isONcorCon_DONE", ".umiCon_DONE", 
-                 ".quant_DONE", ".taxa_DONE", ".tree_DONE", ".requant_DONE", ".all_DONE", ".nanosim_DONE"]
+        flags = [".guppy_DONE", ".minibar_DONE", ".simulated_DONE"]
         for flag in flags:
             file = os.path.join(workdir, flag)
             if os.path.exists(file):
