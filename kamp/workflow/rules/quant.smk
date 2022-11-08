@@ -303,6 +303,7 @@ rule q2_repseqs_export:
 
 def chimeraF(chimera_check = config["chimeraF"]):
     check_val("chimeraF", chimera_check, bool)
-    return ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]
     if chimera_check == False:
         return ["count_matrix.tsv", "rep_seqs.fasta"]
+    else:
+        return ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]
