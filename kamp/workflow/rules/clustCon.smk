@@ -206,8 +206,14 @@ rule minimap2polish:
     benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/minimap2_{assembly}.txt"
     threads: config["threads"]["normal"]
     shell:
-        "minimap2 -t {threads} -x {params.x}"
-        " {input.ref} {input.fastq} > {output} 2> {log}"
+        """
+        # if ref is empty, make dummy output
+        if [ ! -s {input.ref} ]; then
+            touch {output} 2> {log}
+        else
+            minimap2 -t {threads} -x {params.x} {input.ref} {input.fastq} > {output} 2> {log}
+        fi
+        """
 
 def get_racon_input(wildcards):
     # adjust input based on racon iteritions
@@ -234,9 +240,14 @@ rule racon:
     benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/racon_{iter}.txt"
     threads: config["threads"]["normal"]
     shell:
-        "racon -m {params.m} -x {params.x}"
-        " -g {params.g} -w {params.w} -t {threads}"
-        " {input} > {output} 2> {log}"
+        """
+        # if paf file is empty, make dummy output
+        if [ ! -s {input[1]} ]; then
+            touch {output} 2> {log}
+        else
+            racon -m {params.m} -x {params.x} -g {params.g} -w {params.w} -t {threads} {input} > {output} 2> {log}
+        fi
+        """
 
 # add iter for medaka
 def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = False):
@@ -271,11 +282,15 @@ rule medaka_consensus:
     threads: config["threads"]["normal"]
     shell:
         """
-        export TF_FORCE_GPU_ALLOW_GROWTH=true
-        medaka_consensus -i {input.fastq} \
-        -d {input.fna} -o {params._dir} \
-        -t {threads} -m {params.m} > {log} 2>&1;
-        rm -f {params.inedxs}
+        # if fna file is empty, make dummy output
+        if [ ! -s {input.fna} ]; then
+            mkdir -p {params._dir} 2> {log}
+            touch {output} 2>> {log}
+        else
+            export TF_FORCE_GPU_ALLOW_GROWTH=true
+            medaka_consensus -i {input.fastq} -d {input.fna} -o {params._dir} -t {threads} -m {params.m} > {log} 2>&1
+            rm -f {params.inedxs}
+        fi
         """
 
 # isONcorCon
@@ -331,6 +346,9 @@ rule isoCon:
 def merge_consensus(fi, fo):
     with open(fo, "w") as out:
         for i in fi:
+            # if fi is empty, skip; rm dummy output
+            if os.stat(i).st_size == 0:
+                continue
             barcode_i, c_i, id_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
             with open(i, "r") as inp:
                 j = 1
