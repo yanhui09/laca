@@ -924,24 +924,10 @@ rule take_seedfa:
     shell: "seqkit head -n 1 {input} 2> {log} | seqkit replace -p '^(.+)$' -r 'seed' -o {output} 2>> {log}"  
 
 # polish follows rules in clustCon.smk
-def get_umiCon(wildcards, medaka_iter = config["medaka"]["iter"]):
-    bc_kb_cis = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.txt").bc_kb_ci
-    fnas = []
-    for i in bc_kb_cis:
-        fnas.append("umiCon/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta".format(bc_kb_ci=i, iter=medaka_iter))
-    return fnas
-
-rule collect_umiCon:
-    input:
-        "umiCon/clusters",
-        fna = lambda wc: get_umiCon(wc),
-    output: "umiCon/umiCon_full.fna"
-    run: 
-        merge_consensus(fi = input.fna, fo = output[0]) 
 
 # trim primers 
 rule trim_primers_umi:
-    input: rules.collect_umiCon.output
+    input: "umiCon/umiCon.fna"
     output: 
         trimmed = temp("umiCon/umiCon_trimmedF.fna"),
         untrimmed = temp("umiCon/umiCon_untrimmedF.fna"),
@@ -999,7 +985,7 @@ rule collect_umiCon_trimmed:
     input: 
         rules.trim_primers_umi.output.trimmed,
         rules.revcomp_fq_umi.output
-    output: "umiCon.fna"
+    output: "umiCon/umiCon_trimmed.fna"
     run: 
         with open(output[0], "w") as out:
             for i in input:

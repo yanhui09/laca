@@ -4,8 +4,8 @@ check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustC
 # dereplicate sequences with mmseqs
 rule derep_denoised_seqs:
     input: 
-        ["" + str(x) + ".fna" for x in config["cluster"]][1:],
-        first = "" + str(config["cluster"][0]) + ".fna",
+        ["{cls}/{cls}.fna".format(cls=i) for i in config["cluster"]][1:],
+        first = "{cls}/{cls}.fna".format(cls = config["cluster"][0]),
     output: 
         rep = temp("quant/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp("quant/mmseqs_all_seqs.fasta"),

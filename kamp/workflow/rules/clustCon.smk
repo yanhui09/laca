@@ -283,10 +283,10 @@ rule medaka_consensus:
 # racon seems not to be supported in batch mode
 rule isONcorrect:
     input: rules.get_fqs_split3.output
-    output: temp("isONcorCon/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq")
+    output: temp("isONcorCon/polish/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq")
     conda: "../envs/isONcorCon.yaml"
     params:
-        _dir = "isONcorCon/{barcode}_{c}_{clust_id}",
+        _dir = "isONcorCon/polish/{barcode}_{c}_{clust_id}",
         clust_id = "{clust_id}",
         max_seqs = 2000,
     log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
@@ -312,10 +312,10 @@ rule isoCon:
     input: rules.isONcorrect.output
     output:
         cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}.tsv",
-        fna = temp("isONcorCon/{barcode}_{c}_{clust_id}/IsoCon/candidates.fasta"),
+        fna = temp("isONcorCon/polish/{barcode}_{c}_{clust_id}/IsoCon/candidates.fasta"),
     conda: "../envs/isONcorCon.yaml"
     params:
-        prefix = "isONcorCon/{barcode}_{c}_{clust_id}",
+        prefix = "isONcorCon/polish/{barcode}_{c}_{clust_id}",
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
@@ -340,66 +340,99 @@ def merge_consensus(fi, fo):
                         j += 1
                     out.write(line)
 
-# kmerCon
-def get_kmerCon(wildcards, medaka_iter = config["medaka"]["iter"]):
-    bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
-    fnas = []
-    for i in bc_kbs:
-        fnas.append("kmerCon/polish/{bc_kb}_0/medaka_{iter}/consensus.fasta".format(bc_kb=i, iter=medaka_iter))
-    return fnas
+## kmerCon
+#def get_kmerCon(wildcards, medaka_iter = config["medaka"]["iter"]):
+#    bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+#    fnas = []
+#    for i in bc_kbs:
+#        fnas.append("kmerCon/polish/{bc_kb}_0/medaka_{iter}/consensus.fasta".format(bc_kb=i, iter=medaka_iter))
+#    return fnas
+#
+#rule collect_kmerCon:
+#    input: 
+#        "kmerBin/clusters",
+#        fna = lambda wc: get_kmerCon(wc),
+#    output: "kmerCon.fna"
+#    run:
+#        merge_consensus(fi = input.fna, fo = output[0]) 
+#
+## clustCon
+#def get_clustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
+#    bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+#    fnas = []
+#    for i in bc_kb_cis:
+#        fnas.append("clustCon/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta".format(bc_kb_ci=i, iter=medaka_iter))
+#    return fnas
+#
+#rule collect_clustCon:
+#    input:
+#        "clustCon/clusters",
+#        fna = lambda wc: get_clustCon(wc),
+#    output: "clustCon.fna"
+#    run: 
+#        merge_consensus(fi = input.fna, fo = output[0]) 
+#
+## isONclustCon
+#def get_isONclustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
+#    bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+#    fnas = []
+#    for i in bc_kb_cis:
+#        fnas.append("isONclustCon/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta".format(bc_kb_ci=i, iter=medaka_iter))
+#    return fnas
+#
+#rule collect_isONclustCon:
+#    input:
+#        "isONclustCon/clusters",
+#        fna = lambda wc: get_isONclustCon(wc),
+#    output: "isONclustCon.fna"
+#    run: 
+#        merge_consensus(fi = input.fna, fo = output[0]) 
+#
+## isONcorCon   
+#def get_isONcorCon(wildcards):
+#    bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+#    fnas = []
+#    for i in bc_kb_cis:
+#        fnas.append("isONcorCon/polish/{bc_kb_ci}/IsoCon/candidates.fasta".format(bc_kb_ci=i))
+#    return fnas
+#
+#rule collect_isONcorCon:
+#    input: 
+#        "isONclustCon/clusters",
+#        fna = lambda wc: get_isONcorCon(wc),
+#    output: "isONcorCon.fna"
+#    run: 
+#        merge_consensus(fi = input.fna, fo = output[0])
 
-rule collect_kmerCon:
+def get_clusters(wildcards):
+    if wildcards.cls == "kmerCon":
+        return "kmerBin/clusters"
+    if wildcards.cls == "isONcorCon":
+        return "isONclustCon/clusters"
+    else:
+        return "{cls}/clusters"
+
+def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"]):
+    if wildcards.cls == "kmerCon":
+        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+        bc_kb_cis = [i + "_0" for i in bc_kbs]
+    elif wildcards.cls == "clustCon":
+        bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "isONclustCon" or wildcards.cls == "isONcorCon":
+        bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "umiCon":
+        bc_kb_cis = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.txt").bc_kb_ci
+    else:
+        raise ValueError("Unknown consensus method: " + wildcards.cls)
+    
+    if wildcards.cls == "isONcorCon":
+        return expand("{{cls}}/polish/{bc_kb_ci}/IsoCon/candidates.fasta", cls = wildcards.cls, bc_kb_ci = bc_kb_cis)
+    else:
+        return expand("{{cls}}/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta", cls = wildcards.cls, bc_kb_ci = bc_kb_cis, iter = medaka_iter)
+            
+rule collect_consensus:
     input: 
-        "kmerBin/clusters",
-        fna = lambda wc: get_kmerCon(wc),
-    output: "kmerCon.fna"
-    run:
-        merge_consensus(fi = input.fna, fo = output[0]) 
-
-# clustCon
-def get_clustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
-    bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    fnas = []
-    for i in bc_kb_cis:
-        fnas.append("clustCon/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta".format(bc_kb_ci=i, iter=medaka_iter))
-    return fnas
-
-rule collect_clustCon:
-    input:
-        "clustCon/clusters",
-        fna = lambda wc: get_clustCon(wc),
-    output: "clustCon.fna"
-    run: 
-        merge_consensus(fi = input.fna, fo = output[0]) 
-
-# isONclustCon
-def get_isONclustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
-    bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    fnas = []
-    for i in bc_kb_cis:
-        fnas.append("isONclustCon/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta".format(bc_kb_ci=i, iter=medaka_iter))
-    return fnas
-
-rule collect_isONclustCon:
-    input:
-        "isONclustCon/clusters",
-        fna = lambda wc: get_isONclustCon(wc),
-    output: "isONclustCon.fna"
-    run: 
-        merge_consensus(fi = input.fna, fo = output[0]) 
-
-# isONcorCon   
-def get_isONcorCon(wildcards):
-    bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    fnas = []
-    for i in bc_kb_cis:
-        fnas.append("isONcorCon/{bc_kb_ci}/IsoCon/candidates.fasta".format(bc_kb_ci=i))
-    return fnas
-
-rule collect_isONcorCon:
-    input: 
-        "isONclustCon/clusters",
-        fna = lambda wc: get_isONcorCon(wc),
-    output: "isONcorCon.fna"
-    run: 
-        merge_consensus(fi = input.fna, fo = output[0]) 
+        lambda wc: get_clusters(wc),
+        fna = lambda wc: get_consensus(wc),
+    output: "{cls}/{cls}.fna"
+    run: merge_consensus(fi = input.fna, fo = output[0]) 

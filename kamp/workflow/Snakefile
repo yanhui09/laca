@@ -54,32 +54,23 @@ rule kmerBin:
     output: touch(".kmerBin_DONE")
 
 rule kmerCon:
-    input:
-        ".kmerBin_DONE",
-        "kmerCon.fna"
+    input: "kmerCon/kmerCon.fna"
     output: touch(".kmerCon_DONE")
 
 rule clustCon:
-    input:
-        ".kmerBin_DONE",
-        "clustCon.fna"
+    input: "kmerCon/clustCon.fna"
     output: touch(".clustCon_DONE")
 
 rule isONclustCon:
-    input:
-        ".kmerBin_DONE",
-        "isONclustCon.fna"
+    input: "isONclustCon/isONclustCon.fna"
     output: touch(".isONclustCon_DONE")
 
 rule isONcorCon:
-    input: 
-        ".kmerBin_DONE",
-        "isONcorCon.fna"
+    input: "isONcorCon/isONcorCon.fna"
     output: touch(".isONcorCon_DONE")
 
 rule umiCon:
-    input: 
-        "umiCon.fna"
+    input: "umiCon/umiCon_trimmed.fna"
     output: touch(".umiCon_DONE")
 
 rule quant:
