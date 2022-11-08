@@ -301,7 +301,7 @@ rule q2_repseqs_export:
         mv {params._dir}/dna-sequences.fasta {output}
         """
 
-def chimeraF(chimera_check = True):
+def chimeraF(chimera_check = config["chimeraF"]):
     check_val("chimeraF", chimera_check, bool)
     fs = ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]
     if chimera_check == False:

@@ -6,7 +6,7 @@ DATABASE_DIR = config["database_dir"].rstrip("/")
 # LCA taxonomy with MMseqs2
 TaxDB = config["mmseqs"]["taxdb"]
 
-def get_classifier(c):
+def get_classifier(c = config["classifier"][0]):
     if c == "kraken2":
         out = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"])
     elif c == "mmseqs2":
@@ -14,7 +14,7 @@ def get_classifier(c):
     return out 
 
 rule initDB:
-    input: get_classifier(config["classifier"][0])
+    input: get_classifier()
     output: touch(DATABASE_DIR + "/.initDB_DONE")
 
 # use predefined MMseqs2 database

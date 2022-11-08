@@ -144,7 +144,7 @@ rule combine_fastq:
     shell:
         "cat {input} > {output}"
 
-def get_filt(wildcards, pool = True):
+def get_filt(wildcards, pool = config["pool"]):
     barcodes = get_qced(wildcards) 
     check_val("pool", pool, bool)
     if pool is True:

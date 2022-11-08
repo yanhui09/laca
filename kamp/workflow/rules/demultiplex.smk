@@ -82,7 +82,7 @@ rule collect_minibar_batch:
         """
 
 # choose demultiplexer
-def get_demult(demult="guppy", dir=False):
+def get_demult(demult=config["demultiplex"], dir=False):
     if demult != "guppy" and demult != "minibar":
         raise ValueError("Demultiplexer not recognized. Choose guppy or minibar in config.")
     demult_dir = os.path.join(os.getcwd(), "demultiplexed_" + demult)
@@ -93,12 +93,12 @@ def get_demult(demult="guppy", dir=False):
         return demult_flag
 
 checkpoint demultiplex_check:
-    input: ancient(get_demult(demult=config["demultiplex"], dir=False))
+    input: ancient(get_demult(dir=False))
     output: directory("demultiplexed")
     log: "logs/demultiplex/check.log"
     benchmark: "benchmarks/demultiplex/check.txt"
     params:
-        dir=get_demult(demult=config["demultiplex"], dir=True),
+        dir=get_demult(dir=True),
         nreads_m=config["nreads_m"],
     shell: 
         """

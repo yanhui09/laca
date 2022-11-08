@@ -46,11 +46,11 @@ rule demultiplex:
     output: touch(".demultiplex_DONE")
 
 rule qc:
-    input: lambda wc: get_filt(wc, pool = config["pool"]),
+    input: lambda wc: get_filt(wc),
     output: touch(".qc_DONE")
 
 rule kmerBin:
-    input: lambda wc: get_kmerBin(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
+    input: lambda wc: get_kmerBin(wc),
     output: touch(".kmerBin_DONE")
 
 rule kmerCon:

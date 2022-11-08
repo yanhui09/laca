@@ -13,7 +13,7 @@ rule kmer_freqs:
         " -r {input} -t {threads}"
         " 2> {log} > {output}"
 
-def get_batch_size(batch_size, ram, kmer_file):
+def get_batch_size(kmer_file, batch_size = config["batch_size"], ram = config["bin_mem"]):
     if not os.path.exists(kmer_file):
         return -1
     # total input read size
@@ -45,7 +45,7 @@ checkpoint shuffle_batch:
     output: temp(directory("kmerBin/{barcode}/batch_check"))
     conda: "../envs/coreutils.yaml"
     params:
-        batch_size = lambda wc, input: get_batch_size(config["batch_size"], config["bin_mem"], input[0]),
+        batch_size = lambda wc, input: get_batch_size(kmer_file = input[0]),
     log: "logs/kmerBin/shuffle_batch/{barcode}.log"
     benchmark: "benchmarks/kmerBin/shuffle_batch/{barcode}.txt"
     threads: config["threads"]["normal"]
@@ -106,7 +106,7 @@ rule col_kmerbatch:
                     for line in f:
                         out.write(line.rstrip() + "\t" + batch + "\n") 
 
-def get_bin(wildcards, pool = True):
+def get_bin(wildcards, pool = config["pool"]):
     check_val("pool", pool, bool)
     if pool == True:
         barcodes = ["pooled"]
@@ -118,8 +118,8 @@ def get_bin(wildcards, pool = True):
 checkpoint cls_kmerbin:
     input:
         "qc/qfilt/empty",
-        lambda wc: get_filt(wc, pool = config["pool"]), 
-        bin = lambda wildcards: get_bin(wildcards, pool = config["pool"])
+        lambda wc: get_filt(wc), 
+        bin = lambda wc: get_bin(wc)
     output: directory("kmerBin/clusters"),
     run:
         import pandas as pd
@@ -156,7 +156,7 @@ rule skip_bin:
     shell: "cp -p {input} {output} 2> {log}"
 
 # get {barcode} {c} from chekckpoint
-def get_kmerBin(wildcards, pool = True, kmerbin = True):
+def get_kmerBin(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
     check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
     

@@ -5,7 +5,7 @@ check_list_ele("classifier", config["classifier"], ["kraken2", "mmseqs2"])
 TaxDB = config["mmseqs"]["taxdb"]
     
 rule createdb_query:
-    input: chimeraF(config["chimeraF"])[1]
+    input: chimeraF()[1]
     output: 
         expand("taxonomy/mmseqs2/queryDB{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source",

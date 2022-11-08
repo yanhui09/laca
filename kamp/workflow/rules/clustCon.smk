@@ -282,15 +282,13 @@ rule medaka_consensus:
 # run_isoncorrect provide multithread processing for isONcorrect in batches
 # racon seems not to be supported in batch mode
 rule isONcorrect:
-    input: rules.get_fqs_split3.output,
-    output:
-        _dir = temp(directory("isONcorCon/{barcode}_{c}_{clust_id}/isONcor")), 
-        fq = temp("isONcorCon/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq"),
+    input: rules.get_fqs_split3.output
+    output: temp("isONcorCon/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq")
     conda: "../envs/isONcorCon.yaml"
     params:
         _dir = "isONcorCon/{barcode}_{c}_{clust_id}",
-        max_seqs = 2000,
         clust_id = "{clust_id}",
+        max_seqs = 2000,
     log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
@@ -299,38 +297,49 @@ rule isONcorrect:
         mkdir -p {params._dir}/isONclust
         cp {input} {params._dir}/isONclust/{params.clust_id}.fastq
         # number of reads in fastqs
-        nlines=$(cat {params._dir}/isONclust/* | wc -l)
+        nlines=$(cat {params._dir}/isONclust/{params.clust_id}.fastq | wc -l)
         nreads=$((nlines / 4))
         if [ $nreads -gt {params.max_seqs} ]; then
-            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
-            --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
+            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
         else
-            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {output._dir} \
-            --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
+            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
         fi
         rm -rf {params._dir}/isONclust
+        find {params._dir}/isONcor/{params.clust_id} -mindepth 1 ! -name 'corrected_reads.fastq' | xargs rm -rf
         """
 
 rule isoCon:
-    input: 
-        rules.isONcorrect.output._dir, 
-        fq = rules.isONcorrect.output.fq
+    input: rules.isONcorrect.output
     output:
-        _dir = temp(directory("isONcorCon/{barcode}_{c}_{clust_id}/isoCon")),
         cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}.tsv",
-        fna = temp("isONcorCon/{barcode}_{c}_{clust_id}/candidates.fasta"),
+        fna = temp("isONcorCon/{barcode}_{c}_{clust_id}/IsoCon/candidates.fasta"),
     conda: "../envs/isONcorCon.yaml"
+    params:
+        prefix = "isONcorCon/{barcode}_{c}_{clust_id}",
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
     shell: 
         """
-        IsoCon pipeline -fl_reads {input.fq} -outfolder {output._dir} --nr_cores {threads} > {log} 2>&1
-        mv {output._dir}/final_candidates.fa {output.fna}
-        mv {output._dir}/cluster_info.tsv {output.cls} 
+        IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} > {log} 2>&1
+        mv {params.prefix}/IsoCon/cluster_info.tsv {output.cls} 
+        mv {params.prefix}/IsoCon/final_candidates.fa {output.fna}
+        find {params.prefix}/IsoCon -mindepth 1 ! -name 'candidates.fasta' | xargs rm -rf 
         """
  
 # get polished asembly
+def merge_consensus(fi, fo):
+    with open(fo, "w") as out:
+        for i in fi:
+            barcode_i, c_i, id_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
+            with open(i, "r") as inp:
+                j = 1
+                for line in inp:
+                    if line.startswith(">"):
+                        line = ">" + barcode_i + "_" + c_i + "_" + id_i + "_cand" + str(j) + "\n"
+                        j += 1
+                    out.write(line)
+
 # kmerCon
 def get_kmerCon(wildcards, medaka_iter = config["medaka"]["iter"]):
     bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
@@ -344,15 +353,8 @@ rule collect_kmerCon:
         "kmerBin/clusters",
         fna = lambda wc: get_kmerCon(wc),
     output: "kmerCon.fna"
-    run: 
-        with open(output[0], "w") as out:
-            for i in input.fna:
-                barcode_i, c_i, id_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
-                with open(i, "r") as inp:
-                    for line in inp:
-                        if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "\n"
-                        out.write(line)
+    run:
+        merge_consensus(fi = input.fna, fo = output[0]) 
 
 # clustCon
 def get_clustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
@@ -368,14 +370,7 @@ rule collect_clustCon:
         fna = lambda wc: get_clustCon(wc),
     output: "clustCon.fna"
     run: 
-        with open(output[0], "w") as out:
-            for i in input.fna:
-                barcode_i, c_i, id_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
-                with open(i, "r") as inp:
-                    for line in inp:
-                        if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "\n"
-                        out.write(line)
+        merge_consensus(fi = input.fna, fo = output[0]) 
 
 # isONclustCon
 def get_isONclustCon(wildcards, medaka_iter = config["medaka"]["iter"]):
@@ -391,21 +386,14 @@ rule collect_isONclustCon:
         fna = lambda wc: get_isONclustCon(wc),
     output: "isONclustCon.fna"
     run: 
-        with open(output[0], "w") as out:
-            for i in input.fna:
-                bc_i, kb_i, ci_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
-                with open(i, "r") as inp:
-                    for line in inp:
-                        if line.startswith(">"):
-                            line = ">" + bc_i + "_" + kb_i + "_" + ci_i + "\n"
-                        out.write(line)
+        merge_consensus(fi = input.fna, fo = output[0]) 
 
 # isONcorCon   
 def get_isONcorCon(wildcards):
     bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     fnas = []
     for i in bc_kb_cis:
-        fnas.append("isONcorCon/{bc_kb_ci}/candidates.fasta".format(bc_kb_ci=i))
+        fnas.append("isONcorCon/{bc_kb_ci}/IsoCon/candidates.fasta".format(bc_kb_ci=i))
     return fnas
 
 rule collect_isONcorCon:
@@ -414,13 +402,4 @@ rule collect_isONcorCon:
         fna = lambda wc: get_isONcorCon(wc),
     output: "isONcorCon.fna"
     run: 
-        with open(output[0], "w") as out:
-            for i in input.fna:
-                barcode_i, c_i, id_i = [ i.split("/")[-2].split("_")[index] for index in [-3, -2, -1] ]
-                with open(i, "r") as inp:
-                    j = 0
-                    for line in inp:
-                        if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + c_i + "_" + id_i + "_cand" + str(j) + "\n"
-                            j += 1
-                        out.write(line)
+        merge_consensus(fi = input.fna, fo = output[0]) 

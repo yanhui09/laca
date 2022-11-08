@@ -21,15 +21,15 @@ rule trim_repseqs:
     threads: config["threads"]["normal"]
     shell: "cutadapt -j {threads} {params.f} -o {output} {input} > {log} 2>&1"
 
-def trim_check2(trim, chimera_check):
+def trim_check2(trim = config["trim"], chimera_check = config["chimeraF"]):
     check_val("trim", trim, bool)
     out = rules.trim_repseqs.output
-    if trim is False:
+    if trim ==  False:
         out = chimeraF(chimera_check)[1]
     return out
 
 rule q2_repseqs:
-    input: trim_check2(config["trim"], config["chimeraF"])
+    input: trim_check2()
     output: temp("tree/rep_seqs.qza")
     conda: "../envs/q2plugs.yaml"
     log: "logs/tree/q2_repseqs.log"

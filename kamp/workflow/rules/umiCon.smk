@@ -856,7 +856,7 @@ rule umi_binning:
         ' {input.umi1} {input.umi2} > {output.bin_map} 2> {log}
         """
 
-def get_filt(wildcards, kmerbin = config["kmerbin"]):
+def get_filt_umi(wildcards, kmerbin = config["kmerbin"]):
     bc_kbs = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{bc_kb}.fa").bc_kb
     if kmerbin == True:
         fqs = expand("umiCon/kmerBin/split/{bc_kb}.fastq", bc_kb=bc_kbs)
@@ -868,7 +868,7 @@ def get_filt(wildcards, kmerbin = config["kmerbin"]):
 checkpoint cls_umiCon:
     input: 
         "umiCon/umiExtract/check2",
-        lambda wc: get_filt(wc),
+        lambda wc: get_filt_umi(wc),
         cls = lambda wc: expand("umiCon/umiBin/{b_c}/umi_bin_map.txt", b_c=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_kb}.fa").bc_kb),
     output: temp(directory("umiCon/clusters"))
     run:
@@ -937,14 +937,7 @@ rule collect_umiCon:
         fna = lambda wc: get_umiCon(wc),
     output: "umiCon/umiCon_full.fna"
     run: 
-        with open(output[0], "w") as out:
-            for i in input.fna:
-                barcode_i, c_i, uid_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
-                with open(i, "r") as inp:
-                    for line in inp:
-                        if line.startswith(">"):
-                            line = ">" + barcode_i + "_" + c_i + "_" + uid_i + "\n"
-                        out.write(line)
+        merge_consensus(fi = input.fna, fo = output[0]) 
 
 # trim primers 
 rule trim_primers_umi:
