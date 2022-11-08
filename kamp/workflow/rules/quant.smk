@@ -25,7 +25,7 @@ rule derep_denoised_seqs:
         #divergent amplicons for local alignment, mmseqs2 yes, cd-hit no.
         #--min-seq-id 0.99 -c 0.5 (best in benchmark, -c 0.5-0.7 is good)
         "mmseqs easy-cluster {input.first} {params.prefix} {output.tmp} "
-        "--threads {threads} --min-seq-id {params.mid} -c {params.c} > {log} 2>&1"
+        "--threads {threads} --min-seq-id {params.mid} -c {params.c} --cluster-reassign > {log} 2>&1"
 
 # rm duplicates of reverse complements
 rule rmdup_revcom:
