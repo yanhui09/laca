@@ -31,8 +31,8 @@ rule subsample:
     threads: 1
     shell:
         """
-        seqkit sample -p {params.p} -j {threads} {input} -o {output.p} 2> {log}
-        seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} 2>> {log}
+        seqkit sample -p {params.p} -j {threads} {input} -o {output.p} -w0 -s123 2> {log}
+        seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} -w0 2>> {log}
         """
 
 def get_raw(subsample, n):
