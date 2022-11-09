@@ -119,7 +119,7 @@ rule q_filter:
 
 checkpoint exclude_empty_fqs:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: touch(".qc_DONE")
+    output: temp(touch(".qc_DONE"))
 
 def get_qced(wildcards):
     barcodes = get_demultiplexed(wildcards)
