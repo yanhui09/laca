@@ -103,7 +103,7 @@ rule get_fqs_split2:
     input:
         pool = "clustCon/clusters/{barcode}_{c}_{clust_id}.csv",
         ref = "clustCon/clusters/{barcode}_{c}_{clust_id}.ref",
-        binned = get_fq4Con(config["kmerbin"]),
+        binned = get_fq4Con(),
     output:
         pool = temp("clustCon/split/{barcode}_{c}_{clust_id}.fastq"),
         ref = temp("clustCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna"),
@@ -119,7 +119,7 @@ rule get_fqs_split2:
 
 # isONclust
 rule isONclust:
-    input: get_fq4Con(config["kmerbin"])
+    input: get_fq4Con()
     output:
         _dir = temp(directory("isONclustCon/isONclust/{barcode}_{c}")),
         tsv = temp("isONclustCon/isONclust/{barcode}_{c}.tsv")
@@ -176,7 +176,7 @@ checkpoint cls_isONclust:
 rule get_fqs_split3:
     input:
         bin2clust = "isONclustCon/clusters/{barcode}_{c}_{clust_id}.csv",
-        binned = get_fq4Con(config["kmerbin"]),
+        binned = get_fq4Con(),
     output: temp("isONclustCon/split/{barcode}_{c}_{clust_id}.fastq"),
     conda: '../envs/seqkit.yaml'
     log: "logs/isONclustCon/{barcode}_{c}_{clust_id}/get_fqs_split.log"
