@@ -76,7 +76,7 @@ rule dict:
 
 rule minimap2repseqs:
     input:
-        fq = "qc/qfilt/{barcode}.fastq",
+        fq = rules.q_filter.output,
         mmi = rules.index.output,
         dict = rules.dict.output,
     output: temp("quant/mapped/{barcode}.bam")
