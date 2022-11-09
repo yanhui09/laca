@@ -1,11 +1,18 @@
 # check classifier choice
 check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon"])
 
+def get_consensus2derep(cls):
+   #{cls}/{cls}.fna except umiCon ({cls}/{cls}_trimmed.fna)
+    if cls == "umiCon":
+        return "{cls}/{cls}_trimmed.fna".format(cls=cls)
+    else:
+        return "{cls}/{cls}.fna".format(cls=cls)
+
 # dereplicate sequences with mmseqs
 rule derep_denoised_seqs:
     input: 
-        ["{cls}/{cls}.fna".format(cls=i) for i in config["cluster"]][1:],
-        first = "{cls}/{cls}.fna".format(cls = config["cluster"][0]),
+        [get_consensus2derep(cls=i) for i in config["cluster"]][1:],
+        first = get_consensus2derep(cls = config["cluster"][0]),
     output: 
         rep = temp("quant/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp("quant/mmseqs_all_seqs.fasta"),

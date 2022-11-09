@@ -31,21 +31,47 @@ r_pattern2 = linked_pattern_umi(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
+# avoid re-run caused by temp()
+use rule collect_fastq as collect_fastq_umi with:
+    input:  
+        "demultiplexed/{barcode}"
+    output: 
+        temp("umiCon/qc/{barcode}.fastq")
+
+use rule subsample as subsample_umi with:
+    input: 
+        rules.collect_fastq_umi.output
+    output:
+        p = temp("umiCon/qc/subsampled/{barcode}_p.fastq"),
+        n = temp("umiCon/qc/subsampled/{barcode}.fastq"),
+    log: 
+        "logs/umiCon/qc/subsample/{barcode}.log"
+    benchmark: 
+        "benchmarks/umiCon/qc/subsample/{barcode}.txt"
+
+def get_raw_umi(subsample = config["subsample"], n = config["seqkit"]["n"]):
+    check_val("subsample", subsample, bool)
+    check_val("n[seqkit]", n, int)
+    if subsample is True:
+        return rules.subsample_umi.output.n
+    else:
+        return rules.collect_fastq_umi.output
+
 # indepent qfilt (qc.smk trims the primer together with linker and umi)
 # Retain primer and linker for following umi finding steps
 use rule q_filter as qfilter_umi with:
-    input:
-        get_raw(config["subsample"], config["seqkit"]["n"])
+    input: 
+        get_raw_umi()
     output:
-        temp("umiCon/qfilt/{barcode}.fastq")
+        temp("umiCon/qc/qfilt/{barcode}.fastq")
     params:
         Q = config["umi"]["seqkit"]["min-qual"],
         m = config["umi"]["seqkit"]["min-len"],
         M = config["umi"]["seqkit"]["max-len"],
     log:
-        "logs/umiCon/qfilter/{barcode}.log"
+        "logs/umiCon/qc/qfilter/{barcode}.log"
     benchmark: 
-        "benchmarks/umiCon/qfilter/{barcode}.txt"
+        "benchmarks/umiCon/qc/qfilter/{barcode}.txt"
     threads:
         config["threads"]["large"]
 
@@ -54,7 +80,7 @@ use rule q_filter as qfilter_umi with:
 
 # Remove samples in shallow sequencing
 checkpoint exclude_shallow_umi:
-    input: lambda wc: expand("umiCon/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    input: lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
     output: temp(directory("umiCon/shallow"))
     run:
         import shutil
@@ -225,7 +251,6 @@ def get_umifile1(wildcards, kmerbin = config["kmerbin"], extend=False):
             fs.extend(expand("umiCon/kmerBin/split/{bc_kb}.fastq", bc_kb=bc_kbs))
         else:
             fs.extend(expand("umiCon/kmerBin/{bc_kb}.fastq", bc_kb=bc_kbs))
-    print(fs)
     return fs     
 
 checkpoint umi_check1:
