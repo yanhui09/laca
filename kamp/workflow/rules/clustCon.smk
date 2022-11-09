@@ -75,7 +75,7 @@ def get_clust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
 
 checkpoint cls_clustCon:
     input:
-        ["kmerBin/clusters","qc/qfilt/empty"] if config["kmerbin"] else "qc/qfilt/empty",
+        "kmerBin/clusters" if config["kmerbin"] else "",
         lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)),
         lambda wc: get_kmerBin(wc),
         cls = lambda wc: get_clust(wc),
@@ -153,7 +153,7 @@ def get_isONclust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"])
 
 checkpoint cls_isONclust:
     input:
-        ["kmerBin/clusters","qc/qfilt/empty"] if config["kmerbin"] else "qc/qfilt/empty",
+        "kmerBin/clusters" if config["kmerbin"] else "",
         lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)),
         lambda wc: get_kmerBin(wc),
         cls = lambda wc: get_isONclust(wc),

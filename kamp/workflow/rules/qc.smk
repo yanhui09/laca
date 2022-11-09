@@ -106,7 +106,7 @@ def trim_check(trim = config["trim"], subsample = config["subsample"], n = confi
 
 rule q_filter:
     input: trim_check()
-    output: temp("qc/qfilt/{barcode}.fastq")
+    output: "qc/qfilt/{barcode}.fastq"
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min-qual"],
@@ -119,21 +119,14 @@ rule q_filter:
 
 checkpoint exclude_empty_fqs:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
-    output: temp(directory("qc/qfilt/empty"))
-    run:
-        import shutil
-        if not os.path.exists(output[0]):
-            os.makedirs(output[0])
-        for i in list(input):
-            if os.stat(i).st_size == 0:
-                shutil.move(i, output[0])
+    output: touch(".qc_DONE")
 
 def get_qced(wildcards):
     barcodes = get_demultiplexed(wildcards)
-    barcodes_empty = glob_wildcards(checkpoints.exclude_empty_fqs.get(**wildcards).output[0]
-     + "/{barcode, [a-zA-Z]+[0-9]+}.fastq").barcode
-    barcodes_empty = sorted(set(barcodes_empty))
-    barcodes = [b for b in barcodes if b not in barcodes_empty]
+    checkflag = checkpoints.exclude_empty_fqs.get(**wildcards).output[0]
+    for i in barcodes:
+        if os.stat("qc/qfilt/" + i + ".fastq").st_size == 0:
+            barcodes.remove(i)
     return barcodes
 
 #  sample pooling to increase sensitivity 
