@@ -118,7 +118,7 @@ def get_bin(wildcards, pool = config["pool"]):
 checkpoint cls_kmerbin:
     input:
         "qc/qfilt/empty",
-        lambda wc: get_filt(wc), 
+        lambda wc: sorted(set(get_filt(wc) + expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)))), 
         bin = lambda wc: get_bin(wc)
     output: directory("kmerBin/clusters"),
     run:

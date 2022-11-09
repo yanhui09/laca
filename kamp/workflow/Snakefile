@@ -20,8 +20,16 @@ def check_list_ele(var, val, eles):
     else:
         raise ValueError("\t\n{} parameters not specified.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
 
+def chimeraF(chimera_check = config["chimeraF"]):
+    check_val("chimeraF", chimera_check, bool)
+    if chimera_check == False:
+        return ["count_matrix.tsv", "rep_seqs.fasta"]
+    else:
+        return ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]
+
 rule all:
     input:
+        chimeraF(),
         ["taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
         "taxonomy.tsv",
         ["tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],

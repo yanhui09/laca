@@ -35,7 +35,7 @@ rule subsample:
         seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} -w0 2>> {log}
         """
 
-def get_raw(subsample, n):
+def get_raw(subsample = config["subsample"], n = config["seqkit"]["n"]):
     check_val("subsample", subsample, bool)
     check_val("n[seqkit]", n, int)
     if subsample is True:
@@ -45,7 +45,7 @@ def get_raw(subsample, n):
 
 # trim primers, process two strands differently
 rule trim_primers:
-    input: get_raw(config["subsample"], config["seqkit"]["n"])
+    input: get_raw()
     output: 
         trimmed = temp("qc/primers_trimmed/{barcode}F.fastq"),
         untrimmed = temp("qc/primers_untrimmed/{barcode}F.fastq"),
@@ -97,7 +97,7 @@ rule revcomp_fq:
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
 # option to trim or not
-def trim_check(trim, subsample, n):
+def trim_check(trim = config["trim"], subsample = config["subsample"], n = config["seqkit"]["n"]):
     check_val("trim", trim, bool)
     out = [rules.trim_primers.output.trimmed, rules.revcomp_fq.output]
     if trim is False:
@@ -105,8 +105,7 @@ def trim_check(trim, subsample, n):
     return out
 
 rule q_filter:
-    input:
-        trim_check(config["trim"], config["subsample"], config["seqkit"]["n"])
+    input: trim_check()
     output: temp("qc/qfilt/{barcode}.fastq")
     conda: "../envs/seqkit.yaml"
     params:

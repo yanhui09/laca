@@ -4,8 +4,8 @@ check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustC
 # dereplicate sequences with mmseqs
 rule derep_denoised_seqs:
     input: 
-        ["{cls}/{cls}.fna".format(cls=i) for i in config["cluster"]][1:],
-        first = "{cls}/{cls}.fna".format(cls = config["cluster"][0]),
+        ancient(["{cls}/{cls}.fna".format(cls=i) for i in config["cluster"]][1:]),
+        first = ancient("{cls}/{cls}.fna".format(cls = config["cluster"][0])),
     output: 
         rep = temp("quant/mmseqs_rep_seq.fasta"),
         all_by_cluster = temp("quant/mmseqs_all_seqs.fasta"),
@@ -74,9 +74,9 @@ rule dict:
     benchmark: "benchmarks/quant/dict.txt"
     shell: "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
 
-rule minimap2_rep_seqs:
+rule minimap2repseqs:
     input:
-        fq = get_raw(config["subsample"], config["seqkit"]["n"]),
+        fq = "qc/qfilt/{barcode}.fastq",
         mmi = rules.index.output,
         dict = rules.dict.output,
     output: temp("quant/mapped/{barcode}.bam")
@@ -95,7 +95,7 @@ rule minimap2_rep_seqs:
         """
 
 rule sort:
-    input: rules.minimap2_rep_seqs.output
+    input: rules.minimap2repseqs.output
     output: temp("quant/mapped/{barcode}.sorted.bam")
     params:
         prefix = "quant/mapped/tmp.{barcode}",
@@ -300,10 +300,3 @@ rule q2_repseqs_export:
         > {log} 2>&1
         mv {params._dir}/dna-sequences.fasta {output}
         """
-
-def chimeraF(chimera_check = config["chimeraF"]):
-    check_val("chimeraF", chimera_check, bool)
-    if chimera_check == False:
-        return ["count_matrix.tsv", "rep_seqs.fasta"]
-    else:
-        return ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]

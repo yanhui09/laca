@@ -1,4 +1,4 @@
-def get_fq4Con(kmerbin = True):
+def get_fq4Con(kmerbin = config["kmerbin"]):
     check_val("kmerbin", kmerbin, bool)
     if kmerbin == True:
         out = rules.split_bin.output
@@ -8,7 +8,7 @@ def get_fq4Con(kmerbin = True):
 
 # kmerCon
 rule get_fqs_split:
-    input: get_fq4Con(config["kmerbin"]),
+    input: get_fq4Con()
     output: temp("kmerCon/split/{barcode}_{c}_0.fastq"),
     log: "logs/kmerCon/{barcode}_{c}_0/get_fqs_split.log"
     benchmark: "benchmarks/kmerCon/{barcode}_{c}_0/get_fqs_split.txt"
@@ -29,7 +29,7 @@ rule spoa:
 # clustCon
 # draw draft with max average score from pairwise alignments
 rule minimap2aln:
-    input: get_fq4Con(config["kmerbin"])
+    input: get_fq4Con()
     output: temp("clustCon/minimap2aln/{barcode}_{c}.paf")
     conda: '../envs/minimap2.yaml'
     log: "logs/clustCon/minimap2aln/{barcode}_{c}.log"
@@ -55,7 +55,7 @@ rule aln2clust:
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
-def get_clust(wildcards, pool = True, kmerbin = True):
+def get_clust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
     check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
         
@@ -76,8 +76,9 @@ def get_clust(wildcards, pool = True, kmerbin = True):
 checkpoint cls_clustCon:
     input:
         ["kmerBin/clusters","qc/qfilt/empty"] if config["kmerbin"] else "qc/qfilt/empty",
-        lambda wc: get_kmerBin(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
-        cls = lambda wc: get_clust(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)),
+        lambda wc: get_kmerBin(wc),
+        cls = lambda wc: get_clust(wc),
     output: directory("clustCon/clusters")
     params:
         min_size = config["min_cluster_size"],
@@ -132,7 +133,7 @@ rule isONclust:
         mv {output._dir}/final_clusters.tsv {output.tsv}
         """
 
-def get_isONclust(wildcards, pool = True, kmerbin = True):
+def get_isONclust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
     check_val("pool", pool, bool)
     check_val("kmerbin", kmerbin, bool)
         
@@ -153,8 +154,9 @@ def get_isONclust(wildcards, pool = True, kmerbin = True):
 checkpoint cls_isONclust:
     input:
         ["kmerBin/clusters","qc/qfilt/empty"] if config["kmerbin"] else "qc/qfilt/empty",
-        lambda wc: get_kmerBin(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
-        cls = lambda wc: get_isONclust(wc, pool = config["pool"], kmerbin = config["kmerbin"]),
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)),
+        lambda wc: get_kmerBin(wc),
+        cls = lambda wc: get_isONclust(wc),
     output: directory("isONclustCon/clusters")
     params:
         min_size = config["min_cluster_size"],
