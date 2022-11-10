@@ -82,6 +82,8 @@ use rule q_filter as qfilter_umi with:
 checkpoint exclude_shallow_umi:
     input: lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
     output: temp(directory("umiCon/shallow"))
+    params:
+        min_reads = 50,
     run:
         import shutil
         if not os.path.exists(output[0]):
@@ -89,7 +91,7 @@ checkpoint exclude_shallow_umi:
         for i in list(input):
             num_reads = sum(1 for line in open(i)) / 4
             dir_i = os.path.dirname(i)
-            if num_reads < 50:
+            if num_reads < params.min_reads:
                 shutil.move(dir_i, output[0])
 
 def get_qced_umi(wildcards):
@@ -266,10 +268,9 @@ checkpoint umi_check1:
         # possibly related to https://github.com/snakemake/snakemake/issues/55
         fs = get_umifile1(wildcards)
         for i in list(fs):
-            num_lines = sum(1 for line in open(i))
-            if num_lines > 1:
+            if os.stat(i).st_size > 0:
                 barcode, c = [ i.split("/")[-2].split("_")[index] for index in [-2, -1] ]
-                shutil.copy(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
+                shutil.move(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
 
 # check UMI pattern
 # generate grep pattern for UMI regions
@@ -508,10 +509,9 @@ checkpoint umi_check2:
             os.makedirs(output[0])
         fs = get_umifile2(wildcards)
         for i in list(fs):
-            num_lines = sum(1 for line in open(i))
-            if num_lines > 1:
+            if os.stat(i).st_size > 0:
                 barcode, c = [ i.split("/")[-2].split("_")[index] for index in [-2, -1] ]
-                shutil.copy(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
+                shutil.move(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
 
 # rm potential chimera
 rule rm_chimera:
