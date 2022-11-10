@@ -25,8 +25,8 @@ subsample: False
 # Quality filtering
 seqkit:
   min-qual: 7
-  min-len: 400
-  max-len: 1500
+  min-len: 3500
+  max-len: 6000
   # subsampling params
   p: 1 # subsampling portion, upper it if with uneven library [float]
   n: 10000 # subsampling number [int]
@@ -68,8 +68,8 @@ umap:
   metric: cosine
   n_components: 2 # n reduced dimensions passed to hdbscan clustering
 hdbscan:
-  min_bin_size: 100 # Define the smallest size to bin
-  min_samples: 100 # Increase this for more conservative clustering - more points as noise
+  min_bin_size: 20 # Define the smallest size to bin
+  min_samples: 20 # Increase this for more conservative clustering - more points as noise
   epsilon: 0.5 # Lower this for more micro-clusters
 
 ##############################################################
@@ -98,6 +98,7 @@ racon:
   w: 500
 
 medaka:
+  iter: 1
   m: r941_min_high_g330
 
 spoa:
