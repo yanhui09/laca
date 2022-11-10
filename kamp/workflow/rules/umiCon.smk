@@ -381,6 +381,7 @@ rule extract_umip:
     output:
         umi1 = temp("umiCon/umiExtract/{barcode}_{c}/umi1p.fastq"),
         umi2 = temp("umiCon/umiExtract/{barcode}_{c}/umi2p.fastq"),
+    conda: "../envs/cutadapt.yaml"
     params:
         f = fprimers_trim,
         r = rprimers_trim,
