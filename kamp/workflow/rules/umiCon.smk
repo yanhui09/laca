@@ -895,7 +895,7 @@ checkpoint cls_umiCon:
         "umiCon/umiExtract/check2",
         lambda wc: get_filt_umi(wc),
         cls = lambda wc: expand("umiCon/umiBin/{b_c}/umi_bin_map.txt", b_c=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_kb}.fa").bc_kb),
-    output: temp(directory("umiCon/clusters"))
+    output: directory("umiCon/clusters")
     run:
         import pandas as pd
         if not os.path.exists(output[0]):
