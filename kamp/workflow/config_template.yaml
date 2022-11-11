@@ -83,10 +83,10 @@ hdbscan:
 # isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
 cluster:
   #- kmerCon # the first for the final kOTUs
+  #- isONclustCon 
+  #- isONcorCon # sinlge target/amplification region
   #- clustCon 
-  #- isONcorCon
   #- umiCon
-  - isONclustCon
 min_cluster_size: 20
 
 clustCon:
