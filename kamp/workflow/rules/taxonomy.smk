@@ -65,7 +65,7 @@ rule createtsv:
         " --full-header --threads {threads}"
         " 1> {log} 2>&1"
 
-# use taxonkit to get NCBI taxonomy
+# use taxonkit to get NCBI taxonomy, not for silva
 rule lineage_taxonkit_mmseqs2:
     input:
         taxdump = ancient(rules.update_taxdump.output),
@@ -81,11 +81,11 @@ rule lineage_taxonkit_mmseqs2:
         "cut -f {params.f} {input.tsv} | sort -u | taxonkit reformat -I 1 -P -j {threads}"
         " --data-dir {input.taxdump} -o {output} 1> {log} 2>&1"
 
-rule taxonomy_mmseqs2:
+rule taxonomy_mmseqs2_taxonkit:
     input:
         rules.createtsv.output,
         rules.lineage_taxonkit_mmseqs2.output,
-    output: "taxonomy/mmseqs2/taxonomy.tsv"
+    output: "taxonomy/mmseqs2/taxonomy_taxonkit.tsv"
     run:
         import pandas as pd
         df = pd.read_csv(input[0], sep = "\t", header = None)
@@ -97,6 +97,22 @@ rule taxonomy_mmseqs2:
         df = df[['kOTUid', 'lineage']]
         df.rename(columns={'kOTUid': 'kOTU_ID', 'lineage': 'taxonomy'}, inplace=True)
         df.to_csv(output[0], sep = "\t", index = False, header = False)
+
+rule taxonomy_mmseqs2_silva:
+    input: rules.createtsv.output
+    output: "taxonomy/mmseqs2/taxonomy_silva.tsv"
+    shell: "cut -f 1,5 {input} | sed 's/\"//g' > {output}"
+
+def get_taxonomy_mmseqs2(taxdb=config["mmseqs"]["taxdb"], blastdb=config["mmseqs"]["blastdb_alias"]):
+    if taxdb == "silva" and blastdb == "":
+        return rules.taxonomy_mmseqs2_silva.output
+    else:
+        return rules.taxonomy_mmseqs2_taxonkit.output
+
+rule taxonomy_mmseqs2:
+    input: get_taxonomy_mmseqs2()
+    output: "taxonomy/mmseqs2/taxonomy.tsv"
+    shell: "cp -f {input} {output}" 
 
 rule classify_kraken2:
     input:

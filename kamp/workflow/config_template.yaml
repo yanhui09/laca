@@ -130,9 +130,8 @@ mmseqs:
   c: 0.9 # the fraction of aligned residues
   taxdb: SILVA # predefined taxonomy database name in `mmseqs databases`; The provided NT database do not have taxonomy info yet.
   # make a custom seqTaxDB using local blast databases;
-  #blastdb_ftp: "ftp://ftp.ncbi.nlm.nih.gov/blast/db/refseq_rna.??.tar.gz"
   blastdb_alias: "refseq_rna" # alias for blast database; leave this as empty string [""] if you want to use the default database by mmseqs2
-  lca-mode: 3 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [3]
+  lca-mode: 4 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [4]
 
 kraken2:
   # Find prebuilt database: https://benlangmead.github.io/aws-indexes/k2
