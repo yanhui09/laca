@@ -188,11 +188,15 @@ rule classify_q2blast:
     benchmark: "benchmarks/taxonomy/q2blast/{part}.txt"
     shell:
         """
+        if [ ! -f {params.prefix}.qza ]; then
         qiime tools import \
             --input-path {input.query_fna} \
             --output-path {params.prefix}.qza \
             --type 'FeatureData[Sequence]' \
             1> {log} 2>&1
+        fi
+
+        if [ ! -f {params.prefix}_hits.qza ] || [ ! -f {params.prefix}_tax.qza ]; then
         qiime feature-classifier classify-consensus-blast \
             --i-query {params.prefix}.qza \
             --i-reference-reads {input.ref_seqs} \
@@ -200,16 +204,23 @@ rule classify_q2blast:
             --o-classification {params.prefix}_tax.qza \
             --o-search-results {params.prefix}_hits.qza \
             1>> {log} 2>&1
+        fi
+
+        if [ ! -f {output.tax} ]; then
         qiime tools export \
             --input-path {params.prefix}_tax.qza \
             --output-path {output.tax} \
             --output-format 'TSVTaxonomyFormat' \
             1>> {log} 2>&1
+        fi
+
+        if [ ! -f {output.hits} ]; then
         qiime tools export \
             --input-path {params.prefix}_hits.qza \
             --output-path {output.hits} \
             --output-format 'BLAST6Format' \
             1>> {log} 2>&1
+        fi
         """
 
 def get_q2blast_batch(wildcards):
