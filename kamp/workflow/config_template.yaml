@@ -45,7 +45,7 @@ rprimer:
 
 cutadapt:
   max_errors: 0.3
-  min_overlap: 5
+  min_overlap: 6
   minimum-length: 1
 
 ##############################################################
