@@ -1,5 +1,5 @@
 # check classifier choice
-check_list_ele("classifier", config["classifier"], ["kraken2", "mmseqs2"])
+check_list_ele("classifier", config["classifier"], ["q2blast", "kraken2", "mmseqs2"])
 
 # LCA taxonomy with MMseqs2
 TaxDB = config["mmseqs"]["taxdb"]
@@ -118,7 +118,7 @@ rule classify_kraken2:
     input:
         ancient(DATABASE_DIR + "/.initDB_DONE"),
         ancient(expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"])), 
-        fna = ancient(chimeraF(config["chimeraF"])[1]),
+        fna = ancient(chimeraF()[1]),
     output: temp("taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
     params:
@@ -162,8 +162,75 @@ rule taxonomy_kraken2:
         df = df[['kOTUid', 'lineage']]
         df.to_csv(output[0], sep = "\t", index = False, header = False)
 
+# custom parallel, split repseqs into N parts with at most 50 sequnces
+checkpoint repseqs_split:
+    input: chimeraF()[1]
+    output: temp(directory("taxonomy/q2blast/split"))
+    conda: "../envs/seqkit.yaml"
+    params:
+        s = config["q2blast"]["split_by_nseq"],
+    log: "logs/taxonomy/q2blast/repseqs_split.log"
+    benchmark: "benchmarks/taxonomy/q2blast/repseqs_split.txt"
+    shell: "seqkit split {input} -s {params.s} -O {output} 1> {log} 2>&1"
+
+rule classify_q2blast:
+    input: 
+        query_fna = "taxonomy/q2blast/split/{part}.fasta",
+        ref_seqs = ancient(DATABASE_DIR + "/rescript/silva_seqs.qza"),
+        ref_tax = ancient(DATABASE_DIR + "/rescript/silva_tax.qza"),
+    output:
+        tax = temp("taxonomy/q2blast/blast/{part}_tax.tsv"),
+        hits = temp("taxonomy/q2blast/blast/{part}_hits.tsv"),
+    conda: "../envs/rescript.yaml"
+    params:
+        prefix = "taxonomy/q2blast/blast/{part}",
+    log: "logs/taxonomy/q2blast/{part}.log"
+    benchmark: "benchmarks/taxonomy/q2blast/{part}.txt"
+    shell:
+        """
+        qiime tools import \
+            --input-path {input.query_fna} \
+            --output-path {params.prefix}.qza \
+            --type 'FeatureData[Sequence]' \
+            1> {log} 2>&1
+        qiime feature-classifier classify-consensus-blast \
+            --i-query {params.prefix}.qza \
+            --i-reference-reads {input.ref_seqs} \
+            --i-reference-taxonomy {input.ref_tax} \
+            --o-classification {params.prefix}_tax.qza \
+            --o-search-results {params.prefix}_hits.qza \
+            1>> {log} 2>&1
+        qiime tools export \
+            --input-path {params.prefix}_tax.qza \
+            --output-path {output.tax} \
+            --output-format 'TSVTaxonomyFormat' \
+            1>> {log} 2>&1
+        qiime tools export \
+            --input-path {params.prefix}_hits.qza \
+            --output-path {output.hits} \
+            --output-format 'BLAST6Format' \
+            1>> {log} 2>&1
+        """
+
+def get_q2blast_batch(wildcards):
+    parts = glob_wildcards(checkpoints.repseqs_split.get(**wildcards).output[0] + "/{part}.fasta").part
+    return parts
+
+rule col_q2blast_batch:
+    input:
+        "taxonomy/q2blast/split", 
+        tax = lambda wc : expand("taxonomy/q2blast/blast/{part}_tax.tsv", part = get_q2blast_batch(wc)),
+        hits = lambda wc : expand("taxonomy/q2blast/blast/{part}_hits.tsv", part = get_q2blast_batch(wc)),
+    output:
+        tax = "taxonomy/q2blast/taxonomy.tsv",
+        hits = "taxonomy/q2blast/hits.tsv",
+    shell:
+        """
+        cat {input.tax} | grep -v "Feature ID" | sort -k1 -V | sed -e 's/; /;/g' -e 's/d__/k__/' > {output.tax}
+        cat {input.hits} | sort -k1 -V > {output.hits}
+        """
+
 rule get_taxonomy:
     input: "taxonomy/" + config["classifier"][0] + "/taxonomy.tsv",
     output: "taxonomy.tsv"
-    shell:
-        "cp -f {input} {output}"
+    shell: "cut -f1,2 {input} > {output}"

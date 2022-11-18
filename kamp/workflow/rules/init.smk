@@ -1,4 +1,4 @@
-check_list_ele("classifier", config["classifier"], ["kraken2", "mmseqs2"])
+check_list_ele("classifier", config["classifier"], ["q2blast", "kraken2", "mmseqs2"])
 
 # rules to initialize workflows, e.g., building database, etc.
 DATABASE_DIR = config["database_dir"].rstrip("/")
@@ -11,11 +11,12 @@ def get_classifier(c = config["classifier"][0]):
         out = expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"])
     elif c == "mmseqs2":
         out = expand(DATABASE_DIR + "/mmseqs2/customDB/customDB{ext}", ext = ["_mapping", "_taxonomy"])
+    elif c == "q2blast":
+        out = expand(DATABASE_DIR + "/rescript/silva_{prefix}.qza", prefix = ["seqs", "tax"])
     return out 
 
 rule initDB:
     input: get_classifier()
-    output: touch(DATABASE_DIR + "/.initDB_DONE")
 
 # use predefined MMseqs2 database
 rule databases_mmseqs2:
@@ -140,3 +141,18 @@ rule kraken2_prebuilt:
         rm {params.dbloc}/kraken2.tar.gz 1>> {log} 2>&1
         """
 
+# q2 classify-consensus-blast
+# rescript silva 138.1, --p-mode majority, --p-perc-identity 0.99
+rule rescript_silva:
+    output: expand(DATABASE_DIR + "/rescript/silva_{prefix}.qza", prefix = ["seqs", "tax"])
+    conda: "../envs/rescript.yaml"
+    params: 
+        out_dir = DATABASE_DIR + "/rescript",
+    log: "logs/taxonomy/q2blast/rescript_silva.log"
+    benchmark: "benchmarks/taxonomy/q2blast/rescript_silva.txt"
+    threads: config["threads"]["large"]
+    shell: 
+        """
+        mkdir -p {params.out_dir}
+        bash {workflow.basedir}/scripts/rescript_silva.sh {params.out_dir} {threads} 1> {log} 2>&1
+        """

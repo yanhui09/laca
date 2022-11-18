@@ -122,7 +122,8 @@ chimeraF: False
 ##############################################################
 # Taxonomy assignment
 classifier:
-  - kraken2 # the first to be final taxonomy
+  - q2blast
+  #- kraken2 # the first to be final taxonomy
   #- mmseqs2
 
 mmseqs:
@@ -137,6 +138,9 @@ kraken2:
   # Find prebuilt database: https://benlangmead.github.io/aws-indexes/k2
   prebuilt: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz"
   classify_cmd: "--confidence 0.05" # use --confidence 0.05 for standard database 
+
+q2blast:
+  split_by_nseq: 20 # split by N sequence into batches
 
 ##############################################################
 # Build a de novo phylogenetic tree

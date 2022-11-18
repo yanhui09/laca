@@ -1,0 +1,19 @@
+name: q2rescript
+channels:
+  - qiime2/label/r2022.8
+  - https://packages.qiime2.org/qiime2/2022.8/passed/core/
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - q2cli 
+  - q2templates 
+  - q2-types 
+  - q2-longitudinal 
+  - q2-feature-classifier 
+  - "pandas>=0.25.3" 
+  - xmltodict
+  - joblib==1.0.0
+  - pip
+  - pip:
+    - git+https://github.com/bokulich-lab/RESCRIPt.git 
