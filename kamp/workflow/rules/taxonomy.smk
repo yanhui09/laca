@@ -173,54 +173,71 @@ checkpoint repseqs_split:
     benchmark: "benchmarks/taxonomy/q2blast/repseqs_split.txt"
     shell: "seqkit split {input} -s {params.s} -O {output} 1> {log} 2>&1"
 
-rule classify_q2blast:
-    input: 
-        query_fna = "taxonomy/q2blast/split/{part}.fasta",
-        ref_seqs = ancient(DATABASE_DIR + "/rescript/silva_seqs.qza"),
-        ref_tax = ancient(DATABASE_DIR + "/rescript/silva_tax.qza"),
-    output:
-        tax = temp("taxonomy/q2blast/blast/{part}_tax.tsv"),
-        hits = temp("taxonomy/q2blast/blast/{part}_hits.tsv"),
+rule q2import:
+    input: "taxonomy/q2blast/split/{part}.fasta"
+    output: temp("taxonomy/q2blast/split/{part}.qza")
     conda: "../envs/rescript.yaml"
-    params:
-        prefix = "taxonomy/q2blast/blast/{part}",
-    log: "logs/taxonomy/q2blast/{part}.log"
-    benchmark: "benchmarks/taxonomy/q2blast/{part}.txt"
+    log: "logs/taxonomy/q2blast/q2import_{part}.log"
+    benchmark: "benchmarks/taxonomy/q2blast/q2import_{part}.txt"
     shell:
         """
-        if [ ! -f {params.prefix}.qza ]; then
         qiime tools import \
-            --input-path {input.query_fna} \
-            --output-path {params.prefix}.qza \
+            --input-path {input} \
+            --output-path {output} \
             --type 'FeatureData[Sequence]' \
             1> {log} 2>&1
-        fi
-
-        if [ ! -f {params.prefix}_hits.qza ] || [ ! -f {params.prefix}_tax.qza ]; then
+        """
+ 
+rule classify_q2blast:
+    input: 
+        query_fna = "taxonomy/q2blast/split/{part}.qza",
+        ref_seqs = ancient(rules.rescript_drep.output.seqs),
+        ref_tax = ancient(rules.rescript_drep.output.tax),
+    output:
+        tax = temp("taxonomy/q2blast/blast/{part}_tax.qza"),
+        hits = temp("taxonomy/q2blast/blast/{part}_hits.qza"),
+    conda: "../envs/rescript.yaml"
+    log: "logs/taxonomy/q2blast/q2classify_{part}.log"
+    benchmark: "benchmarks/taxonomy/q2blast/q2classify_{part}.txt"
+    shell:
+        """
         qiime feature-classifier classify-consensus-blast \
-            --i-query {params.prefix}.qza \
+            --i-query {input.query_fna} \
             --i-reference-reads {input.ref_seqs} \
             --i-reference-taxonomy {input.ref_tax} \
-            --o-classification {params.prefix}_tax.qza \
-            --o-search-results {params.prefix}_hits.qza \
-            1>> {log} 2>&1
-        fi
+            --o-classification {output.tax} \
+            --o-search-results {output.hits} \
+            1> {log} 2>&1
+        """
 
-        if [ ! -f {output.tax} ]; then
+rule q2export_tax:
+    input: rules.classify_q2blast.output.tax
+    output: temp("taxonomy/q2blast/blast/{part}_tax.tsv")
+    conda: "../envs/rescript.yaml"
+    log: "logs/taxonomy/q2blast/q2export_tax_{part}.log"
+    benchmark: "benchmarks/taxonomy/q2blast/q2export_tax_{part}.txt"
+    shell:
+        """
         qiime tools export \
-            --input-path {params.prefix}_tax.qza \
-            --output-path {output.tax} \
+            --input-path {input} \
+            --output-path {output} \
             --output-format 'TSVTaxonomyFormat' \
-            1>> {log} 2>&1
-        fi
+            1> {log} 2>&1
+        """    
 
-        if [ ! -f {output.hits} ]; then
+rule q2export_hits:
+    input: rules.classify_q2blast.output.hits
+    output: temp("taxonomy/q2blast/blast/{part}_hits.tsv")
+    conda: "../envs/rescript.yaml"
+    log: "logs/taxonomy/q2blast/q2export_hits_{part}.log"
+    benchmark: "benchmarks/taxonomy/q2blast/q2export_hits_{part}.txt"
+    shell:
+        """
         qiime tools export \
-            --input-path {params.prefix}_hits.qza \
-            --output-path {output.hits} \
+            --input-path {input} \
+            --output-path {output} \
             --output-format 'BLAST6Format' \
-            1>> {log} 2>&1
-        fi
+            1> {log} 2>&1
         """
 
 def get_q2blast_batch(wildcards):

@@ -143,16 +143,93 @@ rule kraken2_prebuilt:
 
 # q2 classify-consensus-blast
 # rescript silva 138.1, --p-mode majority, --p-perc-identity 0.99
-rule rescript_silva:
-    output: expand(DATABASE_DIR + "/rescript/silva_{prefix}.qza", prefix = ["seqs", "tax"])
+rule rescript_get_silva:
+    output: 
+        seqs = temp(DATABASE_DIR + "/rescript/silva_rna_seqs.qza"),
+        tax = temp(DATABASE_DIR + "/rescript/silva_tax.qza"),
     conda: "../envs/rescript.yaml"
-    params: 
-        out_dir = DATABASE_DIR + "/rescript",
-    log: "logs/taxonomy/q2blast/rescript_silva.log"
-    benchmark: "benchmarks/taxonomy/q2blast/rescript_silva.txt"
-    threads: config["threads"]["large"]
-    shell: 
+    log: "logs/taxonomy/q2blast/rescript/get_silva.log"
+    benchmark: "benchmarks/taxonomy/q2blast/rescript/get_silva.txt"
+    shell:
         """
-        mkdir -p {params.out_dir}
-        bash {workflow.basedir}/scripts/rescript_silva.sh {params.out_dir} {threads} 1> {log} 2>&1
+        qiime rescript get-silva-data \
+            --p-version '138.1' \
+            --p-target 'SSURef_NR99' \
+            --p-include-species-labels \
+            --p-no-rank-propagation \
+            --o-silva-sequences {output.seqs} \
+            --o-silva-taxonomy {output.tax} 1> {log} 2>&1
+        """
+
+rule rescript_reverse_transcribe:
+    input: rules.rescript_get_silva.output.seqs
+    output: temp(DATABASE_DIR + "/rescript/silva_seqs.qza")
+    conda: "../envs/rescript.yaml"
+    log: "logs/taxonomy/q2blast/rescript/reverse_transcribe.log"
+    benchmark: "benchmarks/taxonomy/q2blast/rescript/reverse_transcribe.txt"
+    shell:
+        """
+        qiime rescript reverse-transcribe \
+            --i-rna-sequences {input} \
+            --o-dna-sequences {output} 1> {log} 2>&1
+        """
+
+rule rescript_cull:
+    input: rules.rescript_reverse_transcribe.output
+    output: temp(DATABASE_DIR + "/rescript/silva_seqs_culled.qza")
+    conda: "../envs/rescript.yaml"
+    log: "logs/taxonomy/q2blast/rescript/cull.log"
+    benchmark: "benchmarks/taxonomy/q2blast/rescript/cull.txt"
+    threads: config["threads"]["large"]
+    shell:
+        """
+        qiime rescript cull-seqs \
+            --i-sequences {input} \
+            --o-clean-sequences {output} \
+            --p-n-jobs {threads} 1> {log} 2>&1
+        """
+
+rule rescript_filter:
+    input: 
+        seqs = rules.rescript_cull.output,
+        tax = rules.rescript_get_silva.output.tax,
+    output: 
+        filt = temp(DATABASE_DIR + "/rescript/silva_seqs_filt.qza"),
+        discard = temp(DATABASE_DIR + "/rescript/silva_seqs_discard.qza")
+    conda: "../envs/rescript.yaml"
+    log: "logs/taxonomy/q2blast/rescript/filter.log"
+    benchmark: "benchmarks/taxonomy/q2blast/rescript/filter.txt"
+    shell:
+        """
+        qiime rescript filter-seqs-length-by-taxon \
+            --i-sequences {input.seqs} \
+            --i-taxonomy {input.tax} \
+            --p-labels Archaea Bacteria Eukaryota \
+            --p-min-lens 900 1200 1400 \
+            --o-filtered-seqs {output.filt} \
+            --o-discarded-seqs {output.discard} 1> {log} 2>&1
+        """
+
+rule rescript_drep:
+    input:
+        seqs = rules.rescript_filter.output.filt,
+        tax = rules.rescript_get_silva.output.tax,
+    output:
+        seqs = DATABASE_DIR + "/rescript/silva_seqs_drep.qza",
+        tax = DATABASE_DIR + "/rescript/silva_tax_drep.qza",
+    conda: "../envs/rescript.yaml"
+    log: "logs/taxonomy/q2blast/rescript/drep.log"
+    benchmark: "benchmarks/taxonomy/q2blast/rescript/drep.txt"
+    threads: config["threads"]["large"]
+    shell:
+        """
+        qiime rescript dereplicate \
+            --i-sequences {input.seqs} \
+            --i-taxa {input.tax} \
+            --p-perc-identity 1.0 \
+            --p-rank-handles 'silva' \
+            --p-mode 'uniq' \
+            --o-dereplicated-sequences {output.seqs} \
+            --o-dereplicated-taxa {output.tax} \
+            --p-threads {threads} 1> {log} 2>&1
         """
