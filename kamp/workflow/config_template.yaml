@@ -44,7 +44,7 @@ rprimer:
   1391R: "GACGGGCGGTGTGTRCA"
 
 cutadapt:
-  max_errors: 0.3
+  max_errors: 0.2
   min_overlap: 6
   minimum-length: 1
 
