@@ -335,7 +335,7 @@ rule isoCon:
         prefix = "isONcorCon/polish/{barcode}_{c}_{clust_id}",
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
-    threads: config["threads"]["normal"]
+    threads: config["threads"]["large"]
     shell: 
         """
         IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} > {log} 2>&1
