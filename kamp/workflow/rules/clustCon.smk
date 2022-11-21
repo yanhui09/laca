@@ -259,8 +259,12 @@ rule racon:
 # add iter for medaka
 def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = False):
     if int(wildcards.iter2) == 1:
-        fna = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/racon_{iter}.fna".format(
-            cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=racon_iter)
+        if int(racon_iter) == 0:
+            fna = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna".format(
+                cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id)
+        else:
+            fna = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/racon_{iter}.fna".format(
+                cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=racon_iter)
     else:
         fna = "{cls}/polish/{barcode}_{c}_{clust_id}/medaka_{iter}/consensus.fasta".format(
             cls=wildcards.cls, barcode=wildcards.barcode, c=wildcards.c, clust_id=wildcards.clust_id, iter=str(int(wildcards.iter2) - 1))
@@ -373,7 +377,13 @@ def get_clusters(wildcards):
     else:
         return "{cls}/clusters"
 
-def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"]):
+def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter = config["racon"]["iter"]):
+    # iter >= 0, integer
+    check_val("racon iter", racon_iter, int)
+    check_val("medaka iter", medaka_iter, int)
+    if racon_iter < 0 or medaka_iter < 0:
+        raise ValueError("racon and medaka iter shall be >= 0")
+
     if wildcards.cls == "kmerCon":
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         bc_kb_cis = [i + "_0" for i in bc_kbs]
@@ -389,7 +399,13 @@ def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"]):
     if wildcards.cls == "isONcorCon":
         return expand("{{cls}}/polish/{bc_kb_ci}/IsoCon/candidates.fasta", cls = wildcards.cls, bc_kb_ci = bc_kb_cis)
     else:
-        return expand("{{cls}}/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta", cls = wildcards.cls, bc_kb_ci = bc_kb_cis, iter = medaka_iter)
+        if medaka_iter == 0:
+            if racon_iter == 0:
+                return expand("{{cls}}/polish/{bc_kb_ci}/minimap2/raw.fna", cls = wildcards.cls, bc_kb_ci = bc_kb_cis)
+            else:
+                return expand("{{cls}}/polish/{bc_kb_ci}/minimap2/racon_{iter}.fna", cls = wildcards.cls, bc_kb_ci = bc_kb_cis, iter = racon_iter)
+        else:
+            return expand("{{cls}}/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta", cls = wildcards.cls, bc_kb_ci = bc_kb_cis, iter = medaka_iter)
             
 rule collect_consensus:
     input: 
