@@ -128,7 +128,7 @@ use rule umap as umap_umi with:
 checkpoint cls_kmerbin_umi:
     input: 
         "umiCon/shallow",
-        lambda wc: expand("umiCon/qfilt/{barcode}.fastq", barcode=get_qced_umi(wc)),
+        lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_qced_umi(wc)),
         bin = lambda wc: expand("umiCon/kmerBin/{barcode}/hdbscan.tsv", barcode=get_qced_umi(wc)),
     output: directory("umiCon/kmerBin/clusters")
     run:
