@@ -10,7 +10,7 @@ threads:
 pool: True
 
 ##############################################################
-# Demultiplex
+# Demultiplex [Nanopore]
 demultiplex: guppy # guppy | minibar
 guppy:
   barcode_kits: "SQK16S-GXO192"
@@ -24,11 +24,10 @@ subsample: True
 
 # Quality filtering
 seqkit:
+  n: 5000 # subsampling number [int]
   min-qual: 7
   min-len: 800
   max-len: 1500
-  # subsampling params
-  n: 5000 # subsampling number [int]
 
 # trim primers
 trim: True
@@ -80,7 +79,7 @@ hdbscan:
 # mode for cluster consensus [ClustCon|isONclustCon|isONcorCon]
 # ClustCon: cluster based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
 # isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
-# isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
+# isONcorCon: isONclust followed by isONcorrect/IsoCon (close similarity)
 cluster:
   #- isONclustCon # the first for the final kOTUs
   #- kmerCon 
@@ -89,12 +88,12 @@ cluster:
   #- umiCon
 min_cluster_size: 20
 
-ava2clust: # used in clustCon
+ava2clust: # [clustCon]
   min_score_frac: 0.8
-  max_recursion: -1 # set to non-zero value to override python's max recursion depth
+  max_recursion: -1 # non-zero value to override python's max recursion depth
 
 isONclust:
-  # --ont: --k13 --w20; --isoseq: --k13 --w50
+  # --ont: --k13 --w20; --isoseq: --k15 --w50
   k: 13
   w: 20
 
@@ -104,9 +103,11 @@ spoa:
   g: -2
 
 minimap2:
-  # choose by reads type
-  x_ava: ava-ont # used in clustCon
-  x_map: map-ont # used in polish & quant
+  # choose by reads type; https://github.com/lh3/minimap2
+  # ont: ava-ont; pb: ava-pb
+  x_ava: ava-ont # [clustCon]
+  # ont: map-ont; pb-clr: map-pb, pb-css: asm20 (< v2.18), map-hifi (> v2.19)
+  x_map: map-ont # [polish & quant]
 
 racon:
   iter: 2
@@ -119,14 +120,17 @@ medaka:
   iter: 1 
   m: r941_min_hac_g507
 
-# chimera identification 
+# isONcorrect before IsoCon
+isONcor: True # [isONcorCon]
+
+# Filter chimera with qiime2-vesearch [uchime-denovo] 
 chimeraF: False
 
 ##############################################################
 # Taxonomy assignment
 classifier:
-  - q2blast
-  #- kraken2 # the first to be final taxonomy
+  - q2blast # the first to be the final
+  #- kraken2
   #- mmseqs2
 
 mmseqs:
@@ -135,19 +139,19 @@ mmseqs:
   taxdb: SILVA # predefined taxonomy database name in `mmseqs databases`; The provided NT database do not have taxonomy info yet.
   # make a custom seqTaxDB using local blast databases;
   blastdb_alias: "refseq_rna" # alias for blast database; leave this as empty string [""] if you want to use the default database by mmseqs2
-  lca-mode: 4 #LCA Mode 1: single search LCA , 2/3: approximate 2bLCA, 4: top hit [4]
+  lca-mode: 4 #LCA Mode 1: single search LCA, 2/3: approximate 2bLCA (not supported in NT-NT match ), 4: top hit [4]
 
 kraken2:
-  # Find prebuilt database: https://benlangmead.github.io/aws-indexes/k2
+  # Prebuilt database: https://benlangmead.github.io/aws-indexes/k2
   prebuilt: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_20220607.tar.gz"
   classify_cmd: "--confidence 0.05" # use --confidence 0.05 for standard database 
 
 q2blast:
-  split_by_nseq: 20 # split by N sequence into batches
+  split_by_nseq: 20 # split by N sequence for parallel
 
 ##############################################################
 # Build a de novo phylogenetic tree
-# trim possible primers on representative sequences for multi-primer PCR
+# shortest amplified region in multi-primer PCR design
 fprimer_max:
   338Fa: "ACWCCTACGGGWGGCAGCAG"
   338Fb: "GACTCCTACGGGAGGCWGCAG"
@@ -155,7 +159,7 @@ rprimer_min:
   1391R: "GACGGGCGGTGTGTRCA"
 
 phylogen:
-  - FastTree # the first to be final taxonomy; You can enable the other two, which are more time consuming.
+  - FastTree # the first to be the final
   #- IQ-TREE
   #- RAxML
 

@@ -334,8 +334,15 @@ rule isONcorrect:
         find {params._dir}/isONcor/{params.clust_id} -mindepth 1 ! -name 'corrected_reads.fastq' | xargs rm -rf
         """
 
+def get_isoCon_input(isONcor = config["isONcor"]):
+    check_val("isONcor", isONcor, bool)
+    if isONcor == True:
+        return rules.isONcorrect.output
+    else:
+        return rules.get_fqs_split3.output
+
 rule isoCon:
-    input: rules.isONcorrect.output
+    input: get_isoCon_input()
     output:
         cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}.tsv",
         fna = temp("isONcorCon/polish/{barcode}_{c}_{clust_id}/IsoCon/candidates.fasta"),

@@ -18,6 +18,8 @@ def init_conf(
     chimer_filter=False,
     jobs_m=2,
     jobs_M=6,
+    nanopore=False,
+    pacbio=False,
 ):
     """
     Reads template config file with comments from ./template_config.yaml
@@ -36,7 +38,9 @@ def init_conf(
         cluster (str): list of methods to generate consensus (kmerCon, clustCon, isONclustCon, isONcorCon, umiCon) [default: "isONclustCon"]
         chimer_filter (bool): if True, filter possible chimeras by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
-        jobs_M (int): number of jobs for threads-dependent tasks [default: 6]       
+        jobs_M (int): number of jobs for threads-dependent tasks [default: 6]
+        nanopore (bool): if True, use template for nanopore reads [default: False]
+        pacbio (bool): if True, use template for pacbio reads [default: False]       
     """
     os.makedirs(dbdir, exist_ok=True)
     os.makedirs(workdir, exist_ok=True)
@@ -47,6 +51,32 @@ def init_conf(
     with open(template_conf_file) as template_conf:
         conf = yaml.load(template_conf)
         
+    if nanopore == True:
+        # isONclust
+        conf["isONclust"]["k"] = 13
+        conf["isONclust"]["w"] = 20
+        # minimap2
+        conf["minimap2"]["x_ava"] = "ava-ont"
+        conf["minimap2"]["x_map"] = "map-ont"
+        # racon medaka
+        conf["racon"]["iter"] = 2
+        conf["medaka"]["iter"] = 1
+        # isONcor
+        conf["isONcor"] = True
+    
+    if pacbio == True:
+        # isONclust
+        conf["isONclust"]["k"] = 15
+        conf["isONclust"]["w"] = 50
+        # minimap2
+        conf["minimap2"]["x_ava"] = "ava-pb"
+        conf["minimap2"]["x_map"] = "asm20"
+        # racon medaka
+        conf["racon"]["iter"] = 2
+        conf["medaka"]["iter"] = 0
+        # isONcor
+        conf["isONcor"] = False
+            
     conf["basecalled_dir"] = fqdir
     conf["database_dir"] = dbdir
     conf["demultiplex"] = demultiplex
