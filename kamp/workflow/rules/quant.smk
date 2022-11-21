@@ -66,7 +66,7 @@ rule index:
     output: temp("rep_seqs.mmi")
     message: "Index denoised sequences [Generate abundance matrix]"
     params:
-        index_size = config["minimap"]["index_size"],
+        index_size = "4G",
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/index.log"
     benchmark: "benchmarks/quant/index.txt"
@@ -89,7 +89,7 @@ rule minimap2repseqs:
     output: temp("quant/mapped/{barcode}.bam")
     message: "Re-map {wildcards.barcode}.fastq files [Generate abundance matrix]"
     params:
-        x = config["minimap"]["x"]
+        x = config["minimap2"]["x_map"]
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/minimap2/{barcode}.log"
     benchmark: "benchmarks/quant/minimap2/{barcode}.txt"
@@ -106,7 +106,7 @@ rule sort:
     output: temp("quant/mapped/{barcode}.sorted.bam")
     params:
         prefix = "quant/mapped/tmp.{barcode}",
-        m = config["samtools"]["m"],
+        m = "3G",
     conda: "../envs/samtools.yaml"
     log: "logs/quant/sort/{barcode}.log"
     benchmark: "benchmarks/quant/sort/{barcode}.txt"
@@ -117,7 +117,7 @@ rule samtools_index:
     input: rules.sort.output
     output: temp("quant/mapped/{barcode}.sorted.bam.bai")
     params:
-        m = config["samtools"]["m"],
+        m = "3G",
     conda: "../envs/samtools.yaml"
     log: "logs/quant/index/{barcode}.log"
     benchmark: "benchmarks/quant/index/{barcode}.txt"

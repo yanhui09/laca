@@ -28,28 +28,30 @@ rule spoa:
 
 # clustCon
 # draw draft with max average score from pairwise alignments
-rule minimap2aln:
+rule minimap2ava:
     input: get_fq4Con()
-    output: temp("clustCon/minimap2aln/{barcode}_{c}.paf")
+    output: temp("clustCon/minimap2va/{barcode}_{c}.paf")
     conda: '../envs/minimap2.yaml'
-    log: "logs/clustCon/minimap2aln/{barcode}_{c}.log"
-    benchmark: "benchmarks/clustCon/minimap2aln/{barcode}_{c}.txt"
+    params:
+        x = config["minimap2"]["x_ava"],
+    log: "logs/clustCon/minimap2ava/{barcode}_{c}.log"
+    benchmark: "benchmarks/clustCon/minimap2ava/{barcode}_{c}.txt"
     threads: config["threads"]["large"]
     shell:
-        "minimap2 -t {threads} -x ava-ont --no-long-join -r100"
+        "minimap2 -t {threads} -x {params.x} --no-long-join -r100"
         " {input} {input} > {output} 2> {log}"
 
-rule aln2clust:
-    input: rules.minimap2aln.output
-    output: temp("clustCon/aln2clust/{barcode}_{c}.csv")
+rule ava2clust:
+    input: rules.minimap2ava.output
+    output: temp("clustCon/ava2clust/{barcode}_{c}.csv")
     conda: "../envs/clustCon.yaml"
     params:
-        prefix = "clustCon/aln2clust/{barcode}_{c}",
-        min_score_frac = config["clustCon"]["min_score_frac"],
+        prefix = "clustCon/ava2clust/{barcode}_{c}",
+        min_score_frac = config["ava2clust"]["min_score_frac"],
         min_reads = config["min_cluster_size"],
-        max_recurs = config["clustCon"]["max_recursion"],
-    log: "logs/clustCon/aln2clust/{barcode}_{c}.log"
-    benchmark: "benchmarks/clustCon/aln2clust/{barcode}_{c}.txt"
+        max_recurs = config["ava2clust"]["max_recursion"],
+    log: "logs/clustCon/ava2clust/{barcode}_{c}.log"
+    benchmark: "benchmarks/clustCon/ava2clust/{barcode}_{c}.txt"
     shell:
         "python {workflow.basedir}/scripts/binClust.py -p {params.prefix}"
         " -R {params.max_recurs}"
@@ -64,13 +66,13 @@ def get_clust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            bin2cls.append("clustCon/aln2clust/{bc}_{kb}.csv".format(bc=bc, kb=kb))
+            bin2cls.append("clustCon/ava2clust/{bc}_{kb}.csv".format(bc=bc, kb=kb))
     else:
         if pool == True:
            bcs = ["pooled"]
         else:
            bcs = get_qced(wildcards)
-        bin2cls = expand("clustCon/aln2clust/{bc}_all.csv", bc=bcs)
+        bin2cls = expand("clustCon/ava2clust/{bc}_all.csv", bc=bcs)
     return bin2cls
 
 checkpoint cls_clustCon:
@@ -122,14 +124,17 @@ rule isONclust:
     input: get_fq4Con()
     output:
         _dir = temp(directory("isONclustCon/isONclust/{barcode}_{c}")),
-        tsv = temp("isONclustCon/isONclust/{barcode}_{c}.tsv")
+        tsv = temp("isONclustCon/isONclust/{barcode}_{c}.tsv"),
+    params:
+        k = config["isONclust"]["k"],
+        w = config["isONclust"]["w"],
     conda: "../envs/isONcorCon.yaml"
     log: "logs/isONclustCon/isONclust/{barcode}_{c}.log"
     benchmark: "benchmarks/isONclustCon/isONclust/{barcode}_{c}.txt"
     threads: config["threads"]["large"]
     shell:
         """
-        isONclust --ont --fastq {input} --outfolder {output._dir} --t {threads} > {log} 2>&1
+        isONclust --k {params.k} --w {params.w} --fastq {input} --outfolder {output._dir} --t {threads} > {log} 2>&1
         mv {output._dir}/final_clusters.tsv {output.tsv}
         """
 
@@ -202,7 +207,7 @@ rule minimap2polish:
     output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/{assembly}.paf"),
     message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.cls}]"
     params:
-        x = config["minimap"]["x"]
+        x = config["minimap2"]["x_map"]
     conda: "../envs/minimap2.yaml"
     log: "logs/{cls}/{barcode}_{c}_{clust_id}/minimap2_{assembly}.log"
     benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/minimap2_{assembly}.txt"

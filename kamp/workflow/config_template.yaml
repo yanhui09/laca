@@ -71,8 +71,8 @@ umap:
   metric: cosine
   n_components: 2 # n reduced dimensions passed to hdbscan clustering
 hdbscan:
-  min_bin_size: 100 # Define the smallest size to bin
-  min_samples: 100 # Increase this for more conservative clustering - more points as noise
+  min_bin_size: 50 # Define the smallest size to bin
+  min_samples: 50 # Increase this for more conservative clustering - more points as noise
   epsilon: 0.5 # Lower this for more micro-clusters
 
 ##############################################################
@@ -82,16 +82,31 @@ hdbscan:
 # isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
 # isONcorCon: isONclust followed by isONcorrect and IsoCon (close similarity)
 cluster:
-  #- kmerCon # the first for the final kOTUs
-  #- isONclustCon 
+  #- isONclustCon # the first for the final kOTUs
+  #- kmerCon 
   #- isONcorCon # sinlge target/amplification region
   #- clustCon 
   #- umiCon
 min_cluster_size: 20
 
-clustCon:
+ava2clust: # used in clustCon
   min_score_frac: 0.8
   max_recursion: -1 # set to non-zero value to override python's max recursion depth
+
+isONclust:
+  # --ont: --k13 --w20; --isoseq: --k13 --w50
+  k: 13
+  w: 20
+
+spoa:
+  l: 1 # global alignment (1) for multi-primer amplicons; local alignment (0) for common amplicons
+  r: 0
+  g: -2
+
+minimap2:
+  # choose by reads type
+  x_ava: ava-ont # used in clustCon
+  x_map: map-ont # used in polish & quant
 
 racon:
   iter: 2
@@ -103,18 +118,6 @@ racon:
 medaka:
   iter: 1 
   m: r941_min_hac_g507
-
-spoa:
-  l: 1 # global alignment (1) for multi-primer amplicons; local alignment (0) for common amplicons
-  r: 0
-  g: -2
-
-minimap:
-  x: map-ont
-  index_size: 4G 
-
-samtools:
-  m: 3G
 
 # chimera identification 
 chimeraF: False
