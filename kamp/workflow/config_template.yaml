@@ -1,17 +1,17 @@
 # This file should contain everything to configure the workflow on a global scale.
-basecalled_dir: "/mnt/md0/UMI16S/zymock/pass"
-database_dir: "/mnt/md0/Database/Kamp"
+basecalled_dir: 
+database_dir: 
+demultiplexed_dir:
 
 threads:
-    normal: 2 # common tasks
-    large: 6 # threads-dependent tasks
+  normal: 2 # common jobs
+  large: 6 # threads-dependent jobs
 
 # Pooling samples for denoise [TRUE|FALSE]
 pool: True
-
 ##############################################################
-# Demultiplex [Nanopore]
-demultiplex: guppy # guppy | minibar
+# Demultiplex 
+demultiplex: guppy # guppy | minibar | external
 guppy:
   barcode_kits: "SQK16S-GXO192"
 minibar:

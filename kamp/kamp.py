@@ -36,21 +36,24 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         "--snakefile {snakefile} "
         "--configfile '{configfile}' "
         "--use-conda {conda_prefix} "
-        "--use-singularity {singularity_prefix} "
-        "--singularity-args '{singularity_args}' "
+        "{singularity_prefix} "
+        "{singularity_args} "
         "{dryrun} "
         "--rerun-triggers mtime --rerun-incomplete --scheduler greedy "
         "--jobs {jobs} --nolock "
         " {max_mem} "
         " {args} "
     ).format(
-        wf=workflow if workflow != "None" else "",
+        wf=workflow if workflow is not None else "",
         workdir=workdir,
         snakefile=snakefile,
         configfile=configfile,
         conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
-        singularity_prefix="--singularity-prefix " + os.path.join(db_dir, "singularity_envs"),
-        singularity_args='--bind ' + os.path.dirname(snakefile) + '/resources/guppy_barcoding/:/opt/ont/guppy/data/barcoding/,' + basecalled_dir,
+        singularity_prefix="--use-singularity --singularity-prefix " + os.path.join(db_dir, "singularity_envs")
+        if basecalled_dir != None else "",
+        singularity_args="--singularity-args '--bind " +
+        os.path.dirname(snakefile) + "/resources/guppy_barcoding/:/opt/ont/guppy/data/barcoding/," + basecalled_dir + "'"
+        if basecalled_dir is not None else "",
         dryrun="--dryrun" if dryrun else "",
         jobs=int(jobs) if jobs is not None else 1,
         max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
@@ -68,6 +71,26 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         logger.critical(e)
         if exit_on_error is True:
             exit(1)
+
+# custom alo(at least one) class from mutex (mutually exclusive) classs
+# https://stackoverflow.com/questions/44247099/click-command-line-interfaces-make-options-required-if-other-optional-option-is/
+class Alo(click.Option):
+    def __init__(self, *args, **kwargs):
+        self.required_if_not:list = kwargs.pop("required_if_not")
+
+        assert self.required_if_not, "'required_if_not' parameter required"
+        kwargs["help"] = (kwargs.get("help", "") + "Option is required if '" + ", ".join(self.required_if_not) + "' not provided.").strip()
+        super(Alo, self).__init__(*args, **kwargs)
+
+    def handle_parse_result(self, ctx, opts, args):
+        current_opt:bool = self.name in opts
+        for alo_opt in self.required_if_not:
+            if alo_opt not in opts:
+                if not current_opt:
+                    raise click.UsageError("At least one of '" + str(self.name) + "' or '" + str(alo_opt) + "' is required.")
+                else:
+                    self.prompt = None
+        return super(Alo, self).handle_parse_result(ctx, opts, args)
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.version_option(
@@ -151,11 +174,20 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     short_help='Prepare the config file.',
 )
 @click.option(
-    '-f',
-    '--fqdir',
-    help='Path to the basecalled fastq files.',
+    '-b',
+    '--bascdir',
+    help='Path to a directory of the basecalled fastq files. ',
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
-    required=True
+    cls = Alo,
+    required_if_not = ['demuxdir'],
+)
+@click.option(
+    '-x',
+    '--demuxdir',
+    help='Path to a directory of demultiplexed fastq files. ',
+    type=click.Path(dir_okay=True,writable=True,resolve_path=True),
+    cls = Alo,
+    required_if_not = ['bascdir'],
 )
 @click.option(
     '-d',
@@ -173,11 +205,11 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     default=".",
 )
 @click.option(
-    "--demult",
-    type=click.Choice(["guppy", "minibar"]),
+    "--demux",
+    type=click.Choice(["guppy", "minibar", "external"]),
     default="guppy",
     show_default=True,
-    help="Use demultiplexer.",
+    help="Demultiplex from.",
 )
 @click.option(
     "--fqs-min",
@@ -212,7 +244,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     is_flag=True,
     default=False,
     show_default=True,
-    help="Conduct kmer binning.",
+    help="Use kmer binning.",
 )
 @click.option(
     "--cluster",
@@ -222,14 +254,14 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     default=["isONclustCon"],
     show_default=True,
     multiple=True,
-    help="Methods to generate consensus.",
+    help="Consensus methods.",
 )
 @click.option(
     "--chimerf",
     is_flag=True,
     default=False,
     show_default=True,
-    help="Filter possible chimeras by vsearch.",
+    help="Filter chimeras by uchime-denovo in vsearch.",
 )
 @click.option(
     "--jobs-min",
@@ -264,21 +296,22 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     is_flag=True,
     default=False,
     show_default=True,
-    help="Clean flag files by Kamp.",
+    help="Clean flag files.",
 )
 def run_init(
-    fqdir, dbdir, workdir, demult, fqs_min, no_pool, subsample, no_trim, kmerbin, cluster,
-    chimerf, jobs_min, jobs_max, nanopore, pacbio, clean_flags):
+    bascdir, demuxdir, dbdir, workdir, demux, fqs_min, no_pool, subsample, no_trim, 
+    kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, clean_flags):
     """
     Prepare config file for Kamp.
     """ 
     logger.info(f"Kamp version: {__version__}")
-    init_conf(fqdir, dbdir, workdir, "config.yaml", demult, fqs_min,
-              no_pool, subsample, no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio)
+    init_conf(
+        bascdir, demuxdir, dbdir, workdir, "config.yaml", demux, fqs_min, no_pool, subsample,
+        no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio)
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir
-        flags = [".guppy_DONE", ".minibar_DONE", ".simulated_DONE", ".qc_DONE"]
+        flags = [".guppy_DONE", ".minibar_DONE", ".external_DONE", ".simulated_DONE", ".qc_DONE"]
         for flag in flags:
             file = os.path.join(workdir, flag)
             if os.path.exists(file):

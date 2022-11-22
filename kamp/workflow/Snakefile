@@ -1,13 +1,17 @@
 #--------------
 configfile: "config.yaml"
 #--------------
-INPUT_DIR = config["basecalled_dir"].rstrip("/")
 DATABASE_DIR = config["database_dir"].rstrip("/")
+def check_inp(basecalled = config["basecalled_dir"], demultiplexed = config["demultiplexed_dir"]):
+    # at least one of basecalled_dir or demultiplexed_dir must be specified
+    if basecalled is None and demultiplexed is None:
+        raise ValueError("\n  At least one of basecalled_dir or demultiplexed_dir is specified in config.\n")
+check_inp()
 
 def check_val(var, val, class_type):
     if not isinstance(val, class_type):
-        warns = ('\n\t' + str(var) + ' only accepts ' + str(class_type) + ' values.' +
-         '\n\t' + str(val) + ' is used in config.yaml file.')
+        warns = ("\n  " + str(var) + " only accepts " + str(class_type) + " values." +
+        "\n  " + str(val) + " is used in config.yaml file.")
         raise ValueError(warns)
 
 # check list elements
@@ -16,9 +20,9 @@ def check_list_ele(var, val, eles):
     if val:
         for i in val:
             if i not in eles:
-                raise ValueError("\t\n{} parameters not recognized.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
+                raise ValueError("\n  {} parameters not recognized.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
     else:
-        raise ValueError("\t\n{} parameters not specified.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
+        raise ValueError("\n  {} parameters not specified.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
 
 def chimeraF(chimera_check = config["chimeraF"]):
     check_val("chimeraF", chimera_check, bool)
