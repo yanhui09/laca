@@ -118,11 +118,11 @@ rule q_filter:
     shell: "cat {input} | seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i > {output} 2> {log}"
 
 checkpoint exclude_empty_fqs:
-    input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc))
     output: touch(".qc_DONE")
 
-def get_qced(wildcards):
-    barcodes = get_demultiplexed(wildcards)
+def get_qced_barcodes(wildcards):
+    barcodes = get_demux_barcodes(wildcards)
     checkflag = checkpoints.exclude_empty_fqs.get(**wildcards).output[0]
     for i in barcodes:
         if os.stat("qc/qfilt/" + i + ".fastq").st_size == 0:
@@ -131,13 +131,13 @@ def get_qced(wildcards):
 
 #  sample pooling to increase sensitivity 
 rule combine_fastq:
-    input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced(wc))
+    input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc))
     output: temp("qc/qfilt/pooled.fastq")
     shell:
         "cat {input} > {output}"
 
 def get_filt(wildcards, pool = config["pool"]):
-    barcodes = get_qced(wildcards) 
+    barcodes = get_qced_barcodes(wildcards) 
     check_val("pool", pool, bool)
     if pool is True:
         barcodes.append("pooled")

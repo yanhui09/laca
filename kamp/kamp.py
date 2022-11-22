@@ -147,7 +147,7 @@ def cli(self):
 @click.argument(
     "workflow",
     type=click.Choice(
-        ["demultiplex", "qc", "kmerBin",
+        ["demux", "qc", "kmerBin",
          "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon",
          "quant", "taxa", "tree", "requant", "all",
          "initDB", "nanosim"]
@@ -205,11 +205,11 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     default=".",
 )
 @click.option(
-    "--demux",
-    type=click.Choice(["guppy", "minibar", "external"]),
+    "--demuxer",
+    type=click.Choice(["guppy", "minibar"]),
     default="guppy",
     show_default=True,
-    help="Demultiplex from.",
+    help="Demultiplexer.",
 )
 @click.option(
     "--fqs-min",
@@ -299,19 +299,19 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     help="Clean flag files.",
 )
 def run_init(
-    bascdir, demuxdir, dbdir, workdir, demux, fqs_min, no_pool, subsample, no_trim, 
+    bascdir, demuxdir, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
     kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, clean_flags):
     """
     Prepare config file for Kamp.
     """ 
     logger.info(f"Kamp version: {__version__}")
     init_conf(
-        bascdir, demuxdir, dbdir, workdir, "config.yaml", demux, fqs_min, no_pool, subsample,
+        bascdir, demuxdir, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
         no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio)
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir
-        flags = [".guppy_DONE", ".minibar_DONE", ".external_DONE", ".simulated_DONE", ".qc_DONE"]
+        flags = [".simulated_DONE", ".qc_DONE"]
         for flag in flags:
             file = os.path.join(workdir, flag)
             if os.path.exists(file):

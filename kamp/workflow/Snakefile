@@ -41,7 +41,7 @@ rule all:
 
 include: "rules/init.smk"
 #include: "rules/nanosim.smk"
-include: "rules/demultiplex.smk"
+include: "rules/demux.smk"
 include: "rules/qc.smk"
 include: "rules/kmerBin.smk"
 include: "rules/clustCon.smk"
@@ -51,8 +51,8 @@ include: "rules/requant.smk"
 include: "rules/taxonomy.smk"
 include: "rules/tree.smk"
 
-rule demultiplex:
-    input: lambda wc: expand("qc/{barcode}.fastq", barcode=get_demultiplexed(wc))
+rule demux:
+    input: lambda wc: expand("qc/{barcode}.fastq", barcode=get_demux_barcodes(wc))
 
 rule qc:
     input: lambda wc: get_filt(wc),

@@ -71,14 +71,14 @@ def get_clust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
         if pool == True:
            bcs = ["pooled"]
         else:
-           bcs = get_qced(wildcards)
+           bcs = get_qced_barcodes(wildcards)
         bin2cls = expand("clustCon/ava2clust/{bc}_all.csv", bc=bcs)
     return bin2cls
 
 checkpoint cls_clustCon:
     input:
         ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
-        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)),
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
         lambda wc: get_kmerBin(wc),
         cls = lambda wc: get_clust(wc),
     output: directory("clustCon/clusters")
@@ -152,14 +152,14 @@ def get_isONclust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"])
         if pool == True:
            bcs = ["pooled"]
         else:
-           bcs = get_qced(wildcards)
+           bcs = get_qced_barcodes(wildcards)
         bin2cls = expand("isONclustCon/isONclust/{bc}_all.tsv", bc=bcs)
     return bin2cls
 
 checkpoint cls_isONclust:
     input:
         ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
-        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)),
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
         lambda wc: get_kmerBin(wc),
         cls = lambda wc: get_isONclust(wc),
     output: directory("isONclustCon/clusters")

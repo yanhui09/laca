@@ -10,8 +10,8 @@ threads:
 # Pooling samples for denoise [TRUE|FALSE]
 pool: True
 ##############################################################
-# Demultiplex 
-demultiplex: guppy # guppy | minibar | external
+# Demultiplex [Nanopore]
+demuxer: guppy # guppy | minibar 
 guppy:
   barcode_kits: "SQK16S-GXO192"
 minibar:

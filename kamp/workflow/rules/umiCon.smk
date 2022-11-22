@@ -80,7 +80,7 @@ use rule q_filter as qfilter_umi with:
 
 # Remove samples in shallow sequencing
 checkpoint exclude_shallow_umi:
-    input: lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc))
+    input: lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc))
     output: temp(directory("umiCon/shallow"))
     params:
         min_reads = 50,
@@ -94,8 +94,8 @@ checkpoint exclude_shallow_umi:
             if num_reads < params.min_reads:
                 shutil.move(dir_i, output[0])
 
-def get_qced_umi(wildcards):
-    barcodes = get_demultiplexed(wildcards)
+def get_qced_barcodes_umi(wildcards):
+    barcodes = get_demux_barcodes(wildcards)
     barcodes_shallow = glob_wildcards(checkpoints.exclude_shallow_umi.get(**wildcards).output[0]
      + "/qfilt/{barcode, [a-zA-Z]+[0-9]+}.fastq").barcode
     barcodes_shallow = sorted(set(barcodes_shallow))
@@ -128,8 +128,8 @@ use rule umap as umap_umi with:
 checkpoint cls_kmerbin_umi:
     input: 
         "umiCon/shallow",
-        lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_qced_umi(wc)),
-        bin = lambda wc: expand("umiCon/kmerBin/{barcode}/hdbscan.tsv", barcode=get_qced_umi(wc)),
+        lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes_umi(wc)),
+        bin = lambda wc: expand("umiCon/kmerBin/{barcode}/hdbscan.tsv", barcode=get_qced_barcodes_umi(wc)),
     output: directory("umiCon/kmerBin/clusters")
     run:
         import pandas as pd
@@ -243,7 +243,7 @@ def get_umifile1(wildcards, kmerbin = config["kmerbin"], extend=False):
     if kmerbin == True:
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin_umi.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
     else:
-        bcs = get_qced_umi(wildcards)
+        bcs = get_qced_barcodes_umi(wildcards)
         bc_kbs = [bc + "_all" for bc in bcs]
     fs = expand("umiCon/umiExtract/{bc_kb}/umi.fasta", bc_kb=bc_kbs)
     if extend == True:

@@ -111,14 +111,14 @@ def get_bin(wildcards, pool = config["pool"]):
     if pool == True:
         barcodes = ["pooled"]
     else:
-        barcodes = get_qced(wildcards)
+        barcodes = get_qced_barcodes(wildcards)
     return expand("kmerBin/{barcode}/hdbscan.tsv", barcode=barcodes)
 
 # split reads by kmerbin
 checkpoint cls_kmerbin:
     input:
         ".qc_DONE",
-        lambda wc: sorted(set(get_filt(wc) + expand("qc/qfilt/{barcode}.fastq", barcode=get_demultiplexed(wc)))), 
+        lambda wc: sorted(set(get_filt(wc) + expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)))), 
         bin = lambda wc: get_bin(wc)
     output: directory("kmerBin/clusters"),
     run:
@@ -170,6 +170,6 @@ def get_kmerBin(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
         if pool is True:
            bcs = ["pooled"]
         else:
-           bcs = get_qced(wildcards)
+           bcs = get_qced_barcodes(wildcards)
         fqs = expand("kmerBin/{bc}/all.fastq", bc=bcs)
     return fqs
