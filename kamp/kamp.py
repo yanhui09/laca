@@ -292,6 +292,13 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     help="Config template for pacbio CCS reads.",
 )
 @click.option(
+    "--longumi",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Use primer design from longumi paper (https://doi.org/10.1038/s41592-020-01041-y).",
+)
+@click.option(
     "--clean-flags",
     is_flag=True,
     default=False,
@@ -300,14 +307,14 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
 )
 def run_init(
     bascdir, demuxdir, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
-    kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, clean_flags):
+    kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi, clean_flags):
     """
     Prepare config file for Kamp.
     """ 
     logger.info(f"Kamp version: {__version__}")
     init_conf(
         bascdir, demuxdir, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
-        no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio)
+        no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi)
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir

@@ -183,8 +183,8 @@ umi:
   # concatenated UMI regions on both sides, whitespaces will be trimmed automatically in Kamp
   # use IUPAC code https://www.bioinformatics.org/sms/iupac.html
   pattern: "NNNNN NNNNN NNNNN NNNNN NNNNN NNNNN" 
-  max_err: 0.4 # cutadapt -e, high error tolerance for nanopore 
-  min_overlap: 10 # cutadapt -O
+  max_err: 0.2 # cutadapt -e, high error tolerance for nanopore 
+  min_overlap: 8 # cutadapt -O
   cl_identity: 0.9 # umi cluster similarity
   # keep it conservative for trusted UMI bins
   s: 90 # Check start of read up to s bp for validated UMIs.

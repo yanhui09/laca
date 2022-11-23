@@ -21,6 +21,7 @@ def init_conf(
     jobs_M=6,
     nanopore=False,
     pacbio=False,
+    longumi=False,
 ):
     """
     Reads template config file with comments from ./template_config.yaml
@@ -42,7 +43,8 @@ def init_conf(
         jobs_m (int): number of jobs for common tasks [default: 2]
         jobs_M (int): number of jobs for threads-dependent tasks [default: 6]
         nanopore (bool): if True, use template for nanopore reads [default: False]
-        pacbio (bool): if True, use template for pacbio reads [default: False]       
+        pacbio (bool): if True, use template for pacbio reads [default: False]
+        longumi (bool): if True, use primer design from longumi paper (https://doi.org/10.1038/s41592-020-01041-y) [default: False]       
     """
     os.makedirs(dbdir, exist_ok=True)
     os.makedirs(workdir, exist_ok=True)
@@ -65,6 +67,11 @@ def init_conf(
         conf["medaka"]["iter"] = 1
         # isONcor
         conf["isONcor"] = True
+        # UMI
+        conf["umi"]["s"] = 90
+        conf["umi"]["e"] = 90
+        conf["umi"]["u"] = 3.5
+        conf["umi"]["O"] = 0.2
     
     if pacbio == True:
         # isONclust
@@ -78,6 +85,32 @@ def init_conf(
         conf["medaka"]["iter"] = 0
         # isONcor
         conf["isONcor"] = False
+        # UMI
+        conf["umi"]["s"] = 60
+        conf["umi"]["e"] = 60
+        conf["umi"]["u"] = 3
+        conf["umi"]["O"] = 0.05
+        
+    if longumi == True:
+        conf["seqkit"]["min-qual"] = -1
+        conf["seqkit"]["min-len"] = 3500
+        conf["seqkit"]["max-len"] = 6000
+        conf["fprimer"].clear()
+        conf["fprimer"]["F"] = "AGRGTTYGATYMTGGCTCAG"
+        conf["rprimer"].clear()
+        conf["rprimer"]["R"] = "CGACATCGAGGTGCCAAAC"
+        conf["fprimer_max"].clear()
+        conf["fprimer_max"]["F"] = "AGRGTTYGATYMTGGCTCAG"
+        conf["rprimer_min"].clear()
+        conf["rprimer_min"]["R"] = "CGACATCGAGGTGCCAAAC"
+        conf["umi"]["seqkit"]["min-qual"] = -1
+        conf["umi"]["seqkit"]["min-len"] = 3500
+        conf["umi"]["seqkit"]["max-len"] = 6000
+        conf["umi"]["len"] = 18
+        conf["umi"]["pattern"] = "NNNYRNNNYRNNNYRNNN NNNYRNNNYRNNNYRNNN"
+        conf["umi"]["overlap"] = 11
+        conf["flinker"] = "CAAGCAGAAGACGGCATACGAGAT"
+        conf["rlinker"] = "AATGATACGGCGACCACCGAGATC"
             
     conf["basecalled_dir"] = bascdir
     conf["demultiplexed_dir"] = demuxdir
