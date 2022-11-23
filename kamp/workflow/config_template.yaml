@@ -25,9 +25,9 @@ subsample: True
 # Quality filtering
 seqkit:
   n: 5000 # subsampling number [int]
-  min-qual: 7
-  min-len: 800
-  max-len: 1500
+  min_qual: 7
+  min_len: 800
+  max_len: 1500
 
 # trim primers
 trim: True
@@ -45,7 +45,6 @@ rprimer:
 cutadapt:
   max_errors: 0.2
   min_overlap: 6
-  minimum-length: 1
 
 ##############################################################
 # kmer binning
@@ -133,13 +132,13 @@ classifier:
   #- kraken2
   #- mmseqs2
 
-mmseqs:
-  min-seq-id: 0.99
+mmseqs2:
+  min_id: 0.99
   c: 0.9 # the fraction of aligned residues
   taxdb: SILVA # predefined taxonomy database name in `mmseqs databases`; The provided NT database do not have taxonomy info yet.
   # make a custom seqTaxDB using local blast databases;
   blastdb_alias: "refseq_rna" # alias for blast database; leave this as empty string [""] if you want to use the default database by mmseqs2
-  lca-mode: 4 #LCA Mode 1: single search LCA, 2/3: approximate 2bLCA (not supported in NT-NT match ), 4: top hit [4]
+  lca: 4 #LCA Mode 1: single search LCA, 2/3: approximate 2bLCA (not supported in NT-NT match ), 4: top hit [4]
 
 kraken2:
   # Prebuilt database: https://benlangmead.github.io/aws-indexes/k2
@@ -158,12 +157,12 @@ fprimer_max:
 rprimer_min:
   1391R: "GACGGGCGGTGTGTRCA"
 
-phylogen:
+phylogeny:
   - FastTree # the first to be the final
   #- IQ-TREE
   #- RAxML
 
-q2-phylogen:
+q2phylo:
   # supplementary parameters for q2_phylogen pipeline `align-to-tree-mafft-{fasttree, iqtree, raxml}`
   # https://docs.qiime2.org/2021.11/plugins/available/phylogeny/
   fasttree: ""
@@ -171,20 +170,22 @@ q2-phylogen:
   raxml: ""
 
 ##############################################################
-# umi extraction with seqkit and cutadapt
+# UMI extraction with seqkit and cutadapt
 umi:
   seqkit:
-    min-qual: 7
-    min-len: 1000
-    max-len: 1600
+    min_qual: 7
+    min_len: 1000
+    max_len: 1600
   # keep it loose for putative UMIs in tolerated error
   loc: 200 # robust location containing the adaptor-UMI-primer pattern, leaving only the start/end regions to find UMIs
-  len: 15 # base length of umi on 5' and 3' side. Their length shall be the same.
+  len: 15 # base length of UMI on 5' and 3' side. Their length shall be the same.
   # concatenated UMI regions on both sides, whitespaces will be trimmed automatically in Kamp
   # use IUPAC code https://www.bioinformatics.org/sms/iupac.html
-  pattern: "NNNNN NNNNN NNNNN NNNNN NNNNN NNNNN" 
-  max_err: 0.2 # cutadapt -e, high error tolerance for nanopore 
-  min_overlap: 8 # cutadapt -O
+  pattern: "NNNNN NNNNN NNNNN NNNNN NNNNN NNNNN"
+  # extract potential UMIs with cutadapt
+  cutadapt: 
+    max_errors: 0.2 # -e, high error tolerance 
+    min_overlap: 8 # -O
   cl_identity: 0.9 # umi cluster similarity
   # keep it conservative for trusted UMI bins
   s: 90 # Check start of read up to s bp for validated UMIs.
@@ -204,8 +205,8 @@ rlinker: "GTCTCGTGGGCTCGG"
 #########################################################################################
 # in silico test with NanoSim
 nanosim:
-  min_seq_id: 80,90,90,95,95,97,97,97,98,98,99
-  max_seq_id: 90,100,95,100,97,100,99,98,100,99,100
+  min_id: 80,90,90,95,95,97,97,97,98,98,99
+  max_id: 90,100,95,100,97,100,99,98,100,99,100
   min_len: -1 # -1 infinite 
   max_len: -1
   subsample_n: 10 # 1000 uniq sequences in ref

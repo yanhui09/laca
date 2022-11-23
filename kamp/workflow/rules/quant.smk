@@ -8,21 +8,21 @@ def get_consensus2derep(cls):
     else:
         return "{cls}/{cls}.fna".format(cls=cls)
 
-# dereplicate sequences with mmseqs
+# dereplicate sequences with MMseqs2
 rule derep_denoised_seqs:
     input: 
         [get_consensus2derep(cls=i) for i in config["cluster"]][1:],
         first = get_consensus2derep(cls = config["cluster"][0]),
     output: 
-        rep = temp("quant/mmseqs_rep_seq.fasta"),
-        all_by_cluster = temp("quant/mmseqs_all_seqs.fasta"),
-        tsv = temp("quant/mmseqs_cluster.tsv"),
+        rep = temp("quant/mmseqs2_rep_seq.fasta"),
+        all_by_cluster = temp("quant/mmseqs2_all_seqs.fasta"),
+        tsv = temp("quant/mmseqs2_cluster.tsv"),
         tmp = temp(directory("tmp")),
     message: "Dereplicate denoised sequences"
     params:
-        prefix = "quant/mmseqs",
-        mid = config["mmseqs"]["min-seq-id"],
-        c = config["mmseqs"]["c"],
+        prefix = "quant/mmseqs2",
+        mid = config["mmseqs2"]["min_id"],
+        c = config["mmseqs2"]["c"],
     conda: "../envs/mmseqs2.yaml"
     log: "logs/quant/derep_denoised_seqs.log"
     benchmark: "benchmarks/quant/derep_denoised_seqs.txt"
@@ -37,7 +37,7 @@ rule derep_denoised_seqs:
 # rm duplicates of reverse complements
 rule rmdup_revcom:
     input: rules.derep_denoised_seqs.output.rep
-    output: temp("quant/mmseqs_rep_seq_rmdup.fasta")
+    output: temp("quant/mmseqs2_rep_seq_rmdup.fasta")
     message: "Remove duplicates of reverse complements"
     conda: "../envs/seqkit.yaml"
     log: "logs/quant/rmdup_revcom.log"

@@ -4,8 +4,8 @@
 # expand list from comma separated string
 def exp_list(x):
     return [y.strip() for y in x.split(",")]
-minids = exp_list(config["nanosim"]["min_seq_id"])
-maxids = exp_list(config["nanosim"]["max_seq_id"])
+minids = exp_list(config["nanosim"]["min_id"])
+maxids = exp_list(config["nanosim"]["max_id"])
 ns = exp_list(config["nanosim"]["simulator"]["n"])
 
 rule read_analysis:
@@ -66,14 +66,14 @@ rule rna2dna:
 rule cls_ref1:
     input: rules.rna2dna.output
     output:
-        rep = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_rep_seq.fasta"),
-        all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_all_seqs.fasta"),
-        tsv = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_cluster.tsv"),
+        rep = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs2_rep_seq.fasta"),
+        all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs2_all_seqs.fasta"),
+        tsv = temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs2_cluster.tsv"),
         tmp = temp(directory("nanosim/tmp/{db}/cls_ref/id_{minid}")),
     conda: "../envs/mmseqs2.yaml"
     params:
         minid = lambda wc: int(wc.minid) * 0.01,
-        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}/mmseqs".format(db=wc.db, minid=wc.minid),
+        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}/mmseqs2".format(db=wc.db, minid=wc.minid),
         c = 1,
     log: "logs/nanosim/{db}/cls_ref/id_{minid}.log"
     benchmark: "benchmarks/nanosim/{db}/cls_ref/id_{minid}.txt"
@@ -86,7 +86,7 @@ rule cls_ref1:
 # take the largest cluster for seconda clustering (min id)
 rule cls_pick:
     input: rules.cls_ref1.output.all_by_cluster
-    output: temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs_cluster_top.fasta")
+    output: temp("nanosim/{db}/cls_ref/id_{minid}/mmseqs2_cluster_top.fasta")
     run:
        # fasta: two lines per sequence: header with ">" and sequence;
        # only one line header suggests a new cluster append to dictory
@@ -115,13 +115,13 @@ rule cls_pick:
 use rule cls_ref1 as cls_ref2 with:
     input: rules.cls_pick.output
     output: 
-        rep = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_rep_seq.fasta"),
-        all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_all_seqs.fasta"),
-        tsv = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_cluster.tsv"),
+        rep = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_rep_seq.fasta"),
+        all_by_cluster = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_all_seqs.fasta"),
+        tsv = temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_cluster.tsv"),
         tmp = temp(directory("nanosim/tmp/{db}/cls_ref/id_{minid}_{maxid}")),
     params:
         minid = lambda wc: int(wc.maxid) * 0.01,
-        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs".format(db = wc.db, minid=wc.minid, maxid=wc.maxid),
+        prefix = lambda wc: "nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2".format(db = wc.db, minid=wc.minid, maxid=wc.maxid),
         c = 1,
     log: "logs/nanosim/{db}/cls_ref/id_{minid}_{maxid}.log"
     benchmark: "benchmarks/nanosim/{db}/cls_ref/id_{minid}_{maxid}.txt"
@@ -129,7 +129,7 @@ use rule cls_ref1 as cls_ref2 with:
 # set a length range
 rule filter_ref_len:
     input: rules.cls_ref2.output.rep    
-    output: temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs_rep_seq_f.fasta")
+    output: temp("nanosim/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_rep_seq_f.fasta")
     conda: "../envs/seqkit.yaml"
     params:
         m = config["nanosim"]["min_len"],

@@ -92,9 +92,9 @@ def init_conf(
         conf["umi"]["O"] = 0.05
         
     if longumi == True:
-        conf["seqkit"]["min-qual"] = -1
-        conf["seqkit"]["min-len"] = 3500
-        conf["seqkit"]["max-len"] = 6000
+        conf["seqkit"]["min_qual"] = -1
+        conf["seqkit"]["min_len"] = 3500
+        conf["seqkit"]["max_len"] = 6000
         conf["fprimer"].clear()
         conf["fprimer"]["F"] = "AGRGTTYGATYMTGGCTCAG"
         conf["rprimer"].clear()
@@ -103,12 +103,12 @@ def init_conf(
         conf["fprimer_max"]["F"] = "AGRGTTYGATYMTGGCTCAG"
         conf["rprimer_min"].clear()
         conf["rprimer_min"]["R"] = "CGACATCGAGGTGCCAAAC"
-        conf["umi"]["seqkit"]["min-qual"] = -1
-        conf["umi"]["seqkit"]["min-len"] = 3500
-        conf["umi"]["seqkit"]["max-len"] = 6000
+        conf["umi"]["seqkit"]["min_qual"] = -1
+        conf["umi"]["seqkit"]["min_len"] = 3500
+        conf["umi"]["seqkit"]["max_len"] = 6000
         conf["umi"]["len"] = 18
         conf["umi"]["pattern"] = "NNNYRNNNYRNNNYRNNN NNNYRNNNYRNNNYRNNN"
-        conf["umi"]["overlap"] = 11
+        conf["umi"]["cutadapt"]["min_overlap"] = 11
         conf["flinker"] = "CAAGCAGAAGACGGCATACGAGAT"
         conf["rlinker"] = "AATGATACGGCGACCACCGAGATC"
             

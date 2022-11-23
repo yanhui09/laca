@@ -65,9 +65,9 @@ use rule q_filter as qfilter_umi with:
     output:
         temp("umiCon/qc/qfilt/{barcode}.fastq")
     params:
-        Q = config["umi"]["seqkit"]["min-qual"],
-        m = config["umi"]["seqkit"]["min-len"],
-        M = config["umi"]["seqkit"]["max-len"],
+        Q = config["umi"]["seqkit"]["min_qual"],
+        m = config["umi"]["seqkit"]["min_len"],
+        M = config["umi"]["seqkit"]["max_len"],
     log:
         "logs/umiCon/qc/qfilter/{barcode}.log"
     benchmark: 
@@ -208,8 +208,8 @@ rule extract_umi:
     params:
         f = f_pattern,
         r = r_pattern,
-        max_err = config["umi"]["max_err"],
-        min_overlap = config["umi"]["min_overlap"],
+        max_err = config["umi"]["cutadapt"]["max_errors"],
+        min_overlap = config["umi"]["cutadapt"]["min_overlap"],
         min_len = config["umi"]["len"],
         max_len = config["umi"]["len"],
     log: "logs/umiCon/umiExtract/extract_umi/{barcode}_{c}.log"
@@ -385,8 +385,8 @@ rule extract_umip:
     params:
         f = fprimers_trim,
         r = rprimers_trim,
-        max_err = config["umi"]["max_err"],
-        min_overlap = config["umi"]["min_overlap"],
+        max_err = config["umi"]["cutadapt"]["max_errors"],
+        min_overlap = config["umi"]["cutadapt"]["min_overlap"],
         min_len = config["umi"]["len"],
         max_len = config["umi"]["len"],
     log: "logs/umiCon/umiExtract/extract_umip/{barcode}_{c}.log"
@@ -962,8 +962,8 @@ rule trim_primers_umi:
         f = f5_pattern1,
         e = 0.1,
         O = 3,
-        m = config["umi"]["seqkit"]["min-len"],
-        M = config["umi"]["seqkit"]["max-len"],
+        m = config["umi"]["seqkit"]["min_len"],
+        M = config["umi"]["seqkit"]["max_len"],
     threads: config["threads"]["normal"]
     log: "logs/umiCon/trim_primers_umi.log"
     benchmark: "benchmarks/umiCon/trim_primers_umi.txt"
@@ -989,8 +989,8 @@ use rule trim_primers_umi as trim_primers_umiR with:
         f = f5_pattern2,
         e = 0.1,
         O = 3,
-        m = config["umi"]["seqkit"]["min-len"],
-        M = config["umi"]["seqkit"]["max-len"],
+        m = config["umi"]["seqkit"]["min_len"],
+        M = config["umi"]["seqkit"]["max_len"],
     log: 
         "logs/umiCon/trim_primers_umiR.log"
     benchmark: 

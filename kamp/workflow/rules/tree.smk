@@ -1,5 +1,5 @@
 # check phylogen choice
-check_list_ele("phylogen", config["phylogen"], ["FastTree", "IQ-TREE", "RAxML"])
+check_list_ele("phylogeny", config["phylogeny"], ["FastTree", "IQ-TREE", "RAxML"])
 
 # only take the aligned sequences
 # max fprimer and min rprimer
@@ -54,7 +54,7 @@ rule q2_fasttree:
         ),
     conda: "../envs/q2plugs.yaml"
     params:
-        supp = config["q2-phylogen"]["fasttree"]
+        supp = config["q2phylo"]["fasttree"]
     log: "logs/tree/q2_fasttree.log"
     benchmark: "benchmarks/tree/q2_fasttree.txt"
     threads: config["threads"]["large"]
@@ -81,7 +81,7 @@ rule q2_iqtree:
             ),
     conda: "../envs/q2plugs.yaml"
     params:
-        supp = config["q2-phylogen"]["iqtree"]
+        supp = config["q2phylo"]["iqtree"]
     log: "logs/tree/q2_iqtree.log"
     benchmark: "benchmarks/tree/q2_iqtree.txt"
     threads: config["threads"]["large"]
@@ -108,7 +108,7 @@ rule q2_raxml:
             ),
     conda: "../envs/q2plugs.yaml"
     params:
-        supp = config["q2-phylogen"]["raxml"]
+        supp = config["q2phylo"]["raxml"]
     log: "logs/tree/q2_raxml.log"
     benchmark: "benchmarks/tree/q2_raxml.txt"
     threads: config["threads"]["large"]
@@ -141,7 +141,7 @@ rule q2export_tree:
         """
 
 rule get_tree:
-    input: "tree/" + config["phylogen"][0] + "/tree.nwk",
+    input: "tree/" + config["phylogeny"][0] + "/tree.nwk",
     output: "tree.nwk"
     shell:
         "cp -f {input} {output}"

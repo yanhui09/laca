@@ -39,19 +39,18 @@ rule concatenate_ref:
     shell:
         "cat {input} > {output} 2> {log}"
 
-# dereplicate sequences with mmseqs
 use rule derep_denoised_seqs as derep_denoised_seqs_re with:
     input: 
         first = rules.concatenate_ref.output,
     output: 
-        rep = temp("requant/mmseqs_rep_seq.fasta"),
-        all_by_cluster = temp("requant/mmseqs_all_seqs.fasta"),
-        tsv = temp("requant/mmseqs_cluster.tsv"),
+        rep = temp("requant/mmseqs2_rep_seq.fasta"),
+        all_by_cluster = temp("requant/mmseqs2_all_seqs.fasta"),
+        tsv = temp("requant/mmseqs2_cluster.tsv"),
         tmp = temp(directory("tmp")),
     params:
-        prefix = "requant/mmseqs",
-        mid = config["mmseqs"]["min-seq-id"],
-        c = config["mmseqs"]["c"],
+        prefix = "requant/mmseqs2",
+        mid = config["mmseqs2"]["min_id"],
+        c = config["mmseqs2"]["c"],
     log: 
         "logs/requant/derep_denoised_seqs.log"
     benchmark: 
@@ -62,7 +61,7 @@ use rule rmdup_revcom as rmdup_revcom_re with:
     input: 
         rules.derep_denoised_seqs_re.output.rep
     output: 
-        temp("requant/mmseqs_rep_seq_rmdup.fasta")
+        temp("requant/mmseqs2_rep_seq_rmdup.fasta")
     log: 
         "logs/requant/rmdup_revcom.log"
     benchmark: 

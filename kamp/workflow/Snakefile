@@ -36,7 +36,7 @@ rule all:
         chimeraF(),
         ["taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
         "taxonomy.tsv",
-        ["tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],
+        ["tree/" + str(x) + "/tree.nwk" for x in config["phylogeny"]],
         "tree.nwk",
 
 include: "rules/init.smk"
@@ -85,7 +85,7 @@ rule taxa:
 
 rule tree: 
     input:
-        ["tree/" + str(x) + "/tree.nwk" for x in config["phylogen"]],
+        ["tree/" + str(x) + "/tree.nwk" for x in config["phylogeny"]],
         "tree.nwk",
 
 rule requant:

@@ -54,7 +54,7 @@ rule trim_primers:
         f = f5_pattern1,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
-        m = config["cutadapt"]["minimum-length"],
+        m = 1,
     log: "logs/qc/trim_primersF/{barcode}.log"
     benchmark: "benchmarks/qc/trim_primersF/{barcode}.txt"
     threads: config["threads"]["large"]
@@ -80,7 +80,7 @@ use rule trim_primers as trim_primersR with:
         f = f5_pattern2,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
-        m = config["cutadapt"]["minimum-length"],
+        m = 1,
     log: 
         "logs/qc/trim_primersR/{barcode}.log"
     benchmark: 
@@ -109,9 +109,9 @@ rule q_filter:
     output: "qc/qfilt/{barcode}.fastq"
     conda: "../envs/seqkit.yaml"
     params:
-        Q = config["seqkit"]["min-qual"],
-        m = config["seqkit"]["min-len"],
-        M = config["seqkit"]["max-len"],
+        Q = config["seqkit"]["min_qual"],
+        m = config["seqkit"]["min_len"],
+        M = config["seqkit"]["max_len"],
     log: "logs/qc/q_filter/{barcode}.log"
     benchmark: "benchmarks/qc/q_filter/{barcode}.txt"
     threads: config["threads"]["normal"]

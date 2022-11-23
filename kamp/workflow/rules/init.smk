@@ -1,10 +1,6 @@
 check_list_ele("classifier", config["classifier"], ["q2blast", "kraken2", "mmseqs2"])
-
 # rules to initialize workflows, e.g., building database, etc.
 DATABASE_DIR = config["database_dir"].rstrip("/")
-
-# LCA taxonomy with MMseqs2
-TaxDB = config["mmseqs"]["taxdb"]
 
 def get_classifier(c = config["classifier"][0]):
     if c == "kraken2":
@@ -21,21 +17,21 @@ rule initDB:
 # use predefined MMseqs2 database
 rule databases_mmseqs2:
     output: 
-        taxdb = expand(DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB + "{ext}",
+        taxdb = expand(DATABASE_DIR + "/mmseqs2/" + config["mmseqs2"]["taxdb"] + "/" + config["mmseqs2"]["taxdb"] + "{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source", ".version",
                 "_h", "_h.dbtype", "_h.index", "_mapping", "_taxonomy"]),
         tmp = temp(directory(DATABASE_DIR + "/mmseqs2/tmp")),
     message: "Downloading MMseqs2 database [{params.taxdb}]"
     conda: "../envs/mmseqs2.yaml"
     params:
-        taxdb = TaxDB,
-        targetDB = DATABASE_DIR + "/mmseqs2/"+ TaxDB + "/" + TaxDB,
+        taxdb = config["mmseqs2"]["taxdb"],
+        targetDB = DATABASE_DIR + "/mmseqs2/" + config["mmseqs2"]["taxdb"] + "/" + config["mmseqs2"]["taxdb"],
     log: "logs/taxonomy/mmseqs2/databases_mmseqs2.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/databases_mmseqs2.txt"
     shell: 
         "mmseqs databases {params.taxdb} {params.targetDB} {output.tmp} 1> {log} 2>&1"
 
-# create seqTaxDB manually
+# create seqconfig["mmseqs2"]["taxdb"]manually
 # the predefined one do not have taxonomy information
 rule update_taxdump:
     output: directory(DATABASE_DIR + "/mmseqs2/customDB/taxdump"),
@@ -51,7 +47,7 @@ rule update_blastdb:
     output: directory(DATABASE_DIR + "/mmseqs2/customDB/blastdb"),
     conda: "../envs/rsync.yaml"
     params:
-        blastdb_alias = config["mmseqs"]["blastdb_alias"],
+        blastdb_alias = config["mmseqs2"]["blastdb_alias"],
     log: "logs/taxonomy/update_blastdb.log"
     benchmark: "benchmarks/taxonomy/update_blastdb.txt"
     shell:
@@ -67,7 +63,7 @@ rule blastdbcmd:
         taxidmapping = DATABASE_DIR + "/mmseqs2/customDB/custom.taxidmapping",
     conda: "../envs/blast.yaml"
     params:
-        db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs"]["blastdb_alias"],
+        db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs2"]["blastdb_alias"],
     log: "logs/taxonomy/blast/blastdbcmd.log"
     benchmark: "benchmarks/taxonomy/blast/blastdbcmd.txt"
     shell:

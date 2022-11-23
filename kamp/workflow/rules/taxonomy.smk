@@ -2,8 +2,6 @@
 check_list_ele("classifier", config["classifier"], ["q2blast", "kraken2", "mmseqs2"])
 
 # LCA taxonomy with MMseqs2
-TaxDB = config["mmseqs"]["taxdb"]
-    
 rule createdb_query:
     input: chimeraF()[1]
     output: 
@@ -28,9 +26,9 @@ def get_seqTaxDB(blastdb_alias, db):
 
 rule classify_mmseqs2:
     input:
-        ancient(get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[-0]),
+        ancient(get_seqTaxDB(config["mmseqs2"]["blastdb_alias"], config["mmseqs2"]["taxdb"])[-0]),
         queryDB = rules.createdb_query.output[0],
-        targetDB = ancient(get_seqTaxDB(config["mmseqs"]["blastdb_alias"], config["mmseqs"]["taxdb"])[0]),
+        targetDB = ancient(get_seqTaxDB(config["mmseqs2"]["blastdb_alias"], config["mmseqs2"]["taxdb"])[0]),
     output:
         resultDB = multiext("taxonomy/mmseqs2/resultDB",
          ".0", ".1", ".2", ".3", ".4", ".5", ".dbtype", ".index"),
@@ -39,7 +37,7 @@ rule classify_mmseqs2:
     conda: "../envs/mmseqs2.yaml"
     params: 
         resultDB = "taxonomy/mmseqs2/resultDB",
-        lca_mode = config["mmseqs"]["lca-mode"],
+        lca_mode = config["mmseqs2"]["lca"],
     log: "logs/taxonomy/mmseqs2/taxonomy.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/taxonomy.txt"
     threads: config["threads"]["large"]
@@ -103,7 +101,7 @@ rule taxonomy_mmseqs2_silva:
     output: "taxonomy/mmseqs2/taxonomy_silva.tsv"
     shell: "cut -f 1,5 {input} | sed 's/\"//g' > {output}"
 
-def get_taxonomy_mmseqs2(taxdb=config["mmseqs"]["taxdb"], blastdb=config["mmseqs"]["blastdb_alias"]):
+def get_taxonomy_mmseqs2(taxdb=config["mmseqs2"]["taxdb"], blastdb=config["mmseqs2"]["blastdb_alias"]):
     if taxdb == "silva" and blastdb == "":
         return rules.taxonomy_mmseqs2_silva.output
     else:
