@@ -153,7 +153,11 @@ checkpoint demux_check:
 rule collect_fastq:
     input:  "demultiplexed/{barcode}"
     output: temp("qc/{barcode}.fastq")
-    shell: "cat {input}/*.fastq > {output}"
+    conda: "../envs/seqkit.yaml"
+    threads: 1
+    log: "logs/demultiplex/collect_fastq/{barcode}.log"
+    benchmark: "benchmarks/demultiplex/collect_fastq/{barcode}.txt"
+    shell: "seqkit scat -f {input} -j {threads} 2> {log} | seqkit rename -w0 -o {output} 2>> {log}"
 
 def get_demux_barcodes(wildcards):
     barcodes = glob_wildcards(checkpoints.demux_check.get(**wildcards).output[0]

@@ -1,6 +1,6 @@
 # LACA: Long Amplicon Consensus Analysis
 
-[![Snakemake](https://img.shields.io/badge/snakemake-=7.12.1-brightgreen.svg)](https://snakemake.bitbucket.io)
+[![Snakemake](https://img.shields.io/badge/snakemake-=7.18.2-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![Build Status](https://github.com/yanhui09/laca/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/yanhui09/laca/actions?query=branch%3Amaster+workflow%3ACI)
 
 **!!! To be updated.**
