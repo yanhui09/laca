@@ -27,13 +27,17 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         exit(1)
     
     conf = load_configfile(configfile)
-    db_dir = conf["database_dir"]
+    # if snake_args (tuple, whitespace removed) contain "basecalled_dir=", take everything after as basecalled_dir
+    for arg in snake_args:
+        if "basecalled_dir=" in arg:
+            conf["basecalled_dir"] = arg.split("=")[1]
     basecalled_dir = conf["basecalled_dir"]
+    db_dir = conf["database_dir"]
     cmd = (
         "snakemake "
         "{wf} "
-        "--directory {workdir} "
-        "--snakefile {snakefile} "
+        "--directory '{workdir}' "
+        "--snakefile '{snakefile}' "
         "--configfile '{configfile}' "
         "--use-conda {conda_prefix} "
         "{singularity_prefix} "
@@ -48,9 +52,9 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         workdir=workdir,
         snakefile=snakefile,
         configfile=configfile,
-        conda_prefix="--conda-prefix " + os.path.join(db_dir, "conda_envs"),
-        singularity_prefix="--use-singularity --singularity-prefix " + os.path.join(db_dir, "singularity_envs")
-        if basecalled_dir != None else "",
+        conda_prefix="--conda-prefix '" + os.path.join(db_dir, "conda_envs") + "'",
+        singularity_prefix="--use-singularity --singularity-prefix '" + os.path.join(db_dir, "singularity_envs") + "'"
+        if basecalled_dir is not None else "",
         singularity_args="--singularity-args '--bind " +
         os.path.dirname(snakefile) + "/resources/guppy_barcoding/:/opt/ont/guppy/data/barcoding/," + basecalled_dir + "'"
         if basecalled_dir is not None else "",
