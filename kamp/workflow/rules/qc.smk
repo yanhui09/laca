@@ -24,14 +24,19 @@ rule subsample:
         n = temp("qc/subsampled/{barcode}.fastq"),
     conda: "../envs/seqkit.yaml"
     params:
-        p = 1,
         n = config["seqkit"]["n"],
     log: "logs/qc/subsample/{barcode}.log"
     benchmark: "benchmarks/qc/subsample/{barcode}.txt"
     threads: 1
     shell:
         """
-        seqkit sample -p {params.p} -j {threads} {input} -o {output.p} -w0 -s123 2> {log}
+        nlines=$(cat {input} | wc -l)
+        nreads=$((nlines / 4))
+        p=$(echo "scale=2; {params.n} / $nreads + 0.01" | bc)
+        if (( $(echo "$p > 1" | bc -l) )); then
+            p=1
+        fi
+        seqkit sample -p $p -j {threads} {input} -o {output.p} -w0 -s123 2> {log}
         seqkit head -n {params.n} -j {threads} {output.p} -o {output.n} -w0 2>> {log}
         """
 
