@@ -179,7 +179,7 @@ umi:
   # keep it loose for putative UMIs in tolerated error
   loc: 200 # robust location containing the adaptor-UMI-primer pattern, leaving only the start/end regions to find UMIs
   len: 15 # base length of UMI on 5' and 3' side. Their length shall be the same.
-  # concatenated UMI regions on both sides, whitespaces will be trimmed automatically in Kamp
+  # concatenated UMI regions on both sides, whitespaces will be trimmed automatically
   # use IUPAC code https://www.bioinformatics.org/sms/iupac.html
   pattern: "NNNNN NNNNN NNNNN NNNNN NNNNN NNNNN"
   # extract potential UMIs with cutadapt

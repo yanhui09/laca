@@ -8,15 +8,15 @@ __email__ = "me@yanh.org"
 __license__ = "GPL"
 
 setup(
-    name='kamp',
+    name='laca',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    url="https://github.com/yanhui09/Kamp",
+    url="https://github.com/yanhui09/laca",
     license=__license__,
     author=__author__,
     author_email=__email__,
     maintainer=__maintainer__,
-    description="Kamp, a k-mer based denoise pipeline for long read amplicon sequencing",
+    description="LACA, a reproducible and scalable workflow for Long Amplicon Consensus Analysis.",
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
@@ -24,7 +24,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'kamp = kamp.kamp:cli',
+            'laca = laca.laca:cli',
         ],
     },
      classifiers=["Topic :: Scientific/Engineering :: Bioinformatics"],

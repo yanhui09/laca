@@ -1,2 +1,2 @@
 include versioneer.py
-include kamp/_version.py
+include laca/_version.py

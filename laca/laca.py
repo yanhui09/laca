@@ -6,7 +6,7 @@ from .log import logger
 from .config import init_conf
 
 from snakemake import load_configfile
-from .__init__ import __version__
+from . import __version__
 
 
 def get_snakefile(file="workflow/Snakefile"):
@@ -17,13 +17,13 @@ def get_snakefile(file="workflow/Snakefile"):
 
 def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error, suppress):
     """
-    Run Kamp workflow to proceess long read amplicons.
+    Run Long Amplicon Consensus analysis (LACA).
     Most snakemake arguments can be appended, for more info see 'snakemake --help'
     """
     if not suppress:
-        logger.info(f"Kamp version: {__version__}")
+        logger.info(f"LACA version: {__version__}")
     if not os.path.exists(configfile):
-        logger.critical(f"Config file not found: {configfile}\nGenerate a config file using 'kamp init'")
+        logger.critical(f"Config file not found: {configfile}\nGenerate a config file using 'laca init'")
         exit(1)
     
     conf = load_configfile(configfile)
@@ -101,21 +101,21 @@ class Alo(click.Option):
 @click.pass_context
 def cli(self):
     """
-    Kamp: a k-mer based denoise pipeline to process long read amplicon sequencing by Nanopore.
-    To follow updates and report issues, see: https://github.com/yanhui09/Kamp.
+    LACA: a reproducible and scaleable workflow for Long Amplicon Consensus Analysis.
+    To follow updates and report issues, see: https://github.com/yanhui09/laca.
     """
     pass
 
 @cli.command(
     'run',
     context_settings=dict(ignore_unknown_options=True),
-    short_help='Run Kamp workflow.'
+    short_help='Run LACA workflow.'
 )
 @click.option(
     "-w",
     "--workdir",
     type=click.Path(dir_okay=True, writable=True, resolve_path=True),
-    help="Output directory for Kamp.",
+    help="Output directory for LACA.",
     show_default=True,
     default=".",
 )
@@ -156,7 +156,7 @@ def cli(self):
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
 def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     """
-    Run Kamp workflow.
+    Run LACA workflow.
     """
     if workflow == "nanosim":
         sf = "workflow/rules/nanosim.smk"
@@ -166,7 +166,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     configfile = os.path.join(workdir, "config.yaml")
     run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)
 
-# kamp init
+# laca init
 # initialize config file
 @cli.command(
     'init',
@@ -200,7 +200,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     "-w",
     "--workdir",
     type=click.Path(dir_okay=True, writable=True, resolve_path=True),
-    help="Output directory for Kamp.",
+    help="Output directory for LACA.",
     show_default=True,
     default=".",
 )
@@ -309,9 +309,9 @@ def run_init(
     bascdir, demuxdir, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
     kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi, clean_flags):
     """
-    Prepare config file for Kamp.
+    Prepare config file for LACA.
     """ 
-    logger.info(f"Kamp version: {__version__}")
+    logger.info(f"LACA version: {__version__}")
     init_conf(
         bascdir, demuxdir, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
         no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi)
