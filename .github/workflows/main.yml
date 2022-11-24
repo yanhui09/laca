@@ -50,7 +50,7 @@ jobs:
         run: |
           export PATH="/usr/share/miniconda/bin:$PATH"
           source activate laca
-          laca init -f laca/workflow/resources/data -d test/Database -w test
+          laca init -b laca/workflow/resources/data -d test/Database -w test
           laca run all -w test -n 
 
       
