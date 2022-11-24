@@ -115,9 +115,16 @@ def cli(self):
     "-w",
     "--workdir",
     type=click.Path(dir_okay=True, writable=True, resolve_path=True),
-    help="Output directory for LACA.",
+    help="Working directory for LACA.",
     show_default=True,
     default=".",
+)
+@click.option(
+    "-c",
+    "--config",
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
+    help="Config file for LACA. Use config.yaml in working directory if not specified.",
+    default=None,
 )
 @click.option(
     "-j",
@@ -154,7 +161,7 @@ def cli(self):
     ),
 )
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
-def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
+def run_workflow(workflow, workdir, config, jobs, maxmem, dryrun, snake_args):
     """
     Run LACA workflow.
     """
@@ -163,7 +170,7 @@ def run_workflow(workflow, workdir, jobs, maxmem, dryrun, snake_args):
     else:
         sf = "workflow/Snakefile" 
     snakefile = get_snakefile(sf)
-    configfile = os.path.join(workdir, "config.yaml")
+    configfile = os.path.join(workdir, "config.yaml") if config is None else config
     run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)
 
 # laca init
