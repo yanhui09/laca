@@ -28,30 +28,30 @@ jobs:
         with:
           fetch-depth: 0 # we need tags for versioneer to work
 
-      - name: Setup Kamp environment
+      - name: Setup LACA environment
         run: |
           export PATH="/usr/share/miniconda/bin:$PATH"
           conda config --set channel_priority flexible
           conda install -c conda-forge -q mamba
           # ensure that mamba is happy to write into the cache
           sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
-          mamba env create -q --name kamp --file kampenv.yml
+          mamba env create -q --name laca --file env.yaml
       
       - name: Install Kamp
         run: |
           export PATH="/usr/share/miniconda/bin:$PATH"
-          source activate kamp
+          source activate laca
           pip install --editable .
-          kamp -h
-          kamp init -h
-          kamp run -h
+          laca -h
+          laca init -h
+          laca run -h
 
-      - name: Dry-run kamp
+      - name: Dry-run LACA
         run: |
           export PATH="/usr/share/miniconda/bin:$PATH"
-          source activate kamp
-          kamp init -f kamp/workflow/resources/data -d test/Database -w test
-          kamp run all -w test -n 
+          source activate laca
+          laca init -f laca/workflow/resources/data -d test/Database -w test
+          laca run all -w test -n 
 
       
            
