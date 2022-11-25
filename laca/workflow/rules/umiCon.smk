@@ -400,15 +400,16 @@ rule extract_umip:
         "-o {output.umi1} -p {output.umi2} "
         "{input.start} {input.end} > {log} 2>&1"
 
-rule concat_umip:
+use rule concat_umi as concat_umip with:
     input:
         umi1=rules.extract_umip.output.umi1,
         umi2=rules.extract_umip.output.umi2,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12p.fasta")
-    conda: "../envs/seqkit.yaml"
-    log: "logs/umiCon/umiExtract/concat_umip/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/concat_umip/{barcode}_{c}.txt"
-    shell: "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -w0 -o {output} 2>> {log}"
+    output: 
+        temp("umiCon/umiExtract/{barcode}_{c}/umi12p.fasta")
+    log: 
+        "logs/umiCon/umiExtract/concat_umip/{barcode}_{c}.log"
+    benchmark:
+        "benchmarks/umiCon/umiExtract/concat_umip/{barcode}_{c}.txt"
 
 # calculate the UMI cluster size through mapping
 # use bwa aln to map the potential UMI reads to the UMI ref, considering the limited length and sensitivity
