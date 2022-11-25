@@ -322,7 +322,7 @@ def get_umi_pattern(umi_pattern, length):
 
 rule check_umi:
     input: "umiCon/umiExtract/check1/{barcode}_{c}.fa"
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umif.fasta")
+    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12f.fasta")
     params:
         pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
     log: "logs/umiCon/umiExtract/check_umi/{barcode}_{c}.log"
@@ -332,30 +332,28 @@ rule check_umi:
 # cluster UMIs
 rule cluster_umi:
     input: rules.check_umi.output
-    output: temp("umiCon/umiExtract/{barcode}_{c}/centroid.fasta")
+    output:
+        umi12u = temp("umiCon/umiExtract/{barcode}_{c}/umi12u.fasta"),
+        umi12cs = temp("umiCon/umiExtract/{barcode}_{c}/umi12cs.fasta"),
+        umi12uc = temp("umiCon/umiExtract/{barcode}_{c}/umi12uc.txt"),
+        umi12c = temp("umiCon/umiExtract/{barcode}_{c}/umi12c.fasta"),
     conda: "../envs/vsearch.yaml"
     params:
         cl_identity = config["umi"]["cl_identity"],
-        min_len = 2*config["umi"]["len"],
-        max_len = 2*config["umi"]["len"],
     log: "logs/umiCon/umiExtract/cluster_umi/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/cluster_umi/{barcode}_{c}.txt"
     threads: config["threads"]["normal"]
     shell:
-        "vsearch "
-        "--cluster_fast {input} --clusterout_sort -id {params.cl_identity} "
-        "--clusterout_id --sizeout --centroids {output} "
-        "--minseqlength {params.min_len} --maxseqlength {params.max_len} "
-        "--qmask none --threads {threads} "
-        "--strand both > {log} 2>&1"
+        """
+        vsearch --fastx_uniques {input} --fastaout {output.umi12u} \
+         --sizeout --minuniquesize 1 --relabel umi --strand both > {log} 2>&1
 
-rule rename_umi_centroid:
-    input: rules.cluster_umi.output
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umi_centroid.fasta")
-    conda: "../envs/seqkit.yaml"
-    log: "logs/umiCon/umiExtract/rename_umi_centroid/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/rename_umi_centroid/{barcode}_{c}.txt"
-    shell: "seqkit replace -p '^(.+)$' -r 'umi{{nr}}' {input} -o {output} 2> {log}"
+        vsearch --cluster_fast {output.umi12u} --id {params.cl_identity} \
+        --centroids {output.umi12cs} --uc {output.umi12uc} --sizein --sizeout \
+        --strand both --threads {threads} >> {log} 2>&1
+
+        vsearch --sortbysize {output.umi12cs} --minsize 1 --relabel umi --output {output.umi12c} >> {log} 2>&1
+        """
 
 # align the trimmed UMI reads to the potential UMIs, which determine the final UMI clusters
 def trim_primers(primers, reverse=False):
@@ -406,7 +404,7 @@ rule concat_umip:
     input:
         umi1=rules.extract_umip.output.umi1,
         umi2=rules.extract_umip.output.umi2,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umip.fasta")
+    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12p.fasta")
     conda: "../envs/seqkit.yaml"
     log: "logs/umiCon/umiExtract/concat_umip/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/concat_umip/{barcode}_{c}.txt"
@@ -415,9 +413,9 @@ rule concat_umip:
 # calculate the UMI cluster size through mapping
 # use bwa aln to map the potential UMI reads to the UMI ref, considering the limited length and sensitivity
 rule bwa_index:
-    input: rules.rename_umi_centroid.output,
+    input: rules.cluster_umi.output.umi12c,
     output:
-        temp(multiext("umiCon/umiExtract/{barcode}_{c}/umi_centroid.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"))
+        temp(multiext("umiCon/umiExtract/{barcode}_{c}/umi12c.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"))
     conda: "../envs/bwa.yaml"
     log: "logs/umiCon/umiExtract/bwa_index/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/bwa_index/{barcode}_{c}.txt"
@@ -427,8 +425,8 @@ rule bwa_aln:
     input:
         rules.bwa_index.output,
         umip = rules.concat_umip.output,
-        ref = rules.rename_umi_centroid.output,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umip.sai")
+        ref = rules.cluster_umi.output.umi12c,
+    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sai")
     conda: "../envs/bwa.yaml"
     params:
         n = 6,
@@ -441,9 +439,9 @@ rule bwa_samse:
     input:
         rules.bwa_index.output,
         umip = rules.concat_umip.output,
-        ref = rules.rename_umi_centroid.output,
+        ref = rules.cluster_umi.output.umi12c,
         sai = rules.bwa_aln.output,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umip.sam")
+    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sam")
     conda: "../envs/bwa.yaml"
     params:
         F = 4,
@@ -456,8 +454,8 @@ rule bwa_samse:
 rule umi_filter:
     input:
         sam = rules.bwa_samse.output,
-        ref = rules.rename_umi_centroid.output,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umicf.fa")
+        ref = rules.cluster_umi.output.umi12c,
+    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12cf.fasta")
     conda: "../envs/umi.yaml"
     log: "logs/umiCon/umiExtract/umi_filter/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/umi_filter/{barcode}_{c}.txt"
@@ -490,7 +488,7 @@ rule umi_filter:
 # extend list with umi_loc fqs
 def get_umifile2(wildcards, kmerbin = config["kmerbin"], extend = False):
     bc_kbs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{bc_kb}.fa").bc_kb
-    fs = expand("umiCon/umiExtract/{bc_kb}/umicf.fa", bc_kb=bc_kbs)
+    fs = expand("umiCon/umiExtract/{bc_kb}/umi12cf.fasta", bc_kb=bc_kbs)
     if extend == True:
         fs.extend(expand("umiCon/umiExtract/{bc_kb}/{loc}.fastq", bc_kb=bc_kbs, loc=["start", "end"]))
         if kmerbin == True:
@@ -512,14 +510,14 @@ checkpoint umi_check2:
         for i in list(fs):
             if os.stat(i).st_size > 0:
                 barcode, c = [ i.split("/")[-2].split("_")[index] for index in [-2, -1] ]
-                shutil.move(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
+                shutil.move(i, output[0] + "/{barcode}_{c}.fasta".format(barcode=barcode, c=c))
 
 # rm potential chimera
 rule rm_chimera:
-    input: "umiCon/umiExtract/check2/{barcode}_{c}.fa",
+    input: "umiCon/umiExtract/check2/{barcode}_{c}.fasta",
     output:
         ref = temp("umiCon/umiExtract/{barcode}_{c}/umi_ref.txt"),
-        fa = temp("umiCon/umiExtract/{barcode}_{c}/umi_ref.fa"),
+        fasta = temp("umiCon/umiExtract/{barcode}_{c}/umi_ref.fasta"),
     conda: "../envs/umi.yaml"
     params:
         umip_len = config["umi"]["len"],
@@ -569,10 +567,10 @@ rule rm_chimera:
                 keep="no";
                 if (g1[s1a[i]] == i && g2[s2a[i]] == i && g1[s1arc[i]] == i && g2[s2arc[i]] == i && s1a[i] != s1arc[i]){{
                   keep="yes";
-                  print ">"i";"u[i]"\\n"s1a[i]s2a[i] > "{output.fa}";
+                  print ">"i";"u[i]"\\n"s1a[i]s2a[i] > "{output.fasta}";
                 }} else if (s1a[i] == s1arc[i]){{
                   keep="tandem"
-                  print ">"i";"u[i]"\\n"s1a[i]s2a[i] > "{output.fa}";
+                  print ">"i";"u[i]"\\n"s1a[i]s2a[i] > "{output.fasta}";
                 }}
                 print i, n[i], s1a[i], s2a[i], keep, g1[s1a[i]]"/"g2[s2a[i]]"/"g1[s1arc[i]]"/"g2[s2arc[i]], u[i]
               }}  
@@ -586,8 +584,8 @@ rule umi_loc2:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        start = temp("umiCon/umiBin/{barcode}_{c}/reads_umi1.fa"),
-        end = temp("umiCon/umiBin/{barcode}_{c}/reads_umi2.fa"),
+        start = temp("umiCon/umiBin/{barcode}_{c}/reads_umi1.fasta"),
+        end = temp("umiCon/umiBin/{barcode}_{c}/reads_umi2.fasta"),
     conda: "../envs/seqkit.yaml"
     params:
         s = config["umi"]["s"],
@@ -602,10 +600,10 @@ rule umi_loc2:
 
 # split UMI ref to capture UMI in both orientations
 rule split_umi_ref:
-    input: rules.rm_chimera.output.fa
+    input: rules.rm_chimera.output.fasta
     output:
-        umi1 = temp("umiCon/umiBin/{barcode}_{c}/barcodes_umi1.fa"),
-        umi2 = temp("umiCon/umiBin/{barcode}_{c}/barcodes_umi2.fa"),
+        umi1 = temp("umiCon/umiBin/{barcode}_{c}/barcodes_umi1.fasta"),
+        umi2 = temp("umiCon/umiBin/{barcode}_{c}/barcodes_umi2.fasta"),
     conda: "../envs/umi.yaml"
     params:
         umi_len = config["umi"]["len"],
@@ -632,9 +630,9 @@ rule split_umi_ref:
 ##         in correct orientations.
 use rule bwa_index as index_umi with:
     input:
-        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fa",
+        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta",
     output:
-        temp(multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa")),
+        temp(multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")),
     log:
         "logs/umiCon/umiBin/index_umi/{barcode}_{c}_{umi}.log"
     benchmark:
@@ -642,9 +640,9 @@ use rule bwa_index as index_umi with:
 
 use rule bwa_aln as aln_umi with:
     input:
-        multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
-        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fa",
-        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fa",
+        rules.index_umi.output,
+        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fasta",
+        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta",
     output:
         temp("umiCon/umiBin/{barcode}_{c}/{umi}_map.sai"),
     params:
@@ -656,9 +654,9 @@ use rule bwa_aln as aln_umi with:
 
 use rule bwa_samse as samse_umi with:
     input:
-        multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fa", ".amb", ".ann", ".bwt", ".pac", ".sa"),
-        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fa",
-        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fa",
+        multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fasta",
+        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta",
         sai = "umiCon/umiBin/{barcode}_{c}/{umi}_map.sai",
     output:
         temp("umiCon/umiBin/{barcode}_{c}/{umi}_map.sam"),
@@ -883,7 +881,7 @@ rule umi_binning:
         """
 
 def get_filt_umi(wildcards, kmerbin = config["kmerbin"]):
-    bc_kbs = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{bc_kb}.fa").bc_kb
+    bc_kbs = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{bc_kb}.fasta").bc_kb
     if kmerbin == True:
         fqs = expand("umiCon/kmerBin/split/{bc_kb}.fastq", bc_kb=bc_kbs)
     else:
@@ -895,7 +893,7 @@ checkpoint cls_umiCon:
     input: 
         "umiCon/umiExtract/check2",
         lambda wc: get_filt_umi(wc),
-        cls = lambda wc: expand("umiCon/umiBin/{b_c}/umi_bin_map.txt", b_c=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_kb}.fa").bc_kb),
+        cls = lambda wc: expand("umiCon/umiBin/{b_c}/umi_bin_map.txt", b_c=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_kb}.fasta").bc_kb),
     output: directory("umiCon/clusters")
     run:
         import pandas as pd
@@ -928,27 +926,23 @@ rule fq2fa_umi:
     benchmark: "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/fq2fa.txt"
     shell: "seqkit fq2fa {input} -o {output} 2> {log}"
 
-rule get_centroids_umifa:
+rule get_seedfa:
     input: rules.fq2fa_umi.output
-    output: temp("umiCon/polish/{barcode}_{c}_{clust_id}/centroid.fna"),
+    output: 
+        centroids = temp("umiCon/polish/{barcode}_{c}_{clust_id}/centroids.fna"),
+        seed = temp("umiCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
     conda: "../envs/vsearch.yaml"
     log: "logs/umiCon/polish/{barcode}_{c}_{clust_id}/get_centroids.log"
     benchmark: "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/get_centroids.txt"
     threads: config["threads"]["normal"]
     shell:
         """
-        vsearch --cluster_fast {input} --clusterout_sort -id 0.75 --clusterout_id --sizeout \
-        --centroids {output} --qmask none --threads {threads} --strand both > {log} 2>&1
+        vsearch --cluster_fast {input} -id 0.75 --sizeout --strand both \
+        --centroids {output.centroids} --threads {threads} > {log} 2>&1
+
+        vsearch --sortbysize {output.centroids} --topn 1 --relabel seed \
+        --output {output.seed} --threads {threads} >> {log} 2>&1
         """
-
-rule take_seedfa:
-    input: rules.get_centroids_umifa.output
-    output: temp("umiCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
-    conda: "../envs/seqkit.yaml"
-    log: "logs/umiCon/polish/{barcode}_{c}_{clust_id}/take_seedfa.log"
-    benchmark: "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/take_seedfa.txt"
-    shell: "seqkit head -n 1 {input} 2> {log} | seqkit replace -p '^(.+)$' -r 'seed' -o {output} 2>> {log}"  
-
 # polish follows rules in clustCon.smk
 
 # trim primers 
