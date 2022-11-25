@@ -411,50 +411,32 @@ use rule concat_umi as concat_umip with:
     benchmark:
         "benchmarks/umiCon/umiExtract/concat_umip/{barcode}_{c}.txt"
 
-# calculate the UMI cluster size through mapping
-# use bwa aln to map the potential UMI reads to the UMI ref, considering the limited length and sensitivity
-rule bwa_index:
-    input: rules.cluster_umi.output.umi12c,
-    output:
-        temp(multiext("umiCon/umiExtract/{barcode}_{c}/umi12c.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"))
-    conda: "../envs/bwa.yaml"
-    log: "logs/umiCon/umiExtract/bwa_index/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/bwa_index/{barcode}_{c}.txt"
-    shell: "bwa index {input} 2> {log}"
-
-rule bwa_aln:
-    input:
-        rules.bwa_index.output,
-        umip = rules.concat_umip.output,
+# use bwa to map the potential UMI reads to the UMI ref
+rule bwa_umi:
+    input: 
         ref = rules.cluster_umi.output.umi12c,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sai")
+        umip = rules.concat_umip.output,
+    output:
+        temp(multiext("umiCon/umiExtract/{barcode}_{c}/umi12c.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")),
+        sai = temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sai"),
+        sam = temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sam"),
     conda: "../envs/bwa.yaml"
     params:
         n = 6,
-    log: "logs/umiCon/umiExtract/bwa_aln/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/bwa_aln/{barcode}_{c}.txt"
-    threads: config["threads"]["large"]
-    shell: "bwa aln -n {params.n} -t {threads} -N {input.ref} {input.umip} > {output} 2> {log}"
-
-rule bwa_samse:
-    input:
-        rules.bwa_index.output,
-        umip = rules.concat_umip.output,
-        ref = rules.cluster_umi.output.umi12c,
-        sai = rules.bwa_aln.output,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sam")
-    conda: "../envs/bwa.yaml"
-    params:
         F = 4,
-    log: "logs/umiCon/umiExtract/bwa_samse/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/bwa_samse/{barcode}_{c}.txt"
-    shell:
-        "bwa samse -n 10000000 {input.ref} {input.sai} {input.umip} 2> {log} | "
-        "samtools view -F {params.F} - > {output} 2>> {log}"
+    log: "logs/umiCon/umiExtract/bwa_umi/{barcode}_{c}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/bwa_umi/{barcode}_{c}.txt"
+    shell: 
+        """
+        bwa index {input.ref} 2> {log}
+        bwa aln -n {params.n} -t {threads} -N {input.ref} {input.umip} > {output.sai} 2>> {log}
+        bwa samse -n 10000000 {input.ref} {output.sai} {input.umip} 2>> {log} | \
+        samtools view -F {params.F} - > {output.sam} 2>> {log}
+        """
 
 rule umi_filter:
     input:
-        sam = rules.bwa_samse.output,
+        sam = rules.bwa_umi.output.sam,
         ref = rules.cluster_umi.output.umi12c,
     output: temp("umiCon/umiExtract/{barcode}_{c}/umi12cf.fasta")
     conda: "../envs/umi.yaml"
@@ -629,51 +611,28 @@ rule split_umi_ref:
 ## -N : diasble iterative search. All possible hits are found.
 ## -F 20 : Removes unmapped and reverse read matches. Keeps UMIs
 ##         in correct orientations.
-use rule bwa_index as index_umi with:
-    input:
+use rule bwa_umi as bwa_umi2 with:
+    input: 
         ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta",
+        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fasta",
     output:
         temp(multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")),
-    log:
-        "logs/umiCon/umiBin/index_umi/{barcode}_{c}_{umi}.log"
-    benchmark:
-        "benchmarks/umiCon/umiBin/index_umi/{barcode}_{c}_{umi}.txt"
-
-use rule bwa_aln as aln_umi with:
-    input:
-        rules.index_umi.output,
-        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fasta",
-        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta",
-    output:
-        temp("umiCon/umiBin/{barcode}_{c}/{umi}_map.sai"),
+        sai = temp("umiCon/umiBin/{barcode}_{c}/{umi}.sai"),
+        sam = temp("umiCon/umiBin/{barcode}_{c}/{umi}.sam"),
     params:
         n = 3,
-    log:
-        "logs/umiCon/umiBin/aln_umi/{barcode}_{c}_{umi}.log"
-    benchmark:
-        "benchmarks/umiCon/umiBin/aln_umi/{barcode}_{c}_{umi}.txt"
-
-use rule bwa_samse as samse_umi with:
-    input:
-        multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
-        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fasta",
-        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta",
-        sai = "umiCon/umiBin/{barcode}_{c}/{umi}_map.sai",
-    output:
-        temp("umiCon/umiBin/{barcode}_{c}/{umi}_map.sam"),
-    params:
         F = 20,
-    log: 
-        "logs/umiCon/umiBin/samse_umi/{barcode}_{c}_{umi}.log"
-    benchmark: 
-        "benchmarks/umiCon/umiBin/samse_umi/{barcode}_{c}_{umi}.txt"
-
+    log:
+        "logs/umiCon/umiBin/bwa_umi2/{barcode}_{c}_{umi}.log"
+    benchmark:
+        "benchmarks/umiCon/umiBin/bwa_umi2/{barcode}_{c}_{umi}.txt"
+ 
 rule umi_binning:
     input:
-        umi1 = "umiCon/umiBin/{barcode}_{c}/umi1_map.sam",
-        umi2 = "umiCon/umiBin/{barcode}_{c}/umi2_map.sam",
+        umi1 = "umiCon/umiBin/{barcode}_{c}/umi1.sam",
+        umi2 = "umiCon/umiBin/{barcode}_{c}/umi2.sam",
     output:
-        bin_map = "umiCon/umiBin/{barcode}_{c}/umi_bin_map.txt",
+        bins = "umiCon/umiBin/{barcode}_{c}/umi_bins.txt",
         stats = "umiCon/umiBin/{barcode}_{c}/umi_stats.txt",
     conda: "../envs/umi.yaml"
     params:
@@ -878,7 +837,7 @@ rule umi_binning:
           # Print to terminal
           print "[" strftime("%T") "] Done." > "/dev/stderr"; 
         }}
-        ' {input.umi1} {input.umi2} > {output.bin_map} 2> {log}
+        ' {input.umi1} {input.umi2} > {output.bins} 2> {log}
         """
 
 def get_filt_umi(wildcards, kmerbin = config["kmerbin"]):
@@ -894,7 +853,7 @@ checkpoint cls_umiCon:
     input: 
         "umiCon/umiExtract/check2",
         lambda wc: get_filt_umi(wc),
-        cls = lambda wc: expand("umiCon/umiBin/{b_c}/umi_bin_map.txt", b_c=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_kb}.fasta").bc_kb),
+        cls = lambda wc: expand("umiCon/umiBin/{b_c}/umi_bins.txt", b_c=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_kb}.fasta").bc_kb),
     output: directory("umiCon/clusters")
     run:
         import pandas as pd
