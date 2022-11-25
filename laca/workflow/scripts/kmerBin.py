@@ -73,6 +73,7 @@ def plot_cluster(X_embedded, umap_out, plot_out):
 
 def main():
     args = parse_arguments()
+    np.random.seed(123)
     X_embedded, umap_out1 = umap_reduction(args.kmer, args.n_neighbors, args.metric, args.low_memory, args.min_dist, args.n_components)
     hdbscan_out = hdbscan_cluster(umap_out1, args.min_cluster_size, args.min_samples, args.epsilon, args.n_components)
     if args.plot:
