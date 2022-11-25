@@ -61,35 +61,38 @@ rule rename_fasta_header:
                     out.write(line)
 
 # create abundance matrix with minimap2
-rule index:
-    input: rules.rename_fasta_header.output,
-    output: temp("rep_seqs.mmi")
-    message: "Index denoised sequences [Generate abundance matrix]"
+rule index_repseqs:
+    input: rules.rename_fasta_header.output
+    output: 
+        mmi = temp("rep_seqs.mmi"),
+        dict = temp("rep_seqs.dict"),
+    message: "Index denoised sequences [Abundance matrix]"
     params:
         index_size = "4G",
     conda: "../envs/minimap2.yaml"
-    log: "logs/quant/index.log"
-    benchmark: "benchmarks/quant/index.txt"
-    shell: "minimap2 -I {params.index_size} -d {output} {input} 2> {log}"
-
-rule dict:
-    input: rules.rename_fasta_header.output,
-    output: temp("rep_seqs.dict")
-    message: "Dict denoised sequences [Generate abundance matrix]"
-    conda: "../envs/samtools.yaml"
-    log: "logs/quant/dict.log"
-    benchmark: "benchmarks/quant/dict.txt"
-    shell: "samtools dict {input} | cut -f1-3 > {output} 2> {log}"
+    log: "logs/quant/index_repseqs.log"
+    benchmark: "benchmarks/quant/index_repseqs.txt"
+    shell: 
+        """
+        minimap2 -I {params.index_size} -d {output.mmi} {input} 2> {log}
+        samtools dict {input} | cut -f1-3 > {output.dict} 2>> {log}
+        """
 
 rule minimap2repseqs:
     input:
         fq = rules.q_filter.output,
-        mmi = rules.index.output,
-        dict = rules.dict.output,
-    output: temp("quant/mapped/{barcode}.bam")
-    message: "Re-map {wildcards.barcode}.fastq files [Generate abundance matrix]"
+        mmi = rules.index_repseqs.output.mmi,
+        dict = rules.index_repseqs.output.dict,
+    output: 
+        bam = temp("quant/mapped/{barcode}.bam"),
+        sort = temp("quant/mapped/{barcode}.sorted.bam"),
+        bai = temp("quant/mapped/{barcode}.sorted.bam.bai"),
+        counts = temp("quant/mapped/{barcode}.count"),
+    message: "Map reads back, barcode={wildcards.barcode} [Abundance matrix]"
     params:
-        x = config["minimap2"]["x_map"]
+        x = config["minimap2"]["x_map"],
+        prefix = "quant/mapped/tmp.{barcode}",
+        m = "3G",
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/minimap2/{barcode}.log"
     benchmark: "benchmarks/quant/minimap2/{barcode}.txt"
@@ -98,31 +101,15 @@ rule minimap2repseqs:
         """
         minimap2 -t {threads} -ax {params.x} --secondary=no {input.mmi} {input.fq} 2> {log} | \
         grep -v "^@" | cat {input.dict} - | \
-        samtools view -F 3584 -b - > {output} 2>> {log}
+        samtools view -F 3584 -b - > {output.bam} 2>> {log}
+
+        samtools sort {output.bam} -T {params.prefix} --threads {threads} -m {params.m} -o {output.sort} 2>>{log}
+        samtools index -m {params.m} -@ 1 {output.sort} {output.bai} 2>>{log}
+        
+        # counts with header
+        echo '{wildcards.barcode}' > {output.counts}
+        samtools idxstats {output.sort} | grep -v "*" | cut -f3 >> {output.counts}
         """
-
-rule sort:
-    input: rules.minimap2repseqs.output
-    output: temp("quant/mapped/{barcode}.sorted.bam")
-    params:
-        prefix = "quant/mapped/tmp.{barcode}",
-        m = "3G",
-    conda: "../envs/samtools.yaml"
-    log: "logs/quant/sort/{barcode}.log"
-    benchmark: "benchmarks/quant/sort/{barcode}.txt"
-    shell:
-        "samtools sort {input} -T {params.prefix} --threads 1 -m {params.m} -o {output} 2>{log}"
-
-rule samtools_index:        
-    input: rules.sort.output
-    output: temp("quant/mapped/{barcode}.sorted.bam.bai")
-    params:
-        m = "3G",
-    conda: "../envs/samtools.yaml"
-    log: "logs/quant/index/{barcode}.log"
-    benchmark: "benchmarks/quant/index/{barcode}.txt"
-    shell:
-        "samtools index -m {params.m} -@ 1 {input} {output} 2>{log}"
 
 def get_qout(wildcards, type_o):
     barcodes = get_demux_barcodes(wildcards)
@@ -142,7 +129,7 @@ rule rowname_kOTU:
         bam = lambda wildcards: get_qout(wildcards, "bam"),
         bai = lambda wildcards: get_qout(wildcards, "bai"),
     output: temp("quant/rowname_seqs")
-    conda: "../envs/samtools.yaml"
+    conda: "../envs/minimap2.yaml"
     log: "logs/quant/rowname_kOTU.log"
     benchmark: "benchmarks/quant/rowname_kOTU.txt"
     shell:
@@ -151,20 +138,6 @@ rule rowname_kOTU:
         samtools idxstats $(ls {input.bam} | head -n 1) | grep -v "*" | cut -f1 >> {output}
         """
        
-rule seqs_count:
-    input:
-        bam = "quant/mapped/{barcode}.sorted.bam",
-        bai = "quant/mapped/{barcode}.sorted.bam.bai"
-    output: temp("quant/mapped/{barcode}.count")
-    conda: "../envs/samtools.yaml"
-    log: "logs/quant/seqs_count/{barcode}.log"
-    benchmark: "benchmarks/quant/seqs_count/{barcode}.txt"
-    shell:
-        """
-        echo '{wildcards.barcode}' > {output}
-        samtools idxstats {input.bam} | grep -v "*" | cut -f3 >> {output}
-        """
-
 rule count_matrix:
     input:
         rowname_seqs = rules.rowname_kOTU.output,

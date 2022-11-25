@@ -79,58 +79,32 @@ use rule rename_fasta_header as rename_fasta_header_re with:
         "benchmarks/requant/rename_fasta.txt"
 
 # create abundance matrix with minimap2
-use rule index as index_re with:
+use rule index_repseqs as index_repseqs_re with:
     input: 
-        rules.rename_fasta_header_re.output,
+        rules.rename_fasta_header_re.output
     output: 
-        temp("rep_seqs_requant.mmi")
+        mmi = temp("rep_seqs_requant.mmi"),
+        dict = temp("rep_seqs_requant.dict"),
     log: 
-        "logs/requant/index.log"
+        "logs/requant/index_repseqs.log"
     benchmark: 
-        "benchmarks/requant/index.txt"
-
-use rule dict as dict_re with:
-    input: 
-        rules.rename_fasta_header_re.output,
-    output: 
-        temp("rep_seqs_requant.dict")
-    log: 
-        "logs/requant/dict.log"
-    benchmark: 
-        "benchmarks/requant/dict.txt"
+        "benchmarks/requant/index_repseqs.txt"
 
 use rule minimap2repseqs as minimap2repseqs_re with:
     input:
         fq = "f2requant/{barcode}.fastq",
-        mmi = rules.index_re.output,
-        dict = rules.dict_re.output,
+        mmi = rules.index_repseqs_re.output.mmi,
+        dict = rules.index_repseqs_re.output.dict,
     output: 
-        temp("requant/mapped/{barcode}.bam")
+        bam = temp("requant/mapped/{barcode}.bam"),
+        sort = temp("requant/mapped/{barcode}.sorted.bam"),
+        bai = temp("requant/mapped/{barcode}.sorted.bam.bai"),
+        counts = temp("requant/mapped/{barcode}.count"),
     log: 
         "logs/requant/minimap2/{barcode}.log"
     benchmark: 
         "benchmarks/requant/minimap2/{barcode}.txt"
-
-use rule sort as sort_re with:
-    input: 
-        rules.minimap2repseqs_re.output
-    output: 
-        temp("requant/mapped/{barcode}.sorted.bam")
-    log: 
-        "logs/requant/sort/{barcode}.log"
-    benchmark: 
-        "benchmarks/requant/sort/{barcode}.txt"
-
-use rule samtools_index as samtools_index_re with:        
-    input: 
-        rules.sort_re.output
-    output: 
-        temp("requant/mapped/{barcode}.sorted.bam.bai")
-    log: 
-        "logs/requant/index/{barcode}.log"
-    benchmark: 
-        "benchmarks/requant/index/{barcode}.txt"
-
+    
 def get_qout_re(wildcards, type_o):
     barcodes = col_info_requant(wildcards, "fq")
     # extract basename & strip extension
@@ -157,17 +131,6 @@ use rule rowname_kOTU as rowname_kOTU_re with:
     benchmark: 
         "benchmarks/requant/rowname_kOTU.txt"
        
-use rule seqs_count as seqs_count_re with:
-    input:
-        bam = "requant/mapped/{barcode}.sorted.bam",
-        bai = "requant/mapped/{barcode}.sorted.bam.bai"
-    output: 
-        temp("requant/mapped/{barcode}.count")
-    log: 
-        "logs/requant/seqs_count/{barcode}.log"
-    benchmark: 
-        "benchmarks/requant/seqs_count/{barcode}.txt"
-
 use rule count_matrix as count_matrix_re with:
     input:
         rowname_seqs = rules.rowname_kOTU_re.output,
