@@ -32,7 +32,7 @@ rule subsample:
         """
         nlines=$(cat {input} | wc -l)
         nreads=$((nlines / 4))
-        p=$(echo "scale=2; {params.n} / $nreads + 0.01" | bc)
+        p=$(echo "scale=2; {params.n} / $nreads + 0.1" | bc)
         if (( $(echo "$p > 1" | bc -l) )); then
             p=1
         fi
