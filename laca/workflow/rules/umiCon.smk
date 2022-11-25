@@ -270,7 +270,7 @@ checkpoint umi_check1:
         for i in list(fs):
             if os.stat(i).st_size > 0:
                 barcode, c = [ i.split("/")[-2].split("_")[index] for index in [-2, -1] ]
-                shutil.move(i, output[0] + "/{barcode}_{c}.fa".format(barcode=barcode, c=c))
+                shutil.move(i, output[0] + "/{barcode}_{c}.fasta".format(barcode=barcode, c=c))
 
 # check UMI pattern
 # generate grep pattern for UMI regions
@@ -321,7 +321,7 @@ def get_umi_pattern(umi_pattern, length):
     return grep_pattern
 
 rule check_umi:
-    input: "umiCon/umiExtract/check1/{barcode}_{c}.fa"
+    input: "umiCon/umiExtract/check1/{barcode}_{c}.fasta"
     output: temp("umiCon/umiExtract/{barcode}_{c}/umi12f.fasta")
     params:
         pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
@@ -470,7 +470,7 @@ rule umi_filter:
 
 # extend list with umi_loc fqs
 def get_umifile2(wildcards, kmerbin = config["kmerbin"], extend = False):
-    bc_kbs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{bc_kb}.fa").bc_kb
+    bc_kbs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{bc_kb}.fasta").bc_kb
     fs = expand("umiCon/umiExtract/{bc_kb}/umi12cf.fasta", bc_kb=bc_kbs)
     if extend == True:
         fs.extend(expand("umiCon/umiExtract/{bc_kb}/{loc}.fastq", bc_kb=bc_kbs, loc=["start", "end"]))
