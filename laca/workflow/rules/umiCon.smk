@@ -406,11 +406,11 @@ rule concat_umip:
     input:
         umi1=rules.extract_umip.output.umi1,
         umi2=rules.extract_umip.output.umi2,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umip.fastq")
+    output: temp("umiCon/umiExtract/{barcode}_{c}/umip.fasta")
     conda: "../envs/seqkit.yaml"
     log: "logs/umiCon/umiExtract/concat_umip/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/concat_umip/{barcode}_{c}.txt"
-    shell: "seqkit concat {input.umi1} {input.umi2} -o {output} 2> {log}"
+    shell: "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -w0 -o {output} 2>> {log}"
 
 # calculate the UMI cluster size through mapping
 # use bwa aln to map the potential UMI reads to the UMI ref, considering the limited length and sensitivity
@@ -596,8 +596,8 @@ rule umi_loc2:
     benchmark: "benchmarks/umiCon/umiBin/umi_loc2/{barcode}_{c}.txt"
     shell:
         """
-        seqkit subseq -r 1:{params.s} {input.start} 2> {log} | seqkit fq2fa -o {output.start} 2>> {log}
-        seqkit subseq -r -{params.e}:-1 {input.end} 2> {log} | seqkit fq2fa -o {output.end} 2>> {log}
+        seqkit subseq -r 1:{params.s} {input.start} 2> {log} | seqkit fq2fa -w0 -o {output.start} 2>> {log}
+        seqkit subseq -r -{params.e}:-1 {input.end} 2> {log} | seqkit fq2fa -w0 -o {output.end} 2>> {log}
         """
 
 # split UMI ref to capture UMI in both orientations
