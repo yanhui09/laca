@@ -317,17 +317,16 @@ def get_umi_pattern(umi_pattern, length):
         if iloc == n-1:
             grep_pattern += "[" + iupac[umi_pattern[iloc]] + "]{" + str(count) + "}"
         iloc += 1
-    grep_pattern = "'" + grep_pattern + "'" # escape `{}` with `'{}'` 
     return grep_pattern
 
 rule check_umi:
     input: "umiCon/umiExtract/check1/{barcode}_{c}.fasta"
     output: temp("umiCon/umiExtract/{barcode}_{c}/umi12f.fasta")
     params:
-        pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"]) # use dummy lambda to escape `{}`
+        pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"])
     log: "logs/umiCon/umiExtract/check_umi/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/check_umi/{barcode}_{c}.txt"
-    shell: "grep -B1 -E {params.pattern} {input} | sed '/--$/d' > {output} 2> {log}"
+    shell: "grep -B1 -E '{params.pattern}' {input} | sed '/^--$/d' > {output} 2> {log}"
 
 # cluster UMIs
 rule cluster_umi:
