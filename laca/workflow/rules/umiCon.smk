@@ -194,9 +194,6 @@ rule umi_loc:
         """
 
 # extract UMI sequences
-# linked primers to ensure a "trusted" umi, and take a more trusted ref with adequate size in cluster
-# This is different from the original design due to different UMI settings
-# https://github.com/SorenKarst/longread_umi/blob/00302fd34cdf7a5b8722965f3f6c581acbafd70c/scripts/umi_binning.sh#L193
 rule extract_umi:
     input:
         start = rules.umi_loc.output.start,
@@ -351,7 +348,7 @@ rule cluster_umi:
         --centroids {output.umi12cs} --uc {output.umi12uc} --sizein --sizeout \
         --strand both --threads {threads} >> {log} 2>&1
 
-        vsearch --sortbysize {output.umi12cs} --minsize 1 --relabel umi --output {output.umi12c} >> {log} 2>&1
+        vsearch --sortbysize {output.umi12cs} --minsize 1 --output {output.umi12c} >> {log} 2>&1
         """
 
 # align the trimmed UMI reads to the potential UMIs, which determine the final UMI clusters
