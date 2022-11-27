@@ -33,13 +33,12 @@ rule guppy:
     # need to bind INPUT_DIR if not in workdir
     output: temp(directory("demux_guppy"))
     singularity: "docker://genomicpariscentre/guppy:3.3.3"
-    params:
-      indir = config["basecalled_dir"]
     log: "logs/demultiplex/guppy.log"
     benchmark: "benchmarks/demultiplex/guppy.txt"
     threads: config["threads"]["large"]
     params:
-        barcode_kits=config["guppy"]["barcode_kits"],
+        indir = config["basecalled_dir"],
+        barcode_kits = config["guppy"]["barcode_kits"],
     shell: 
         """
         guppy_barcoder -i {params.indir} -s {output} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}
