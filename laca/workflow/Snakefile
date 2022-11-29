@@ -64,7 +64,7 @@ rule kmerCon:
     input: "kmerCon/kmerCon.fna"
 
 rule clustCon:
-    input: "kmerCon/clustCon.fna"
+    input: "clustCon/clustCon.fna"
 
 rule isONclustCon:
     input: "isONclustCon/isONclustCon.fna"

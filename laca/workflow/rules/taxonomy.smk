@@ -185,7 +185,11 @@ rule q2import:
             --type 'FeatureData[Sequence]' \
             1> {log} 2>&1
         """
- 
+# For NFS disk in clusters
+# export TMPDIR=$LOCALSCRATCH in qsub script
+#https://forum.qiime2.org/t/error-when-executing-qiime-tools-import-script-on-a-server/7790/2
+#https://forum.qiime2.org/t/qiime-tools-import-on-cluster/17531/30
+
 rule classify_q2blast:
     input: 
         query_fna = "taxonomy/q2blast/split/{part}.qza",
