@@ -99,9 +99,10 @@ rule minimap2repseqs:
     threads: config["threads"]["normal"]
     shell:
         """
-        minimap2 -t {threads} -ax {params.x} --secondary=no {input.mmi} {input.fq} 2> {log} | \
+        minimap2 -t {threads} -ax {params.x} {input.mmi} {input.fq} 2> {log} | \
         grep -v "^@" | cat {input.dict} - | \
-        samtools view -F 3584 -b - > {output.bam} 2>> {log}
+        # no supplementary alignments, primary alignments only
+        samtools view -F0x900 -b - > {output.bam} 2>> {log}
 
         samtools sort {output.bam} -T {params.prefix} --threads {threads} -m {params.m} -o {output.sort} 2>>{log}
         samtools index -m {params.m} -@ 1 {output.sort} {output.bai} 2>>{log}
