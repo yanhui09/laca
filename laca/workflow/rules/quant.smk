@@ -93,16 +93,19 @@ rule minimap2repseqs:
         x = config["minimap2"]["x_map"],
         prefix = "quant/mapped/tmp.{barcode}",
         m = "3G",
+        # https://lh3.github.io/minimap2/minimap2.html#10
+        max_de = 0.1,
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/minimap2/{barcode}.log"
     benchmark: "benchmarks/quant/minimap2/{barcode}.txt"
     threads: config["threads"]["normal"]
     shell:
+        # de:f: divergence < max_de
+        # no supplementary alignments, primary alignments only, exclude unmapped reads
         """
         minimap2 -t {threads} -ax {params.x} {input.mmi} {input.fq} 2> {log} | \
-        grep -v "^@" | cat {input.dict} - | \
-        # no supplementary alignments, primary alignments only
-        samtools view -F0x900 -b - > {output.bam} 2>> {log}
+        grep -v "^@" | awk -F '\t|de:f:' '$(NF-1) < {params.max_de}' | \
+        cat {input.dict} - | samtools view -F0x900 -b - > {output.bam} 2>> {log}
 
         samtools sort {output.bam} -T {params.prefix} --threads {threads} -m {params.m} -o {output.sort} 2>>{log}
         samtools index -m {params.m} -@ 1 {output.sort} {output.bai} 2>>{log}

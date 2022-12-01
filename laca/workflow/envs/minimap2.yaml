@@ -2,7 +2,9 @@ name: minimap2
 channels:
   - bioconda
   - conda-forge
+  - anaconda
   - defaults
 dependencies:
   - minimap2
   - samtools
+  - gawk
