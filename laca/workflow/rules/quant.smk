@@ -94,7 +94,7 @@ rule minimap2repseqs:
         prefix = "quant/mapped/tmp.{barcode}",
         m = "3G",
         # https://lh3.github.io/minimap2/minimap2.html#10
-        max_de = 0.1,
+        max_de = 0.075,
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/minimap2/{barcode}.log"
     benchmark: "benchmarks/quant/minimap2/{barcode}.txt"
