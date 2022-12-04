@@ -260,7 +260,7 @@ def get_isONcorCon(wildcards):
     bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     return {
     "cls": expand("isONcorCon/{bc_kb_ci}/IsoCon/cluster_info.tsv", bc_kb_ci = bc_kb_cis),
-    "candidates": expand("isONcorCon/{bc_kb_ci}/IsoCon/final_candidates.fa", bc_kb_ci = bc_kb_cis)
+    "cands": expand("isONcorCon/{bc_kb_ci}/IsoCon/final_candidates.fa", bc_kb_ci = bc_kb_cis)
     }
 
 checkpoint cls_isONcorCon:
@@ -270,8 +270,6 @@ checkpoint cls_isONcorCon:
         lambda wc: expand("isONclustCon/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclust.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
         unpack(get_isONcorCon),
     output: directory("isONcorCon/clusters"),
-    params:
-        dir_polish = "isONcorCon/polish",
     run:
         import pandas as pd
         if not os.path.exists(output[0]):
@@ -286,20 +284,26 @@ checkpoint cls_isONcorCon:
                 df_clust['seqid'].to_csv(output[0] + "/{bc_kb_ci}cand{clust_id}.csv".format(bc_kb_ci=bc_kb_ci, clust_id=clust_id),
                 header = False, index = False)
 
-        for i in list(input.candidates):
-            bc_kb_ci = i.split('/')[-3]
-            with open (i, 'r') as f:
-                # > write next two lines
-                for line in f:
-                    if line.startswith('>'):
-                        clust_id = line.split('_')[1]
-                        cand = bc_kb_ci + 'cand' + clust_id
-                        _dir = params.dir_polish + "/" + cand + "/minimap2"
-                        if not os.path.exists(_dir):
-                            os.makedirs(_dir)
-                        with open(_dir + "/raw.fna", 'a') as f1:
-                            f1.write('>' + cand + "\n")
-                            f1.write(next(f))
+rule get_IsoCon_cand:
+    input:
+        cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
+        cands = rules.isoCon.output.fna,
+    output: temp("isONcorCon/polish/{barcode}_{c}_{clust_id}cand{cand}/minimap2/raw.fna")
+    run:
+            outdir = os.path.dirname(output[0])
+            if not os.path.exists(outdir):
+                os.makedirs(outdir)
+            bc_kb_ci, cand_id = input.cls.removesuffix('.csv').split('/')[-1].split('cand')
+            with open (input.cands, 'r') as fi:
+                lines = fi.readlines()
+
+            for i, line in enumerate(lines):
+                if line.startswith('>transcript_' + cand_id + '_support'):
+                    header = '>' + bc_kb_ci + 'cand' + cand_id + '\n'
+                    with open (output[0], 'w') as fo:
+                        fo.write(header)
+                        fo.write(lines[i+1])
+                    break
 
 rule get_fqs_split4:
     input:
@@ -474,11 +478,4 @@ rule collect_consensus:
         lambda wc: get_clusters(wc),
         fna = lambda wc: get_consensus(wc),
     output: "{cls}/{cls}.fna"
-    run: 
-        merge_consensus(fi = input.fna, fo = output[0])
-        # clean up isONcorCon/polish if cls == isONcorCon 
-        # temp(raw.fna) not allowed for output content of checkpoints
-        if wildcards.cls == "isONcorCon":
-            import shutil
-            shutil.rmtree("isONcorCon/polish", ignore_errors = True)
-        
+    run: merge_consensus(fi = input.fna, fo = output[0])
