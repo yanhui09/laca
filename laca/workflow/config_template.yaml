@@ -129,10 +129,10 @@ IsoCon:
   min_candidates: 2
 
 ##############################################################
-# quantification by sequence id or minimap2 mapping, 
-# cluster | minimap2, the first is the final
+# create abundance matrix by sequence id or minimap2 mapping, 
+# seqid | minimap2, the first is the final
 quant: 
-  - cluster
+  - seqid
   #- minimap2 
 # Filter chimera with qiime2-vesearch [uchime-denovo] 
 chimeraF: False

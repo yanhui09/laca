@@ -1,7 +1,7 @@
 # check classifier choice
 check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon"])
 # check quantification method
-check_list_ele("quant", config["quant"], ["cluster", "minimap2"])
+check_list_ele("quant", config["quant"], ["seqid", "minimap2"])
 
 def get_consensus2derep(cls):
    #{cls}/{cls}.fna except umiCon ({cls}/{cls}_trimmed.fna)
@@ -85,12 +85,12 @@ rule combine_cls:
         df_all.to_csv(output[0], sep="\t", header=None, index=None)
 
 # abudance matrix by read id
-rule matrix_cls: 
+rule matrix_seqid: 
     input:
         rules.derep_denoised_seqs.output.tsv,
         rules.combine_cls.output,
         fqs = lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc)),
-    output: "quant/matrix_cluster.tsv"
+    output: "quant/matrix_seqid.tsv"
     run:
         import pandas as pd
         # OTU <- derep_cls -> cand_cls
