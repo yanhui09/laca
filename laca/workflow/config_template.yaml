@@ -107,6 +107,9 @@ minimap2:
   x_ava: ava-ont # [clustCon]
   # ont: map-ont; pb-clr: map-pb, pb-css: asm20 (< v2.18), map-hifi (> v2.19)
   x_map: map-ont # [polish & quant]
+  # maximally allowed gap-compressed per-base sequence divergence as valid mapping, 
+  # filter mismappings due to partial sequence similarity when creating abundance matrix
+  max_de: 0.075 # [quant]
 
 racon:
   iter: 2
