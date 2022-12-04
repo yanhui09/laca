@@ -46,7 +46,7 @@ rule rename_fasta_header:
                 i = 1
                 for line in inp:
                     if line.startswith(">"):
-                        line = ">kOTU_" + str(i) + "\n"
+                        line = ">OTU_" + str(i) + "\n"
                         i += 1 
                     out.write(line)
 
@@ -93,11 +93,11 @@ rule matrix_cls:
     output: "quant/matrix_cluster.tsv"
     run:
         import pandas as pd
-        # kOTU <- derep_cls -> cand_cls
+        # OTU <- derep_cls -> cand_cls
         derep_cls = pd.read_csv(input[0], sep="\t", header=None)
         derep_cls.columns = ["rep_cls","cls"]
-        # kOTU with incremental number by rep_cls, 1, 2, ...
-        derep_cls["kOTU"] = derep_cls["rep_cls"].factorize()[0] + 1
+        # OTU with incremental number by rep_cls, 1, 2, ...
+        derep_cls["OTU"] = derep_cls["rep_cls"].factorize()[0] + 1
 
         cand_cls = pd.read_csv(input[1], sep="\t", header=None)
         cand_cls.columns = ["seqid", "cls"]
@@ -115,11 +115,11 @@ rule matrix_cls:
             cls[barcode] = cls["seqid"].isin(seqid).astype(int)
         
         # exclude rep_cls, cls, seqid
-        # group by kOTU, sum by barcode
-        cls = cls.drop(["rep_cls", "cls", "seqid"], axis=1).groupby("kOTU").sum()
-        # append 'kOTU_' after sorting
-        cls.index = ["kOTU_" + str(i) for i in cls.index.sort_values()]
-        # rename kOTU as "# OTU ID" for qiime2 import
+        # group by OTU, sum by barcode
+        cls = cls.drop(["rep_cls", "cls", "seqid"], axis=1).groupby("OTU").sum()
+        # append 'OTU_' after sorting
+        cls.index = ["OTU_" + str(i) for i in cls.index.sort_values()]
+        # rename OTU as "# OTU ID" for qiime2 import
         cls.index.name = "#OTU ID"
         # write to output
         cls.to_csv(output[0], sep="\t", header=True, index=True)
@@ -192,14 +192,14 @@ def get_qout(wildcards, type_o):
     return output
 
 # biom format header
-rule rowname_kOTU:
+rule rowname_OTU:
     input:
         bam = lambda wildcards: get_qout(wildcards, "bam"),
         bai = lambda wildcards: get_qout(wildcards, "bai"),
     output: temp("quant/rowname_seqs")
     conda: "../envs/minimap2.yaml"
-    log: "logs/quant/rowname_kOTU.log"
-    benchmark: "benchmarks/quant/rowname_kOTU.txt"
+    log: "logs/quant/rowname_OTU.log"
+    benchmark: "benchmarks/quant/rowname_OTU.txt"
     shell:
         """
         echo '#OTU ID' > {output}
@@ -208,7 +208,7 @@ rule rowname_kOTU:
        
 rule matrix_minimap2:
     input:
-        rowname_seqs = rules.rowname_kOTU.output,
+        rowname_seqs = rules.rowname_OTU.output,
         seqs_count = lambda wildcards: get_qout(wildcards, "count"),
     output: "quant/matrix_minimap2.tsv"
     shell:

@@ -109,20 +109,20 @@ def get_qout_re(wildcards, type_o):
     return output
 
 # biom format header
-use rule rowname_kOTU as rowname_kOTU_re with:
+use rule rowname_OTU as rowname_OTU_re with:
     input:
         bam = lambda wildcards: get_qout_re(wildcards, "bam"),
         bai = lambda wildcards: get_qout_re(wildcards, "bai"),
     output: 
         temp("requant/rowname_seqs")
     log: 
-        "logs/requant/rowname_kOTU.log"
+        "logs/requant/rowname_OTU.log"
     benchmark: 
-        "benchmarks/requant/rowname_kOTU.txt"
+        "benchmarks/requant/rowname_OTU.txt"
        
 use rule matrix_minimap2 as matrix_minimap2_re with:
     input:
-        rowname_seqs = rules.rowname_kOTU_re.output,
+        rowname_seqs = rules.rowname_OTU_re.output,
         seqs_count = lambda wildcards: get_qout_re(wildcards, "count"),
     output: 
         "count_matrix_requant.tsv"
