@@ -56,21 +56,10 @@ use rule derep_denoised_seqs as derep_denoised_seqs_re with:
     benchmark: 
         "benchmarks/requant/derep_denoised_seqs.txt"
 
-# rm duplicates of reverse complements
-use rule rmdup_revcom as rmdup_revcom_re with:
-    input: 
-        rules.derep_denoised_seqs_re.output.rep
-    output: 
-        temp("requant/mmseqs2_rep_seq_rmdup.fasta")
-    log: 
-        "logs/requant/rmdup_revcom.log"
-    benchmark: 
-        "benchmarks/requant/rmdup_revcom.txt"
-
 # keep fasta header unique
 use rule rename_fasta_header as rename_fasta_header_re with:
     input: 
-        rules.rmdup_revcom_re.output
+        rules.derep_denoised_seqs_re.output.rep
     output: 
         "rep_seqs_requant.fasta"
     log: 

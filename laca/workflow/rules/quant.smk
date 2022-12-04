@@ -34,19 +34,9 @@ rule derep_denoised_seqs:
         "mmseqs easy-cluster {input.first} {params.prefix} {output.tmp} "
         "--threads {threads} --min-seq-id {params.mid} -c {params.c} --cluster-reassign > {log} 2>&1"
 
-# rm duplicates of reverse complements
-rule rmdup_revcom:
-    input: rules.derep_denoised_seqs.output.rep
-    output: temp("quant/mmseqs2_rep_seq_rmdup.fasta")
-    message: "Remove duplicates of reverse complements"
-    conda: "../envs/seqkit.yaml"
-    log: "logs/quant/rmdup_revcom.log"
-    benchmark: "benchmarks/quant/rmdup_revcom.txt"
-    shell: "seqkit rmdup -s {input} -o {output} -w 0 > {log} 2>&1"
-
 # keep fasta header unique
 rule rename_fasta_header:
-    input: rules.rmdup_revcom.output
+    input: rules.derep_denoised_seqs.output.rep
     output: "rep_seqs.fasta"
     log: "logs/quant/rename_fasta.log"
     benchmark: "benchmarks/quant/rename_fasta.benchmark"
