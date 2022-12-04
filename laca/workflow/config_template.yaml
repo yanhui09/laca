@@ -80,7 +80,7 @@ hdbscan:
 # isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
 # isONcorCon: isONclust followed by isONcorrect/IsoCon (close similarity)
 cluster:
-  #- isONclustCon # the first for the final kOTUs
+  #- isONclustCon # the first is the final kOTUs
   #- kmerCon 
   #- isONcorCon # sinlge target/amplification region
   #- clustCon 
@@ -125,9 +125,14 @@ isONcor: True # [isONcorCon]
 IsoCon:
   min_candidates: 2
 
+##############################################################
+# quantification by sequence id or minimap2 mapping, 
+# cluster | minimap2, the first is the final
+quant: 
+  - cluster
+  #- minimap2 
 # Filter chimera with qiime2-vesearch [uchime-denovo] 
 chimeraF: False
-
 ##############################################################
 # Taxonomy assignment
 classifier:

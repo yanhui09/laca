@@ -120,7 +120,7 @@ use rule rowname_kOTU as rowname_kOTU_re with:
     benchmark: 
         "benchmarks/requant/rowname_kOTU.txt"
        
-use rule count_matrix as count_matrix_re with:
+use rule matrix_minimap2 as matrix_minimap2_re with:
     input:
         rowname_seqs = rules.rowname_kOTU_re.output,
         seqs_count = lambda wildcards: get_qout_re(wildcards, "count"),

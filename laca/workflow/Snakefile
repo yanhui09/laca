@@ -20,9 +20,9 @@ def check_list_ele(var, val, eles):
     if val:
         for i in val:
             if i not in eles:
-                raise ValueError("\n  {} parameters not recognized.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
+                raise ValueError("\n  {} parameters not recognized.\n  Please choose from {} in the config.yaml file.".format(var,eles))
     else:
-        raise ValueError("\n  {} parameters not specified.\t\nPlease choose from {} in the config.yaml file.".format(var,eles))
+        raise ValueError("\n  {} parameters not specified.\n  Please choose from {} in the config.yaml file.".format(var,eles))
 
 def chimeraF(chimera_check = config["chimeraF"]):
     check_val("chimeraF", chimera_check, bool)

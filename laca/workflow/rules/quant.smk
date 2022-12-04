@@ -1,5 +1,7 @@
 # check classifier choice
 check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon"])
+# check quantification method
+check_list_ele("quant", config["quant"], ["cluster", "minimap2"])
 
 def get_consensus2derep(cls):
    #{cls}/{cls}.fna except umiCon ({cls}/{cls}_trimmed.fna)
@@ -10,9 +12,7 @@ def get_consensus2derep(cls):
 
 # dereplicate sequences with MMseqs2
 rule derep_denoised_seqs:
-    input: 
-        [get_consensus2derep(cls=i) for i in config["cluster"]][1:],
-        first = get_consensus2derep(cls = config["cluster"][0]),
+    input: [get_consensus2derep(cls=i) for i in config["cluster"]]
     output: 
         rep = temp("quant/mmseqs2_rep_seq.fasta"),
         all_by_cluster = temp("quant/mmseqs2_all_seqs.fasta"),
@@ -31,7 +31,7 @@ rule derep_denoised_seqs:
         #https://github.com/soedinglab/MMseqs2/wiki#how-do-parameters-of-cd-hit-relate-to-mmseqs2
         #divergent amplicons for local alignment, mmseqs2 yes, cd-hit no.
         #--min-seq-id 0.99 -c 0.5 (best in benchmark, -c 0.5-0.7 is good)
-        "mmseqs easy-cluster {input.first} {params.prefix} {output.tmp} "
+        "mmseqs easy-cluster {input[0]} {params.prefix} {output.tmp} "
         "--threads {threads} --min-seq-id {params.mid} -c {params.c} --cluster-reassign > {log} 2>&1"
 
 # keep fasta header unique
@@ -50,7 +50,81 @@ rule rename_fasta_header:
                         i += 1 
                     out.write(line)
 
-# create abundance matrix with minimap2
+def get_cand_cls(cls=config["cluster"][0]):
+    if cls == "kmerCon":
+        return "kmerBin/clusters"
+    else:
+        return "{cls}/clusters".format(cls=cls)
+
+rule combine_cls:
+    input: get_cand_cls()
+    output: temp("quant/cls_combined.tsv")
+    run:
+        import pandas as pd
+        # append cand suffix by cls
+        cls = input[0].split("/")[-2]
+        if cls == "kmerBin":
+            cand = "_0cand1"
+        elif cls == "isONclustCon" or cls == "clustCon" or cls == "umiCon":
+            cand = "cand1"
+        else:
+            cand = ""
+
+        # combine csv files under input
+        files = os.listdir(input[0])
+        cls_csvs = [os.path.join(input[0], i) for i in files if i.endswith(".csv")]
+        # concatanate all csv files, with file name (without suffix) as column
+        for i in cls_csvs:
+            df = pd.read_csv(i, sep="\t", header=None)
+            df["cls"] = os.path.basename(i).split(".")[0] + cand
+            if i == cls_csvs[0]:
+                df_all = df
+            else:
+                df_all = pd.concat([df_all, df], axis=0)
+        # write to output
+        df_all.to_csv(output[0], sep="\t", header=None, index=None)
+
+# abudance matrix by read id
+rule matrix_cls: 
+    input:
+        rules.derep_denoised_seqs.output.tsv,
+        rules.combine_cls.output,
+        fqs = lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc)),
+    output: "quant/matrix_cluster.tsv"
+    run:
+        import pandas as pd
+        # kOTU <- derep_cls -> cand_cls
+        derep_cls = pd.read_csv(input[0], sep="\t", header=None)
+        derep_cls.columns = ["rep_cls","cls"]
+        # kOTU with incremental number by rep_cls, 1, 2, ...
+        derep_cls["kOTU"] = derep_cls["rep_cls"].factorize()[0] + 1
+
+        cand_cls = pd.read_csv(input[1], sep="\t", header=None)
+        cand_cls.columns = ["seqid", "cls"]
+        # merge on cls, left join, dummy files not included in {cls}/{cls}.fna 
+        cls = derep_cls.merge(cand_cls, on="cls", how="left")
+        # take header from fastq files, ^@, as a list
+        for fq in input.fqs:
+            barcode = os.path.basename(fq).split(".")[0]
+            seqid = []
+            with open(fq, "r") as f:
+                for line in f:
+                    if line.startswith("@"):
+                        seqid.append(line.rstrip().split(" ")[0][1:])
+            # if cls["seqid"] is in seqid, then 1, else 0
+            cls[barcode] = cls["seqid"].isin(seqid).astype(int)
+        
+        # exclude rep_cls, cls, seqid
+        # group by kOTU, sum by barcode
+        cls = cls.drop(["rep_cls", "cls", "seqid"], axis=1).groupby("kOTU").sum()
+        # append 'kOTU_' after sorting
+        cls.index = ["kOTU_" + str(i) for i in cls.index.sort_values()]
+        # rename kOTU as "# OTU ID" for qiime2 import
+        cls.index.name = "#OTU ID"
+        # write to output
+        cls.to_csv(output[0], sep="\t", header=True, index=True)
+                
+# abundance matrix with minimap2
 rule index_repseqs:
     input: rules.rename_fasta_header.output
     output: 
@@ -132,11 +206,11 @@ rule rowname_kOTU:
         samtools idxstats $(ls {input.bam} | head -n 1) | grep -v "*" | cut -f1 >> {output}
         """
        
-rule count_matrix:
+rule matrix_minimap2:
     input:
         rowname_seqs = rules.rowname_kOTU.output,
         seqs_count = lambda wildcards: get_qout(wildcards, "count"),
-    output: "count_matrix.tsv"
+    output: "quant/matrix_minimap2.tsv"
     shell:
         """
         cp {input.rowname_seqs} {output}
@@ -147,6 +221,11 @@ rule count_matrix:
             mv {output}.tmp {output}
         done < <(echo {input.seqs_count} | xargs -n 1000)
         """
+
+rule count_matrix:
+    input: ["quant/matrix_{quant}.tsv".format(quant=i) for i in config["quant"]], 
+    output: "count_matrix.tsv"
+    shell: "cp {input[0]} {output}"
 
 rule q2_repseqs_import:
     input: rules.rename_fasta_header.output

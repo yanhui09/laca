@@ -860,7 +860,7 @@ checkpoint cls_umiCon:
             df = pd.read_csv(i, sep=" ", header=None, usecols=[0,1], names=["umi","read"])
             df.umi = [x.split(";")[0] for x in df.umi]
             for umi in set(df.umi):
-                df.loc[df.umi == umi, "read"].to_csv(output[0] + "/" + b_c + "_" + str(umi) + ".txt", sep="\t", header=False, index=False)
+                df.loc[df.umi == umi, "read"].to_csv(output[0] + "/" + b_c + "_" + str(umi) + ".csv", header=False, index=False)
         
 use rule split_bin as split_umibin with:
     input: 
