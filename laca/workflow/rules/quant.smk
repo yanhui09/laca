@@ -17,7 +17,7 @@ rule derep_denoised_seqs:
         rep = temp("quant/mmseqs2_rep_seq.fasta"),
         all_by_cluster = temp("quant/mmseqs2_all_seqs.fasta"),
         tsv = temp("quant/mmseqs2_cluster.tsv"),
-        tmp = temp(directory("tmp")),
+        tmp = temp(directory("quant/tmp")),
     message: "Dereplicate denoised sequences"
     params:
         prefix = "quant/mmseqs2",

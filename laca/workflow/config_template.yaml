@@ -119,8 +119,11 @@ medaka:
   iter: 1 
   m: r941_min_hac_g507
 
-# isONcorrect before IsoCon
+# run isONcorrect before IsoCon
 isONcor: True # [isONcorCon]
+
+IsoCon:
+  min_candidates: 2
 
 # Filter chimera with qiime2-vesearch [uchime-denovo] 
 chimeraF: False

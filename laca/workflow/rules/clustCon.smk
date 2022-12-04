@@ -93,6 +93,8 @@ checkpoint cls_clustCon:
             if num_lines > params.min_size:
                 barcode, c = [ i.split("/")[-1].removesuffix(".csv").split("_")[index] for index in [-2, -1] ]
                 df = pd.read_csv(i)
+                # cluster starts from 0
+                df["cluster"] = df["cluster"] - 1
                 for clust_id, df_clust in df.groupby('cluster'):
                     if len(df_clust) >= params.min_size:
                         bc_kb_ci = "/{barcode}_{c}_{clust_id}".format(barcode=barcode, c=c, clust_id=clust_id)
@@ -197,6 +199,117 @@ use rule spoa as spoa2 with:
         "logs/isONclustCon/{barcode}_{c}_{clust_id}/spoa.log"
     benchmark: 
         "benchmarks/isONclustCon/{barcode}_{c}_{clust_id}/spoa.txt"
+
+# isONcorCon
+# run_isoncorrect provide multithread processing for isONcorrect in batches
+# racon seems not to be supported in batch mode
+rule isONcorrect:
+    input: rules.get_fqs_split3.output
+    output: temp("isONcorCon/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq")
+    conda: "../envs/isONcorCon.yaml"
+    params:
+        _dir = "isONcorCon/{barcode}_{c}_{clust_id}",
+        clust_id = "{clust_id}",
+        max_seqs = 2000,
+    log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
+    threads: config["threads"]["normal"]
+    shell:
+        """
+        mkdir -p {params._dir}/isONclust
+        cp {input} {params._dir}/isONclust/{params.clust_id}.fastq
+        # number of reads in fastqs
+        nlines=$(cat {params._dir}/isONclust/{params.clust_id}.fastq | wc -l)
+        nreads=$((nlines / 4))
+        if [ $nreads -gt {params.max_seqs} ]; then
+            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
+        else
+            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
+        fi
+        rm -rf {params._dir}/isONclust
+        find {params._dir}/isONcor/{params.clust_id} -mindepth 1 ! -name 'corrected_reads.fastq' | xargs rm -rf
+        """
+
+def get_isoCon_input(isONcor = config["isONcor"]):
+    check_val("isONcor", isONcor, bool)
+    if isONcor == True:
+        return rules.isONcorrect.output
+    else:
+        return rules.get_fqs_split3.output
+
+rule isoCon:
+    input: get_isoCon_input()
+    output:
+        cls = temp("isONcorCon/{barcode}_{c}_{clust_id}/IsoCon/cluster_info.tsv"),
+        fna = temp("isONcorCon/{barcode}_{c}_{clust_id}/IsoCon/final_candidates.fa"),
+    conda: "../envs/isONcorCon.yaml"
+    params:
+        prefix = "isONcorCon/{barcode}_{c}_{clust_id}",
+        min_candidates = config["IsoCon"]["min_candidates"],
+    log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
+    threads: config["threads"]["large"]
+    shell: 
+        """
+        IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} \
+        --prefilter_candidates --min_candidate_support {params.min_candidates} > {log} 2>&1
+        find {params.prefix}/IsoCon -mindepth 1 ! -name 'final_candidates.fa' ! -name 'cluster_info.tsv' | xargs rm -rf 
+        """
+
+def get_isONcorCon(wildcards):
+    bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    return {
+    "cls": expand("isONcorCon/{bc_kb_ci}/IsoCon/cluster_info.tsv", bc_kb_ci = bc_kb_cis),
+    "candidates": expand("isONcorCon/{bc_kb_ci}/IsoCon/final_candidates.fa", bc_kb_ci = bc_kb_cis)
+    }
+
+checkpoint cls_isONcorCon:
+    input: 
+        ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
+        lambda wc: expand("isONclustCon/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclust.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
+        unpack(get_isONcorCon),
+    output: directory("isONcorCon/clusters"),
+    params:
+        dir_polish = "isONcorCon/polish",
+    run:
+        import pandas as pd
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input.cls):
+            bc_kb_ci = i.split('/')[-3]
+            df_i = pd.read_csv(i, sep = '\t', header = None, usecols=range(2))
+            df_i.columns = ['seqid', 'cluster']
+            # only leave candidate id 'transcript_id_support_num'
+            df_i['cluster'] = df_i['cluster'].apply(lambda x: x.split('_')[1])
+            for clust_id, df_clust in df_i.groupby('cluster'):
+                df_clust['seqid'].to_csv(output[0] + "/{bc_kb_ci}cand{clust_id}.csv".format(bc_kb_ci=bc_kb_ci, clust_id=clust_id),
+                header = False, index = False)
+
+        for i in list(input.candidates):
+            bc_kb_ci = i.split('/')[-3]
+            with open (i, 'r') as f:
+                # > write next two lines
+                for line in f:
+                    if line.startswith('>'):
+                        clust_id = line.split('_')[1]
+                        cand = bc_kb_ci + 'cand' + clust_id
+                        _dir = params.dir_polish + "/" + cand + "/minimap2"
+                        if not os.path.exists(_dir):
+                            os.makedirs(_dir)
+                        with open(_dir + "/raw.fna", 'a') as f1:
+                            f1.write('>' + cand + "\n")
+                            f1.write(next(f))
+
+rule get_fqs_split4:
+    input:
+        bin2clust = "isONcorCon/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
+        binned = rules.get_fqs_split3.output,
+    output: temp("isONcorCon/split/{barcode}_{c}_{clust_id}cand{cand}.fastq")
+    conda: "../envs/seqkit.yaml"
+    log: "logs/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/get_fqs_split.log"
+    benchmark: "benchmarks/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/get_fqs_split.txt"
+    shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
 
 # polish with racon and medaka
 # reused in racon iterations
@@ -304,62 +417,6 @@ rule medaka_consensus:
         fi
         """
 
-# isONcorCon
-# run_isoncorrect provide multithread processing for isONcorrect in batches
-# racon seems not to be supported in batch mode
-rule isONcorrect:
-    input: rules.get_fqs_split3.output
-    output: temp("isONcorCon/polish/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq")
-    conda: "../envs/isONcorCon.yaml"
-    params:
-        _dir = "isONcorCon/polish/{barcode}_{c}_{clust_id}",
-        clust_id = "{clust_id}",
-        max_seqs = 2000,
-    log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
-    benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
-    threads: config["threads"]["normal"]
-    shell:
-        """
-        mkdir -p {params._dir}/isONclust
-        cp {input} {params._dir}/isONclust/{params.clust_id}.fastq
-        # number of reads in fastqs
-        nlines=$(cat {params._dir}/isONclust/{params.clust_id}.fastq | wc -l)
-        nreads=$((nlines / 4))
-        if [ $nreads -gt {params.max_seqs} ]; then
-            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
-        else
-            run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
-        fi
-        rm -rf {params._dir}/isONclust
-        find {params._dir}/isONcor/{params.clust_id} -mindepth 1 ! -name 'corrected_reads.fastq' | xargs rm -rf
-        """
-
-def get_isoCon_input(isONcor = config["isONcor"]):
-    check_val("isONcor", isONcor, bool)
-    if isONcor == True:
-        return rules.isONcorrect.output
-    else:
-        return rules.get_fqs_split3.output
-
-rule isoCon:
-    input: get_isoCon_input()
-    output:
-        cls = "isONcorCon/clusters/{barcode}_{c}_{clust_id}.tsv",
-        fna = temp("isONcorCon/polish/{barcode}_{c}_{clust_id}/IsoCon/candidates.fasta"),
-    conda: "../envs/isONcorCon.yaml"
-    params:
-        prefix = "isONcorCon/polish/{barcode}_{c}_{clust_id}",
-    log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
-    benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
-    threads: config["threads"]["large"]
-    shell: 
-        """
-        IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} > {log} 2>&1
-        mv {params.prefix}/IsoCon/cluster_info.tsv {output.cls} 
-        mv {params.prefix}/IsoCon/final_candidates.fa {output.fna}
-        find {params.prefix}/IsoCon -mindepth 1 ! -name 'candidates.fasta' | xargs rm -rf 
-        """
- 
 # get polished asembly
 def merge_consensus(fi, fo):
     with open(fo, "w") as out:
@@ -367,20 +424,19 @@ def merge_consensus(fi, fo):
             # if fi is empty, skip; rm dummy output
             if os.stat(i).st_size == 0:
                 continue
-            barcode_i, c_i, id_i = [ i.split("/")[-3].split("_")[index] for index in [-3, -2, -1] ]
+            bc_kb_ci_cand = i.split("/")[-3]
+            if "cand" not in bc_kb_ci_cand:
+                bc_kb_ci_cand = bc_kb_ci_cand + "cand1"
+            
             with open(i, "r") as inp:
-                j = 1
                 for line in inp:
                     if line.startswith(">"):
-                        line = ">" + barcode_i + "_" + c_i + "_" + id_i + "_cand" + str(j) + "\n"
-                        j += 1
+                        line = ">" + bc_kb_ci_cand + "\n"
                     out.write(line)
 
 def get_clusters(wildcards):
     if wildcards.cls == "kmerCon":
         return "kmerBin/clusters"
-    if wildcards.cls == "isONcorCon":
-        return "isONclustCon/clusters"
     else:
         return "{cls}/clusters"
 
@@ -393,30 +449,36 @@ def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter 
 
     if wildcards.cls == "kmerCon":
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
-        bc_kb_cis = [i + "_0" for i in bc_kbs]
+        candidates = [i + "_0" for i in bc_kbs]
     elif wildcards.cls == "clustCon":
-        bc_kb_cis = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    elif wildcards.cls == "isONclustCon" or wildcards.cls == "isONcorCon":
-        bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+        candidates = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "isONclustCon":
+        candidates = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "isONcorCon":
+        candidates = glob_wildcards(checkpoints.cls_isONcorCon.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
     elif wildcards.cls == "umiCon":
-        bc_kb_cis = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.txt").bc_kb_ci
+        candidates = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.txt").bc_kb_ci
     else:
         raise ValueError("Unknown consensus method: " + wildcards.cls)
     
-    if wildcards.cls == "isONcorCon":
-        return expand("{{cls}}/polish/{bc_kb_ci}/IsoCon/candidates.fasta", cls = wildcards.cls, bc_kb_ci = bc_kb_cis)
-    else:
-        if medaka_iter == 0:
-            if racon_iter == 0:
-                return expand("{{cls}}/polish/{bc_kb_ci}/minimap2/raw.fna", cls = wildcards.cls, bc_kb_ci = bc_kb_cis)
-            else:
-                return expand("{{cls}}/polish/{bc_kb_ci}/minimap2/racon_{iter}.fna", cls = wildcards.cls, bc_kb_ci = bc_kb_cis, iter = racon_iter)
+    if medaka_iter == 0:
+        if racon_iter == 0:
+            return expand("{{cls}}/polish/{cand}/minimap2/raw.fna", cls = wildcards.cls, cand = candidates)
         else:
-            return expand("{{cls}}/polish/{bc_kb_ci}/medaka_{iter}/consensus.fasta", cls = wildcards.cls, bc_kb_ci = bc_kb_cis, iter = medaka_iter)
+            return expand("{{cls}}/polish/{cand}/minimap2/racon_{iter}.fna", cls = wildcards.cls, cand = candidates, iter = racon_iter)
+    else:
+        return expand("{{cls}}/polish/{cand}/medaka_{iter}/consensus.fasta", cls = wildcards.cls, cand = candidates, iter = medaka_iter)
             
 rule collect_consensus:
     input: 
         lambda wc: get_clusters(wc),
         fna = lambda wc: get_consensus(wc),
     output: "{cls}/{cls}.fna"
-    run: merge_consensus(fi = input.fna, fo = output[0]) 
+    run: 
+        merge_consensus(fi = input.fna, fo = output[0])
+        # clean up isONcorCon/polish if cls == isONcorCon 
+        # temp(raw.fna) not allowed for output content of checkpoints
+        if wildcards.cls == "isONcorCon":
+            import shutil
+            shutil.rmtree("isONcorCon/polish", ignore_errors = True)
+        
