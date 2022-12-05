@@ -7,6 +7,7 @@ def init_conf(
     bascdir,
     demuxdir,
     merge,
+    merge_parent,
     dbdir,
     workdir,
     config="config.yaml",
@@ -31,6 +32,7 @@ def init_conf(
         bascdir (str): path to a directory of basecalled fastq files
         demuxdir (str): path to a directory of demultiplexed fastq files
         merge (list): list of the working directories of LACA runs to merge
+        merge_parent (str): path to the parent of the working directories of LACA runs to merge
         dbdir (str): path to the taxonomy database
         workdir (str): path to the working directory
         config (str): the config filename
@@ -116,7 +118,15 @@ def init_conf(
             
     conf["basecalled_dir"] = bascdir
     conf["demultiplexed_dir"] = demuxdir
-    conf["merge_runs"] = list(merge)
+    # combine LACA runs, append if not empty
+    if merge_parent is not None:
+        merge_runs = [os.path.join(merge_parent, sub) for sub in os.listdir(merge_parent) if os.path.isdir(os.path.join(merge_parent, sub))]
+        merge_runs += list(merge)
+    else:
+        merge_runs = list(merge)
+    if len(merge_runs) > 0:
+        conf["merge_runs"] = list(set(merge_runs))
+        
     conf["database_dir"] = dbdir
     conf["demuxer"] = demuxer
     conf["nreads_m"] = nreads_m

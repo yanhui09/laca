@@ -191,7 +191,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     help="Path to a directory of the basecalled fastq files.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = Alo,
-    required_if_not = ["demuxdir", "merge"],
+    required_if_not = ["demuxdir", "merge", "merge_parent"],
 )
 @click.option(
     "-x",
@@ -199,15 +199,22 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     help="Path to a directory of demultiplexed fastq files.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = Alo,
-    required_if_not = ["bascdir", "merge"],
+    required_if_not = ["bascdir", "merge", "merge_parent"],
 )
 @click.option(
     "--merge",
-    help="Path to the working directory of a completed LACA run.",
+    help="Path to the working directory of a completed LACA run [Multiple]. Runs will be combined if --merge_parent applied.",
     multiple=True,
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = Alo,
-    required_if_not = ["bascdir", "demuxdir"],
+    required_if_not = ["bascdir", "demuxdir", "merge_parent"],
+)
+@click.option(
+    "--merge-parent",
+    help="Path to the parent of the working directories of completed LACA runs. Runs will be combined if --merge applied.",
+    type=click.Path(dir_okay=True,writable=True,resolve_path=True),
+    cls = Alo,
+    required_if_not = ["bascdir", "demuxdir", "merge"],
 )
 @click.option(
     "-d",
@@ -326,14 +333,14 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     help="Clean flag files.",
 )
 def run_init(
-    bascdir, demuxdir, merge, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
+    bascdir, demuxdir, merge, merge_parent, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
     kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi, clean_flags):
     """
     Prepare config file for LACA.
     """ 
     logger.info(f"LACA version: {__version__}")
     init_conf(
-        bascdir, demuxdir, merge, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
+        bascdir, demuxdir, merge, merge_parent, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
         no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi)
     # clean flags if requested
     if clean_flags:
