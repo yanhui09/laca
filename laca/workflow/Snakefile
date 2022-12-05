@@ -29,16 +29,16 @@ def check_list_ele(var, val, eles):
     else:
         raise ValueError("\n  {} parameters not specified.\n  Please choose from {} in the config.yaml file.".format(var,eles))
 
-def chimeraF(chimera_check = config["chimeraF"]):
-    check_val("chimeraF", chimera_check, bool)
-    if chimera_check == False:
+def chimera_filt(uchime = config["uchime"]):
+    check_val("uchime", uchime, bool)
+    if uchime == False:
         return ["count_matrix.tsv", "rep_seqs.fasta"]
     else:
-        return ["chimeraF/" + x for x in ["table_nonchimeras.tsv", "rep_seqs_nonchimeras.fasta"]]
+        return ["count_matrix_filt.tsv", "rep_seqs_filt.fasta"]
 
 rule all:
     input:
-        chimeraF(),
+        chimera_filt(),
         ["taxonomy/" + str(x) + "/taxonomy.tsv" for x in config["classifier"]],
         "taxonomy.tsv",
         ["tree/" + str(x) + "/tree.nwk" for x in config["phylogeny"]],
@@ -81,7 +81,7 @@ rule umiCon:
     input: "umiCon/umiCon_trimmed.fna"
 
 rule quant:
-    input: chimeraF()
+    input: chimera_filt()
 
 rule taxa: 
     input:
@@ -93,7 +93,17 @@ rule tree:
         ["tree/" + str(x) + "/tree.nwk" for x in config["phylogeny"]],
         "tree.nwk",
 
+def collect_merge(
+    bascdir = config["basecalled_dir"], 
+    demuxdir = config["demultiplexed_dir"], 
+    classifier = config["classifier"],
+    phylogeny = config["phylogeny"]):
+    out = ["rep_seqs_merged.fasta", "count_matrix_merged.tsv"]
+    if bascdir is None and demuxdir is None:
+        out += ["taxonomy/" + str(x) + "/taxonomy.tsv" for x in classifier]
+        out += ["tree/" + str(x) + "/tree.nwk" for x in phylogeny]
+        out += ["taxonomy.tsv", "tree.nwk"]
+    return out
+
 rule merge:
-    input:
-        "rep_seqs_merged.fasta",
-        "count_matrix_merged.tsv",
+    input: collect_merge()

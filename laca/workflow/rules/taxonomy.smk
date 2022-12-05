@@ -3,7 +3,7 @@ check_list_ele("classifier", config["classifier"], ["q2blast", "kraken2", "mmseq
 
 # LCA taxonomy with MMseqs2
 rule createdb_query:
-    input: chimeraF()[1]
+    input: get_repseqs()
     output: 
         expand("taxonomy/mmseqs2/queryDB{ext}",
          ext = ["", ".dbtype", ".index", ".lookup", ".source",
@@ -116,7 +116,7 @@ rule classify_kraken2:
     input:
         ancient(DATABASE_DIR + "/.initDB_DONE"),
         ancient(expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"])), 
-        fna = ancient(chimeraF()[1]),
+        fna = ancient(get_repseqs()),
     output: temp("taxonomy/kraken2/classified.tsv"),
     conda: "../envs/kraken2.yaml"
     params:
@@ -162,7 +162,7 @@ rule taxonomy_kraken2:
 
 # custom parallel, split repseqs into N parts with at most 50 sequnces
 checkpoint repseqs_split:
-    input: chimeraF()[1]
+    input: get_repseqs()
     output: temp(directory("taxonomy/q2blast/split"))
     conda: "../envs/seqkit.yaml"
     params:

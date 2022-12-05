@@ -136,7 +136,7 @@ quant:
   - seqid
   #- minimap2 
 # Filter chimera with qiime2-vesearch [uchime-denovo] 
-chimeraF: False
+uchime: False
 ##############################################################
 # Taxonomy assignment
 classifier:

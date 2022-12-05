@@ -43,9 +43,8 @@ rule merge_repseqs:
                         fo.write(line)
         
 # dereplicate sequences with MMseqs2
-use rule derep_denoised_seqs as derep_merged_seqs with:
-    input: 
-        rules.merge_repseqs.output
+use rule drep_consensus as drep_seqs_merged with:
+    input: rules.merge_repseqs.output
     output: 
         rep = temp("merge/mmseqs2_rep_seq.fasta"),
         all_by_cluster = temp("merge/mmseqs2_all_seqs.fasta"),
@@ -61,14 +60,14 @@ use rule derep_denoised_seqs as derep_merged_seqs with:
         "benchmarks/merge/derep_merged_seqs.txt"
     
 # rename fasta header
-use rule rename_fasta_header as rename_merged_fasta_header with:
+use rule rename_drep_seqs as rename_drep_seqs_merged with:
     input: 
-        rules.derep_merged_seqs.output.rep
+        rules.drep_seqs_merged.output.rep
     output: 
        "rep_seqs_merged.fasta"
 
 rule matrix_merged:
-    input: rules.derep_merged_seqs.output.tsv
+    input: rules.drep_seqs_merged.output.tsv
     output: "count_matrix_merged.tsv"
     run:
         import pandas as pd

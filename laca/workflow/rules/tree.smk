@@ -11,7 +11,7 @@ f5al_pattern2 = linked_pattern(rprimers_min, fprimers_max)
 f5al_patterns = f5al_pattern1 + ' ' + f5al_pattern2
 
 rule trim_repseqs:
-    input: chimeraF()[1]
+    input: get_repseqs()
     output: temp("tree/rep_seqs_trimmed.fasta")
     conda: "../envs/cutadapt.yaml"
     params:
@@ -21,11 +21,16 @@ rule trim_repseqs:
     threads: config["threads"]["normal"]
     shell: "cutadapt -j {threads} {params.f} -o {output} {input} > {log} 2>&1"
 
-def trim_check2(trim = config["trim"], chimera_check = config["chimeraF"]):
+def trim_check2(
+    trim = config["trim"], 
+    bascdir = config["basecalled_dir"], 
+    demuxdir = config["demultiplexed_dir"], 
+    uchime = config["uchime"]
+    ):
     check_val("trim", trim, bool)
     out = rules.trim_repseqs.output
     if trim ==  False:
-        out = chimeraF(chimera_check)[1]
+        out = get_repseqs(bascdir, demuxdir, uchime)
     return out
 
 rule q2_repseqs:

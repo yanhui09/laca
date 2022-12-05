@@ -11,7 +11,7 @@ def get_consensus2derep(cls):
         return "{cls}/{cls}.fna".format(cls=cls)
 
 # dereplicate sequences with MMseqs2
-rule derep_denoised_seqs:
+rule drep_consensus:
     input: [get_consensus2derep(cls=i) for i in config["cluster"]]
     output: 
         rep = temp("quant/mmseqs2_rep_seq.fasta"),
@@ -35,8 +35,8 @@ rule derep_denoised_seqs:
         "--threads {threads} --min-seq-id {params.mid} -c {params.c} --cluster-reassign > {log} 2>&1"
 
 # keep fasta header unique
-rule rename_fasta_header:
-    input: rules.derep_denoised_seqs.output.rep
+rule rename_drep_seqs:
+    input: rules.drep_consensus.output.rep
     output: "rep_seqs.fasta"
     run:
         with open(output[0], "w") as out:
@@ -85,7 +85,7 @@ rule combine_cls:
 # abudance matrix by read id
 rule matrix_seqid: 
     input:
-        rules.derep_denoised_seqs.output.tsv,
+        rules.drep_consensus.output.tsv,
         rules.combine_cls.output,
         fqs = lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc)),
     output: "quant/matrix_seqid.tsv"
@@ -124,7 +124,7 @@ rule matrix_seqid:
                 
 # abundance matrix with minimap2
 rule index_repseqs:
-    input: rules.rename_fasta_header.output
+    input: rules.rename_drep_seqs.output
     output: 
         mmi = temp("rep_seqs.mmi"),
         dict = temp("rep_seqs.dict"),
@@ -225,12 +225,12 @@ rule count_matrix:
     output: "count_matrix.tsv"
     shell: "cp {input[0]} {output}"
 
-rule q2_repseqs_import:
-    input: rules.rename_fasta_header.output
+rule q2repseqs_import:
+    input: rules.rename_drep_seqs.output
     output: temp("rep_seqs.qza")
     conda: "../envs/q2plugs.yaml"
-    log: "logs/chimeraF/q2_repseqs_import.log"
-    benchmark: "benchmarks/chimeraF/q2_repseqs_import.txt"
+    log: "logs/uchime/q2_repseqs_import.log"
+    benchmark: "benchmarks/uchime/q2_repseqs_import.txt"
     shell:
         """
         qiime tools import \
@@ -240,14 +240,14 @@ rule q2_repseqs_import:
         > {log} 2>&1
         """
 
-rule q2_ftable_import:
+rule q2ftable_import:
     input: rules.count_matrix.output
     output: 
         biom = temp("table.biom"),
         qza = temp("table.qza")
     conda: "../envs/q2plugs.yaml"
-    log: "logs/chimeraF/q2_ftable_import.log"
-    benchmark: "benchmarks/chimeraF/q2_ftable_import.txt"
+    log: "logs/uchime/q2_ftable_import.log"
+    benchmark: "benchmarks/uchime/q2_ftable_import.txt"
     shell:
         """
         biom convert -i {input} -o {output.biom} --to-hdf5 > {log} 2>&1
@@ -259,17 +259,17 @@ rule q2_ftable_import:
         >> {log} 2>&1
         """
 
-rule q2_uchime_denovo:
+rule q2uchime_denovo:
     input:
-        ftable = rules.q2_ftable_import.output.qza,
-        repseqs = rules.q2_repseqs_import.output,
+        ftable = rules.q2ftable_import.output.qza,
+        repseqs = rules.q2repseqs_import.output,
     output: 
-        nonchimeras = "chimeraF/nonchimeras.qza",
-        chimeras = "chimeraF/chimeras.qza",
-        stats = "chimeraF/stats.qza",
+        nonchimeras = "uchime/nonchimeras.qza",
+        chimeras = "uchime/chimeras.qza",
+        stats = "uchime/stats.qza",
     conda: "../envs/q2plugs.yaml"
-    log: "logs/chimeraF/uchime_denovo.log"
-    benchmark: "benchmarks/chimeraF/uchime_denovo.txt"
+    log: "logs/uchime/uchime_denovo.log"
+    benchmark: "benchmarks/uchime/uchime_denovo.txt"
     shell:
         """
         qiime vsearch uchime-denovo \
@@ -281,14 +281,14 @@ rule q2_uchime_denovo:
         > {log} 2>&1
         """
 
-rule q2_filter_features:
+rule q2filter_features:
     input:
-        ftable = rules.q2_ftable_import.output.qza,
-        nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
-    output: temp("chimeraF/table_nonchimeras.qza")
+        ftable = rules.q2ftable_import.output.qza,
+        nonchimeras = rules.q2uchime_denovo.output.nonchimeras,
+    output: temp("uchime/table_nonchimeras.qza")
     conda: "../envs/q2plugs.yaml"
-    log: "logs/chimeraF/filter_features.log"
-    benchmark: "benchmarks/chimeraF/filter_features.txt"
+    log: "logs/uchime/filter_features.log"
+    benchmark: "benchmarks/uchime/filter_features.txt"
     shell:
         """
         qiime feature-table filter-features \
@@ -298,14 +298,14 @@ rule q2_filter_features:
         > {log} 2>&1
         """
 
-rule q2_filter_seqs:
+rule q2filter_seqs:
     input:
-        repseqs = rules.q2_repseqs_import.output,
-        nonchimeras = rules.q2_uchime_denovo.output.nonchimeras,
-    output: temp("chimeraF/rep_seqs_nonchimeras.qza")
+        repseqs = rules.q2repseqs_import.output,
+        nonchimeras = rules.q2uchime_denovo.output.nonchimeras,
+    output: temp("uchime/rep_seqs_nonchimeras.qza")
     conda: "../envs/q2plugs.yaml"
-    log: "logs/chimeraF/filter_seqs.log"
-    benchmark: "benchmarks/chimeraF/filter_seqs.txt"
+    log: "logs/uchime/filter_seqs.log"
+    benchmark: "benchmarks/uchime/filter_seqs.txt"
     shell:
         """
         qiime feature-table filter-seqs \
@@ -315,16 +315,16 @@ rule q2_filter_seqs:
         > {log} 2>&1
         """
 
-rule q2_ftable_export:
-    input: rules.q2_filter_features.output
+rule q2ftable_export:
+    input: rules.q2filter_features.output
     output:
-        biom = temp("chimeraF/table_nonchimeras.biom"), 
-        tsv = "chimeraF/table_nonchimeras.tsv"
+        biom = temp("uchime/table_nonchimeras.biom"), 
+        tsv = "count_matrix_filt.tsv"
     params:
-        _dir = "chimeraF"
+        _dir = "uchime"
     conda: "../envs/q2plugs.yaml"
-    log: "logs/chimeraF/ftable_export.log"
-    benchmark: "benchmarks/chimeraF/ftable_export.txt"
+    log: "logs/uchime/ftable_export.log"
+    benchmark: "benchmarks/uchime/ftable_export.txt"
     shell:
         """
         qiime tools export \
@@ -335,14 +335,14 @@ rule q2_ftable_export:
         biom convert -i {output.biom} -o {output.tsv} --to-tsv >> {log} 2>&1
         """
 
-rule q2_repseqs_export:
-    input: rules.q2_filter_seqs.output
-    output: "chimeraF/rep_seqs_nonchimeras.fasta"
+rule q2repseqs_export:
+    input: rules.q2filter_seqs.output
+    output: "rep_seqs_filt.fasta"
     conda: "../envs/q2plugs.yaml"
     params:
-        _dir = "chimeraF"
-    log: "logs/chimeraF/repseqs_export.log"
-    benchmark: "benchmarks/chimeraF/repseqs_export.txt"
+        _dir = "uchime"
+    log: "logs/uchime/repseqs_export.log"
+    benchmark: "benchmarks/uchime/repseqs_export.txt"
     shell:
         """
         qiime tools export \
@@ -351,3 +351,14 @@ rule q2_repseqs_export:
         > {log} 2>&1
         mv {params._dir}/dna-sequences.fasta {output}
         """
+
+def get_repseqs(
+    bascdir = config["basecalled_dir"], 
+    demuxdir = config["demultiplexed_dir"], 
+    uchime = config["uchime"]
+    ):
+    # use rep_seqs_merged.fasta if bascdir and demuxdir are none
+    if bascdir is None and demuxdir is None:
+        return "rep_seqs_merged.fasta"
+    else:
+        return chimera_filt(uchime)[1]
