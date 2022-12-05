@@ -1,34 +1,3 @@
-# None type check in Smakefile, at least one of basecalled_dir and demultiplexed_dir not None
-def check_demux_dir(dir_path = config["demultiplexed_dir"]):
-    if dir_path is not None:
-        if not os.path.isdir(dir_path):
-            raise ValueError("\n  'demultiplexed_dir' ({}) in config not found.\n".format(dir_path))
-        else:
-            if not os.listdir(dir_path):
-                raise ValueError("\n  'demultiplexed_dir' ({}) in config is empty.\n".format(dir_path))
-            else:
-                # shall contain at least one barcode sub-directory, {barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq
-                glob_pattern = os.path.join(dir_path, "[a-zA-Z]*[0-9]*", "*.fastq")
-                import glob
-                if not glob.glob(glob_pattern):
-                    raise ValueError("\n  'demultiplexed_dir' ({}) in config does not contain barcode sub-directories.\n  A barcode folder contains unzipped fastq files, named as [a-zA-Z]+[0-9]+.\n".format(dir_path))
-check_demux_dir()
-
-rule get_demux_external:
-    output: temp(directory("demux_external"))
-    params:
-        indir = config["demultiplexed_dir"] 
-    shell: "cp -r {params.indir} {output}"
-
-def check_basecall_dir(dir_path = config["basecalled_dir"]):
-    if dir_path is not None:
-        if not os.path.isdir(dir_path):
-            raise ValueError("\n  'basecalled_dir' ({}) in config not found.\n".format(dir_path))
-        else:
-            if not os.listdir(dir_path):
-                raise ValueError("\n  'basecalled_dir' ({}) in config is empty.\n".format(dir_path))
-check_basecall_dir()
-
 rule guppy:
     # need to bind INPUT_DIR if not in workdir
     output: temp(directory("demux_guppy"))
@@ -112,14 +81,44 @@ rule collect_minibars:
             rm {input} -f
         done
         """
-      
+ 
+def check_demux_dir(dir_path = config["demultiplexed_dir"]):
+    if dir_path is not None:
+        if not os.path.isdir(dir_path):
+            raise ValueError("\n  'demultiplexed_dir' ({}) in config not found.\n".format(dir_path))
+        else:
+            if not os.listdir(dir_path):
+                raise ValueError("\n  'demultiplexed_dir' ({}) in config is empty.\n".format(dir_path))
+            else:
+                # shall contain at least one barcode sub-directory, {barcode, [a-zA-Z]+[0-9]+}/{runid}.fastq
+                glob_pattern = os.path.join(dir_path, "[a-zA-Z]*[0-9]*", "*.fastq")
+                import glob
+                if not glob.glob(glob_pattern):
+                    raise ValueError("\n  'demultiplexed_dir' ({}) in config does not contain barcode sub-directories.\n  A barcode folder contains unzipped fastq files, named as [a-zA-Z]+[0-9]+.\n".format(dir_path))
+
+rule get_demux_external:
+    output: temp(directory("demux_external"))
+    params:
+        indir = config["demultiplexed_dir"] 
+    shell: "cp -r {params.indir} {output}"
+
+def check_basecall_dir(dir_path = config["basecalled_dir"]):
+    if dir_path is not None:
+        if not os.path.isdir(dir_path):
+            raise ValueError("\n  'basecalled_dir' ({}) in config not found.\n".format(dir_path))
+        else:
+            if not os.listdir(dir_path):
+                raise ValueError("\n  'basecalled_dir' ({}) in config is empty.\n".format(dir_path))
+
 # get demux input
 def get_demux(demux=config["demuxer"], demux_external=config["demultiplexed_dir"]):
     if demux_external is not None:
+        check_demux_dir(demux_external)
         return rules.get_demux_external.output
     else:
         if demux != "guppy" and demux != "minibar":
             raise ValueError("Demultiplexer not recognized. Choose guppy or minibar in config.")
+        check_basecall_dir()
         return "demux_" + demux
 
 checkpoint demux_check:

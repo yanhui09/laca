@@ -2,10 +2,15 @@
 configfile: "config.yaml"
 #--------------
 DATABASE_DIR = config["database_dir"].rstrip("/")
-def check_inp(basecalled = config["basecalled_dir"], demultiplexed = config["demultiplexed_dir"]):
-    # at least one of basecalled_dir or demultiplexed_dir must be specified
-    if basecalled is None and demultiplexed is None:
-        raise ValueError("\n  At least one of basecalled_dir or demultiplexed_dir is specified in config.\n")
+
+def check_inp(
+    basecalled = config["basecalled_dir"], 
+    demultiplexed = config["demultiplexed_dir"], 
+    merge_runs = config["merge_runs"]):
+    # at least one is specified, 
+    if basecalled is None and demultiplexed is None and merge_runs == []:
+        raise ValueError(
+            "\n  At least one of 'basecalled_dir', 'demultiplexed_dir' or 'merge_runs' is specified in config.\n")
 check_inp()
 
 def check_val(var, val, class_type):

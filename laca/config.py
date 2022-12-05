@@ -6,6 +6,7 @@ from ruamel.yaml import YAML
 def init_conf(
     bascdir,
     demuxdir,
+    merge,
     dbdir,
     workdir,
     config="config.yaml",
@@ -29,6 +30,7 @@ def init_conf(
     Args:
         bascdir (str): path to a directory of basecalled fastq files
         demuxdir (str): path to a directory of demultiplexed fastq files
+        merge (list): list of the working directories of LACA runs to merge
         dbdir (str): path to the taxonomy database
         workdir (str): path to the working directory
         config (str): the config filename
@@ -38,7 +40,7 @@ def init_conf(
         subsample (bool): if True, subsample the reads [default: False]
         no_trim (bool): if True, do not trim the primers [default: False]
         kmerbin (bool): if True, conduct kmer binning  [default: False]
-        cluster (str): list of methods to generate consensus (kmerCon, clustCon, isONclustCon, isONcorCon, umiCon) [default: "isONclustCon"]
+        cluster (list): list of methods to generate consensus (kmerCon, clustCon, isONclustCon, isONcorCon, umiCon) [default: "isONclustCon"]
         chimer_filter (bool): if True, filter possible chimeras by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
         jobs_M (int): number of jobs for threads-dependent tasks [default: 6]
@@ -114,6 +116,7 @@ def init_conf(
             
     conf["basecalled_dir"] = bascdir
     conf["demultiplexed_dir"] = demuxdir
+    conf["merge_runs"] = list(merge)
     conf["database_dir"] = dbdir
     conf["demuxer"] = demuxer
     conf["nreads_m"] = nreads_m

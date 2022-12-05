@@ -83,17 +83,18 @@ class Alo(click.Option):
         self.required_if_not:list = kwargs.pop("required_if_not")
 
         assert self.required_if_not, "'required_if_not' parameter required"
-        kwargs["help"] = (kwargs.get("help", "") + "Option is required if '" + ", ".join(self.required_if_not) + "' not provided.").strip()
+        kwargs["help"] = (kwargs.get("help", "") + " Option is required if '" + "', '".join(self.required_if_not) + "' not provided.").strip()
         super(Alo, self).__init__(*args, **kwargs)
 
     def handle_parse_result(self, ctx, opts, args):
         current_opt:bool = self.name in opts
-        for alo_opt in self.required_if_not:
-            if alo_opt not in opts:
-                if not current_opt:
-                    raise click.UsageError("At least one of '" + str(self.name) + "' or '" + str(alo_opt) + "' is required.")
-                else:
-                    self.prompt = None
+        if all(alo_opt not in opts for alo_opt in self.required_if_not) and not current_opt:
+            raise click.UsageError(
+                "At least one of '" + "', '".join(self.required_if_not) + 
+                "' or '" + str(self.name) +  "' options must be provided."
+            )
+        else:
+            self.prompt = None
         return super(Alo, self).handle_parse_result(ctx, opts, args)
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
@@ -185,25 +186,33 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     short_help='Prepare the config file.',
 )
 @click.option(
-    '-b',
-    '--bascdir',
-    help='Path to a directory of the basecalled fastq files. ',
+    "-b",
+    "--bascdir",
+    help="Path to a directory of the basecalled fastq files.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = Alo,
-    required_if_not = ['demuxdir'],
+    required_if_not = ["demuxdir", "merge"],
 )
 @click.option(
-    '-x',
-    '--demuxdir',
-    help='Path to a directory of demultiplexed fastq files. ',
+    "-x",
+    "--demuxdir",
+    help="Path to a directory of demultiplexed fastq files.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = Alo,
-    required_if_not = ['bascdir'],
+    required_if_not = ["bascdir", "merge"],
 )
 @click.option(
-    '-d',
-    '--dbdir',
-    help='Path to the taxonomy databases.',
+    "--merge",
+    help="Path to the working directory of a completed LACA run.",
+    multiple=True,
+    type=click.Path(dir_okay=True,writable=True,resolve_path=True),
+    cls = Alo,
+    required_if_not = ["bascdir", "demuxdir"],
+)
+@click.option(
+    "-d",
+    "--dbdir",
+    help="Path to the taxonomy databases.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     required=True
 )
@@ -317,14 +326,14 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     help="Clean flag files.",
 )
 def run_init(
-    bascdir, demuxdir, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
+    bascdir, demuxdir, merge, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
     kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi, clean_flags):
     """
     Prepare config file for LACA.
     """ 
     logger.info(f"LACA version: {__version__}")
     init_conf(
-        bascdir, demuxdir, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
+        bascdir, demuxdir, merge, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
         no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi)
     # clean flags if requested
     if clean_flags:
