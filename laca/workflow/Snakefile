@@ -47,7 +47,7 @@ include: "rules/kmerBin.smk"
 include: "rules/clustCon.smk"
 include: "rules/umiCon.smk"
 include: "rules/quant.smk"
-include: "rules/requant.smk"
+include: "rules/merge.smk"
 include: "rules/taxonomy.smk"
 include: "rules/tree.smk"
 
@@ -88,7 +88,7 @@ rule tree:
         ["tree/" + str(x) + "/tree.nwk" for x in config["phylogeny"]],
         "tree.nwk",
 
-rule requant:
+rule merge:
     input:
-        "rep_seqs_requant.fasta",
-        "count_matrix_requant.tsv",
+        "rep_seqs_merged.fasta",
+        "count_matrix_merged.tsv",

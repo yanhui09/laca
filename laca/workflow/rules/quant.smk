@@ -38,8 +38,6 @@ rule derep_denoised_seqs:
 rule rename_fasta_header:
     input: rules.derep_denoised_seqs.output.rep
     output: "rep_seqs.fasta"
-    log: "logs/quant/rename_fasta.log"
-    benchmark: "benchmarks/quant/rename_fasta.benchmark"
     run:
         with open(output[0], "w") as out:
             with open (input[0], "r") as inp:

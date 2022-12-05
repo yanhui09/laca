@@ -160,7 +160,7 @@ def cli(self):
     type=click.Choice(
         ["demux", "qc", "kmerBin",
          "kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon",
-         "quant", "taxa", "tree", "requant", "all",
+         "quant", "taxa", "tree", "all", "merge",
          "initDB", "nanosim"]
     ),
 )

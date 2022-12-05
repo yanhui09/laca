@@ -2,6 +2,7 @@
 basecalled_dir: 
 database_dir: 
 demultiplexed_dir:
+merge_runs:
 
 threads:
   normal: 2 # common jobs
