@@ -10,6 +10,10 @@ rule guppy:
         barcode_kits = config["guppy"]["barcode_kits"],
     shell: 
         """
+        if [ {params.indir} == "None" ]; then
+            echo "ERROR: 'basecalled_dir' not found in config."
+            exit 1
+        fi
         guppy_barcoder -i {params.indir} -s {output} -t {threads} --barcode_kits {params.barcode_kits} --trim_barcodes 2>{log}
         """
     
@@ -47,6 +51,10 @@ rule collect_minibars:
     benchmark: "benchmarks/demultiplex/minibar/collect_batch.txt"
     shell:
         """
+        if [ ! -d {params.indir} ]; then
+            echo "ERROR: 'basecalled_dir' not found in config."
+            exit 1
+        fi
         mv {params.indir} {output}
         mkdir -p {output}/unclassified {output}/mult
         # create barcode list
