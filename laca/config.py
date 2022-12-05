@@ -18,6 +18,7 @@ def init_conf(
     no_trim=False,
     kmerbin=False,
     cluster=["isONclustCon"],
+    quant=["seqid"],
     chimer_filter=False,
     jobs_m=2,
     jobs_M=6,
@@ -42,7 +43,8 @@ def init_conf(
         subsample (bool): if True, subsample the reads [default: False]
         no_trim (bool): if True, do not trim the primers [default: False]
         kmerbin (bool): if True, conduct kmer binning  [default: False]
-        cluster (list): list of methods to generate consensus (kmerCon, clustCon, isONclustCon, isONcorCon, umiCon) [default: "isONclustCon"]
+        cluster (list): list of methods to generate consensus (kmerCon, clustCon, isONclustCon, isONcorCon, umiCon) [default: ["isONclustCon"]]
+        quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
         chimer_filter (bool): if True, filter possible chimeras by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
         jobs_M (int): number of jobs for threads-dependent tasks [default: 6]
@@ -135,6 +137,7 @@ def init_conf(
     conf["trim"] = not no_trim
     conf["kmerbin"] = kmerbin
     conf["cluster"] = list(cluster)
+    conf["quant"] = list(quant)
     conf["chimeraF"] = chimer_filter
     conf["threads"]["normal"] = jobs_m
     conf["threads"]["large"] = jobs_M

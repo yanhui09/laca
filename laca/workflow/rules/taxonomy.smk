@@ -114,7 +114,6 @@ rule taxonomy_mmseqs2:
 
 rule classify_kraken2:
     input:
-        ancient(DATABASE_DIR + "/.initDB_DONE"),
         ancient(expand(DATABASE_DIR + "/kraken2/{prefix}.k2d", prefix = ["hash", "opts", "taxo"])), 
         fna = ancient(get_repseqs()),
     output: temp("taxonomy/kraken2/classified.tsv"),

@@ -303,7 +303,15 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     default=["isONclustCon"],
     show_default=True,
     multiple=True,
-    help="Consensus methods.",
+    help="Consensus methods.  [Mutiple]",
+)
+@click.option(
+    "--quant",
+    type=click.Choice(["seqid", "minimap2"]),
+    default=["seqid"],
+    show_default=True,
+    multiple=True,
+    help="Create abundance matrix by sequence id or minimap2.  [Mutiple]",
 )
 @click.option(
     "--chimerf",
@@ -356,14 +364,14 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
 )
 def run_init(
     bascdir, demuxdir, merge, merge_parent, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
-    kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi, clean_flags):
+    kmerbin, cluster, quant, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi, clean_flags):
     """
     Prepare config file for LACA.
     """ 
     logger.info(f"LACA version: {__version__}")
     init_conf(
         bascdir, demuxdir, merge, merge_parent, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
-        no_trim, kmerbin, cluster, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi)
+        no_trim, kmerbin, cluster, quant, chimerf, jobs_min, jobs_max, nanopore, pacbio, longumi)
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir
