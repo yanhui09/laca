@@ -83,36 +83,32 @@ class AloMutex(click.Option):
         self.required_if_not:list = kwargs.pop("required_if_not")
         self.not_required_if:list = kwargs.pop("not_required_if")
 
-        assert self.required_if_not, "'required_if_not' parameter required"
-        assert self.not_required_if, "'not_required_if' parameter required"
-        kwargs["help"] = (
-            kwargs.get("help", "") + " Option is required if '" + "', '".join(self.required_if_not) + "' not provided." +
-            " Option is mutually exclusive with '" + "', '".join(self.not_required_if) + "'."
-            ).strip()
+        if self.required_if_not:
+            kwargs["help"] = (
+                kwargs.get("help", "") + " Option is required if '" + "', '".join(self.required_if_not) + "' not provided."
+                ).strip()
+        if self.not_required_if:
+            kwargs["help"] = (
+                kwargs.get("help", "") + " Option is mutually exclusive with '" + "', '".join(self.not_required_if) + "'."
+                ).strip()
         super(AloMutex, self).__init__(*args, **kwargs)
 
     def handle_parse_result(self, ctx, opts, args):
         current_opt:bool = self.name in opts
-        if all(alo_opt not in opts for alo_opt in self.required_if_not) and not current_opt:
+        if self.required_if_not and all(alo_opt not in opts for alo_opt in self.required_if_not) and not current_opt:
             raise click.UsageError(
                 "at least one of '" + "', '".join(self.required_if_not) + 
                 "' and '" + str(self.name) +  "' options is provided."
                 )
-        #elif current_opt and any(mutex_opt in opts for mutex_opt in self.not_required_if):
-        #    raise click.UsageError(
-        #        "', '".join(self.not_required_if) + "' and '" + str(self.name) + 
-        #        "' are mutually exclusive." 
-        #        )
-        #else:
-        #    self.prompt = None
-        for mutex_opt in self.not_required_if:
-            if mutex_opt in opts:
-                if current_opt:
-                    raise click.UsageError(
-                        "'" + str(self.name) + "' is mutually exclusive with '" + str(mutex_opt) + "'."
-                        )
-                else:
-                    self.prompt = None
+        if self.not_required_if:
+            for mutex_opt in self.not_required_if:
+                if mutex_opt in opts:
+                    if current_opt:
+                        raise click.UsageError(
+                            "'" + str(self.name) + "' is mutually exclusive with '" + str(mutex_opt) + "'."
+                            )
+                    else:
+                        self.prompt = None
         return super(AloMutex, self).handle_parse_result(ctx, opts, args)
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
@@ -209,7 +205,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     help="Path to a directory of the basecalled fastq files.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = AloMutex,
-    required_if_not = ["demuxdir", "merge", "merge_parent"],
+    required_if_not = [],
     not_required_if = ["merge", "merge_parent", "demuxdir"],
 )
 @click.option(
@@ -218,7 +214,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     help="Path to a directory of demultiplexed fastq files.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = AloMutex,
-    required_if_not = ["bascdir", "merge", "merge_parent"],
+    required_if_not = [],
     not_required_if = ["merge", "merge_parent", "bascdir"],
 )
 @click.option(
@@ -227,7 +223,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     multiple=True,
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = AloMutex,
-    required_if_not = ["bascdir", "demuxdir", "merge_parent"],
+    required_if_not = [],
     not_required_if = ["bascdir", "demuxdir"],
 )
 @click.option(
@@ -235,7 +231,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     help="Path to the parent of the working directories of completed LACA runs. Runs will be combined if --merge applied.",
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = AloMutex,
-    required_if_not = ["bascdir", "demuxdir", "merge"],
+    required_if_not = [],
     not_required_if = ["bascdir", "demuxdir"],
 )
 @click.option(
