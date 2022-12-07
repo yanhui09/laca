@@ -3,16 +3,6 @@ configfile: "config.yaml"
 #--------------
 DATABASE_DIR = config["database_dir"].rstrip("/")
 
-def check_inp(
-    basecalled = config["basecalled_dir"], 
-    demultiplexed = config["demultiplexed_dir"], 
-    merge_runs = config["merge_runs"]):
-    # at least one is specified, 
-    if basecalled is None and demultiplexed is None and merge_runs == []:
-        raise ValueError(
-            "\n  At least one of 'basecalled_dir', 'demultiplexed_dir' or 'merge_runs' is specified in config.\n")
-check_inp()
-
 def check_val(var, val, class_type):
     if not isinstance(val, class_type):
         warns = ("\n  " + str(var) + " only accepts " + str(class_type) + " values." +
@@ -96,10 +86,11 @@ rule tree:
 def collect_merge(
     bascdir = config["basecalled_dir"], 
     demuxdir = config["demultiplexed_dir"], 
+    merge_runs = config["merge_runs"],
     classifier = config["classifier"],
     phylogeny = config["phylogeny"]):
     out = ["rep_seqs_merged.fasta", "count_matrix_merged.tsv"]
-    if bascdir is None and demuxdir is None:
+    if bascdir is None and demuxdir is None and merge_runs is not None:
         out += ["taxonomy/" + str(x) + "/taxonomy.tsv" for x in classifier]
         out += ["tree/" + str(x) + "/tree.nwk" for x in phylogeny]
         out += ["taxonomy.tsv", "tree.nwk"]

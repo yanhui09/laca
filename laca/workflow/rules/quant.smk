@@ -355,10 +355,12 @@ rule q2repseqs_export:
 def get_repseqs(
     bascdir = config["basecalled_dir"], 
     demuxdir = config["demultiplexed_dir"], 
+    merge_runs = config["merge_runs"],
     uchime = config["uchime"]
     ):
-    # use rep_seqs_merged.fasta if bascdir and demuxdir are none
-    if bascdir is None and demuxdir is None:
+    # rep_seqs_merged.fasta if 'bascdir' and 'demuxdir' are none
+    # and 'merge_runs' is not empty
+    if bascdir is None and demuxdir is None and merge_runs is not None:
         return "rep_seqs_merged.fasta"
     else:
         return chimera_filt(uchime)[1]

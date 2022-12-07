@@ -25,12 +25,13 @@ def trim_check2(
     trim = config["trim"], 
     bascdir = config["basecalled_dir"], 
     demuxdir = config["demultiplexed_dir"], 
+    merge_runs = config["merge_runs"],
     uchime = config["uchime"]
     ):
     check_val("trim", trim, bool)
     out = rules.trim_repseqs.output
     if trim ==  False:
-        out = get_repseqs(bascdir, demuxdir, uchime)
+        out = get_repseqs(bascdir, demuxdir, merge_runs, uchime)
     return out
 
 rule q2_repseqs:
