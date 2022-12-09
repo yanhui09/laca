@@ -1,6 +1,6 @@
 name: q2rescript
 channels:
-  - qiime2/label/r2022.8
+  - qiime2/label/r2022.2
   - https://packages.qiime2.org/qiime2/2022.8/passed/core/
   - conda-forge
   - bioconda
