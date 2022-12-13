@@ -275,6 +275,9 @@ checkpoint cls_isONcorCon:
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input.cls):
+            # if empty, skip
+            if os.stat(i).st_size == 0:
+                continue
             bc_kb_ci = i.split('/')[-3]
             df_i = pd.read_csv(i, sep = '\t', header = None, usecols=range(2))
             df_i.columns = ['seqid', 'cluster']
