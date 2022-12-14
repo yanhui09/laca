@@ -78,10 +78,12 @@ hdbscan:
 # cluster within kmer bins
 # mode for cluster consensus [ClustCon|isONclustCon|isONcorCon]
 # ClustCon: cluster based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
-# isONclustCon: NGSpeciesID on kmer clusters (divergent similarity)
+# isONclustCon: isONclust consensus(divergent similarity)
+# NGSpeciesID: isONclust consensus refined by NGSpeciesID 
 # isONcorCon: isONclust followed by isONcorrect/IsoCon (close similarity)
 cluster:
   #- isONclustCon # the first is the final kOTUs
+  #- NGSpeciesID
   #- kmerCon 
   #- isONcorCon # sinlge target/amplification region
   #- clustCon 
@@ -91,6 +93,9 @@ min_cluster_size: 20
 ava2clust: # [clustCon]
   min_score_frac: 0.8
   max_recursion: -1 # non-zero value to override python's max recursion depth
+
+NGSpeciesID:
+  abundance_ratio: 0.1  
 
 isONclust:
   # --ont: --k13 --w20; --isoseq: --k15 --w50

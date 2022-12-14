@@ -1,5 +1,5 @@
 # check classifier choice
-check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustCon", "isONcorCon", "umiCon"])
+check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "NGSpeciesID", "isONclustCon", "isONcorCon", "umiCon"])
 # check quantification method
 check_list_ele("quant", config["quant"], ["seqid", "minimap2"])
 

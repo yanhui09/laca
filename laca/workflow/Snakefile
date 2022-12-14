@@ -61,6 +61,9 @@ rule kmerCon:
 rule clustCon:
     input: "clustCon/clustCon.fna"
 
+rule NGSpeciesID:
+    input: "NGSpeciesID/NGSpeciesID.fna"
+
 rule isONclustCon:
     input: "isONclustCon/isONclustCon.fna"
 

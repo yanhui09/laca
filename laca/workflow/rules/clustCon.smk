@@ -121,6 +121,96 @@ rule get_fqs_split2:
         seqkit replace -p '^(.+)$' -r '{wildcards.barcode}_{wildcards.c}_{wildcards.clust_id}' -o {output.ref} 2> {log}
         """
 
+rule run_NGSpeciesID:
+    input: get_fq4Con()
+    output:
+        _dir = temp(directory("NGSpeciesID/isONclust/{barcode}_{c}")),
+        tsv = temp("NGSpeciesID/isONclust/{barcode}_{c}.tsv"),
+    params:
+        k = config["isONclust"]["k"],
+        w = config["isONclust"]["w"],
+        abundance_ratio = config["NGSpeciesID"]["abundance_ratio"],
+        barcode_c = "{barcode}_{c}",
+    conda: "../envs/NGSpeciesID.yaml"
+    log: "logs/NGSpeciesID/isONclust/{barcode}_{c}.log"
+    benchmark: "benchmarks/NGSpeciesID/isONclust/{barcode}_{c}.txt"
+    threads: config["threads"]["large"]
+    shell:
+        """
+        NGSpeciesID --k {params.k} --w {params.w} --fastq {input} \
+        --abundance_ratio {params.abundance_ratio} --rc_identity_threshold 1 --racon --racon_iter 0 --consensus \
+        --t {threads} --outfolder {output._dir} > {log} 2>&1
+        # At least one reads_to_consensus*[0-9].fastq exists, or exit with error: no consesus generated
+        if [ $(ls {output._dir}/reads_to_consensus*[0-9].fastq | wc -l) -eq 0 ] ; then
+            echo "No consensuses pass through NGSpeciesID. Consider loose the abundance_ratio in config." > {log}
+            exit 1
+        fi
+        # create {output.tsv} file with two columns: consensus_id, seqid
+        touch {output.tsv}
+        PARENT=$(dirname $(dirname {output._dir}))
+        mkdir -p $PARENT/split $PARENT/polish/ 
+        for i in {output._dir}/reads_to_consensus*[0-9].fastq; do
+            consensus_id=$(basename $i | sed "s/reads_to_consensus_//;s/.fastq//")
+            sed -n "1~4p" $i | sed "s/^@/$consensus_id\t/;s/_[^_]*$//" >> {output.tsv}
+            # mv fastq to split dir
+            mv $i $PARENT/split/{params.barcode_c}_$consensus_id.fastq
+            # mv fasta to polish dir
+            mkdir -p $PARENT/polish/{params.barcode_c}_$consensus_id/minimap2
+            mv {output._dir}/racon_cl_id_$consensus_id/consensus.fasta $PARENT/polish/{params.barcode_c}_$consensus_id/minimap2/raw.fna
+        done
+        """
+
+def get_isONclust(wildcards, cls, pool = config["pool"], kmerbin = config["kmerbin"]):
+    check_val("pool", pool, bool)
+    check_val("kmerbin", kmerbin, bool)
+        
+    if kmerbin == True:
+        bin2cls = []
+        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+        for i in bc_kbs:
+            bc, kb = i.split("_")
+            bin2cls.append("{cls}/isONclust/{bc}_{kb}.tsv".format(cls=cls, bc=bc, kb=kb))
+    else:
+        if pool == True:
+           bcs = ["pooled"]
+        else:
+           bcs = get_qced_barcodes(wildcards)
+        bin2cls = expand(cls + "/isONclust/{bc}_all.tsv", bc=bcs)
+    return bin2cls
+
+checkpoint cls_NGSpeciesID:
+    input:
+        ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
+        lambda wc: get_kmerBin(wc),
+        cls = lambda wc: get_isONclust(wc, cls="NGSpeciesID"),
+    output: directory("NGSpeciesID/clusters")
+    params:
+        min_size = config["min_cluster_size"],
+    run:
+        import pandas as pd
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input.cls):
+            barcode, c = [ i.split('/')[-1].removesuffix(".tsv").split('_')[index] for index in [-2, -1] ]
+            df_i = pd.read_csv(i, sep = '\t', header = None)
+            df_i.columns = ['cluster', 'seqid']
+            for clust_id, df_clust in df_i.groupby('cluster'):
+                if len(df_clust) >= params.min_size:
+                    df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c}_{clust_id}.csv".format(barcode=barcode, c=c, clust_id=clust_id),
+                     header = False, index = False)
+
+rule touch_NGSpeciesID_out:
+    input: "NGSpeciesID/clusters/{barcode}_{c}_{clust_id}.csv"
+    output:
+        fna = temp("NGSpeciesID/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna"),
+        fastq = temp("NGSpeciesID/split/{barcode}_{c}_{clust_id}.fastq"),
+    shell:
+        """
+        touch {output.fna}
+        touch {output.fastq}
+        """
+
 # isONclust
 rule isONclust:
     input: get_fq4Con()
@@ -140,30 +230,12 @@ rule isONclust:
         mv {output._dir}/final_clusters.tsv {output.tsv}
         """
 
-def get_isONclust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
-    check_val("pool", pool, bool)
-    check_val("kmerbin", kmerbin, bool)
-        
-    if kmerbin == True:
-        bin2cls = []
-        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
-        for i in bc_kbs:
-            bc, kb = i.split("_")
-            bin2cls.append("isONclustCon/isONclust/{bc}_{kb}.tsv".format(bc=bc, kb=kb))
-    else:
-        if pool == True:
-           bcs = ["pooled"]
-        else:
-           bcs = get_qced_barcodes(wildcards)
-        bin2cls = expand("isONclustCon/isONclust/{bc}_all.tsv", bc=bcs)
-    return bin2cls
-
 checkpoint cls_isONclust:
     input:
         ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
         lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
         lambda wc: get_kmerBin(wc),
-        cls = lambda wc: get_isONclust(wc),
+        cls = lambda wc: get_isONclust(wc, cls="isONclustCon"),
     output: directory("isONclustCon/clusters")
     params:
         min_size = config["min_cluster_size"],
@@ -459,6 +531,8 @@ def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter 
         candidates = [i + "_0" for i in bc_kbs]
     elif wildcards.cls == "clustCon":
         candidates = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "NGSpeciesID":
+        candidates = glob_wildcards(checkpoints.cls_NGSpeciesID.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     elif wildcards.cls == "isONclustCon":
         candidates = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     elif wildcards.cls == "isONcorCon":
