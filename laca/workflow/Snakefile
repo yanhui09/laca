@@ -67,6 +67,12 @@ rule NGSpeciesID:
 rule isONclustCon:
     input: "isONclustCon/isONclustCon.fna"
 
+rule NGSpeciesID2:
+    input: "NGSpeciesID2/NGSpeciesID2.fna"
+
+rule isONclustCon2:
+    input: "isONclustCon2/isONclustCon2.fna"
+
 rule isONcorCon:
     input: "isONcorCon/isONcorCon.fna"
 

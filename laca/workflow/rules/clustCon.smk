@@ -10,8 +10,8 @@ def get_fq4Con(kmerbin = config["kmerbin"]):
 rule get_fqs_split:
     input: get_fq4Con()
     output: temp("kmerCon/split/{barcode}_{c}_0.fastq"),
-    log: "logs/kmerCon/{barcode}_{c}_0/get_fqs_split.log"
-    benchmark: "benchmarks/kmerCon/{barcode}_{c}_0/get_fqs_split.txt"
+    log: "logs/kmerCon/get_fqs_split/{barcode}_{c}_0.log"
+    benchmark: "benchmarks/kmerCon/get_fqs_split/{barcode}_{c}_0.txt"
     shell: "cp -f {input} {output} 2> {log}"
 
 rule spoa:
@@ -22,8 +22,8 @@ rule spoa:
         l = config["spoa"]["l"],
         r = config["spoa"]["r"],
         g = config["spoa"]["g"],
-    log: "logs/kmerCon/{barcode}_{c}_0/spoa.log"
-    benchmark: "benchmarks/kmerCon/{barcode}_{c}_0/spoa.txt"
+    log: "logs/kmerCon/spoa/{barcode}_{c}_0.log"
+    benchmark: "benchmarks/kmerCon/spoa/{barcode}_{c}_0.txt"
     shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}"
 
 # clustCon
@@ -258,8 +258,8 @@ rule get_fqs_split3:
         binned = get_fq4Con(),
     output: temp("isONclustCon/split/{barcode}_{c}_{clust_id}.fastq"),
     conda: '../envs/seqkit.yaml'
-    log: "logs/isONclustCon/{barcode}_{c}_{clust_id}/get_fqs_split.log"
-    benchmark: "benchmarks/isONclustCon/{barcode}_{c}_{clust_id}/get_fqs_split.txt"
+    log: "logs/isONclustCon/get_fqs_split/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/isONclustCon/get_fqs_split/{barcode}_{c}_{clust_id}.txt"
     shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
 
 use rule spoa as spoa2 with:
@@ -268,9 +268,9 @@ use rule spoa as spoa2 with:
     output: 
         temp("isONclustCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
     log: 
-        "logs/isONclustCon/{barcode}_{c}_{clust_id}/spoa.log"
+        "logs/isONclustCon/spoa/{barcode}_{c}_{clust_id}.log"
     benchmark: 
-        "benchmarks/isONclustCon/{barcode}_{c}_{clust_id}/spoa.txt"
+        "benchmarks/isONclustCon/spoa/{barcode}_{c}_{clust_id}.txt"
 
 # isONcorCon
 # run_isoncorrect provide multithread processing for isONcorrect in batches
@@ -389,6 +389,105 @@ rule get_fqs_split4:
     log: "logs/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/get_fqs_split.log"
     benchmark: "benchmarks/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/get_fqs_split.txt"
     shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
+
+use rule kmer_freqs as kmer_freqs2 with:
+    input: 
+        "{cls}/split/{barcode}_{c}_{clust_id}.fastq"
+    output: 
+        temp("{cls}/kmerBin/{barcode}_{c}_{clust_id}/kmer_freqs.txt")
+    log: 
+        "logs/{cls}/kmerBin/kmer_freqs/{barcode}_{c}_{clust_id}.log"
+    benchmark: 
+        "benchmarks/{cls}/kmerBin/kmer_freqs/{barcode}_{c}_{clust_id}.txt"
+
+use rule umap as umap2 with:
+    input: 
+        rules.kmer_freqs2.output
+    output: 
+        cluster=temp("{cls}/kmerBin/{barcode}_{c}_{clust_id}/hdbscan.tsv"),
+	    plot="{cls}/kmerBin/{barcode}_{c}_{clust_id}/hdbscan.png",
+    log: 
+        "logs/{cls}/kmerBin/umap/{barcode}_{c}_{clust_id}.log"
+    benchmark: 
+        "benchmarks/{cls}/kmerBin/umap/{barcode}_{c}_{clust_id}.txt"
+
+checkpoint cls_isONclust2:
+    input:
+        ".qc_DONE",
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
+        lambda wc: expand("isONclustCon/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclust.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
+        bin = lambda wc: expand("isONclustCon/kmerBin/{bc_kb_ci}/hdbscan.tsv", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclust.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
+    output: directory("isONclustCon2/clusters"),
+    run:
+        import pandas as pd
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input.bin):
+            bc_kb_ci = i.split("/")[-2]
+            df_i = pd.read_csv(i, sep="\t")
+            # unclustered reads are assigned to bin -1, drop
+            df_i = df_i[df_i.bin_id != -1]
+
+            if 'batch_id' in df_i.columns:
+                 # concatanate the batch_id bin_id column
+                 df_i['bin_id'] = df_i['bin_id'].astype(str) + df_i['batch_id'].astype(str)
+            df_i = df_i[["read", "bin_id"]]
+            for clust_id, df_clust in df_i.groupby('bin_id'):
+                df_clust['read'].to_csv(output[0] + "/{bc_kb_ci}cand{c}.csv".format(
+                    bc_kb_ci=bc_kb_ci, c=clust_id), header = False, index = False)
+
+use rule split_bin as split_bin_isONclust with:
+    input:
+        cluster = "isONclustCon2/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
+        fqs = "isONclustCon/split/{barcode}_{c}_{clust_id}.fastq"
+    output: 
+        temp("isONclustCon2/split/{barcode}_{c}_{clust_id}cand{cand}.fastq"),
+    log: 
+        "logs/isONclustCon2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.log"
+    benchmark: 
+        "benchmarks/isONclustCon2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.txt"
+
+checkpoint cls_NGSpeciesID2:
+    input:
+        ".qc_DONE",
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
+        lambda wc: expand("NGSpeciesID/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_NGSpeciesID.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
+        bin = lambda wc: expand("NGSpeciesID/kmerBin/{bc_kb_ci}/hdbscan.tsv", bc_kb_ci=glob_wildcards(checkpoints.cls_NGSpeciesID.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
+    output: directory("NGSpeciesID2/clusters"),
+    run:
+        import pandas as pd
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input.bin):
+            bc_kb_ci = i.split("/")[-2]
+            df_i = pd.read_csv(i, sep="\t")
+            # unclustered reads are assigned to bin -1, drop
+            df_i = df_i[df_i.bin_id != -1]
+
+            if 'batch_id' in df_i.columns:
+                 # concatanate the batch_id bin_id column
+                 df_i['bin_id'] = df_i['bin_id'].astype(str) + df_i['batch_id'].astype(str)
+            df_i = df_i[["read", "bin_id"]]
+            for clust_id, df_clust in df_i.groupby('bin_id'):
+                df_clust['read'].to_csv(output[0] + "/{bc_kb_ci}cand{c}.csv".format(
+                    bc_kb_ci=bc_kb_ci, c=clust_id), header = False, index = False)
+
+use rule split_bin as split_bin_NGSpeciesID with:
+    input:
+        cluster = "NGSpeciesID2/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
+        fqs = "NGSpeciesID/split/{barcode}_{c}_{clust_id}.fastq"
+    output: 
+        temp("NGSpeciesID2/split/{barcode}_{c}_{clust_id}cand{cand}.fastq"),
+    log: 
+        "logs/NGSpeciesID2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.log"
+    benchmark: 
+        "benchmarks/NGSpeciesID2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.txt"
+
+use rule spoa as spoa3 with:
+    input: "{cls}/split/{barcode}_{c}_{clust_id}cand{cand}.fastq"
+    output: temp("{cls}/polish/{barcode}_{c}_{clust_id}cand{cand}/minimap2/raw.fna")
+    log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}cand{cand}.log"
+    benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}cand{cand}.txt"
 
 # polish with racon and medaka
 # reused in racon iterations
@@ -535,6 +634,10 @@ def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter 
         candidates = glob_wildcards(checkpoints.cls_NGSpeciesID.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     elif wildcards.cls == "isONclustCon":
         candidates = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "NGSpeciesID2":
+        candidates = glob_wildcards(checkpoints.cls_NGSpeciesID2.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
+    elif wildcards.cls == "isONclustCon2":
+        candidates = glob_wildcards(checkpoints.cls_isONclust2.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
     elif wildcards.cls == "isONcorCon":
         candidates = glob_wildcards(checkpoints.cls_isONcorCon.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
     elif wildcards.cls == "umiCon":

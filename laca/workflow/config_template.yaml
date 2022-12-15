@@ -48,7 +48,7 @@ cutadapt:
   min_overlap: 6
 
 ##############################################################
-# kmer binning
+# Pre-kmer binning
 kmerbin: True
 bin_mem: 50 # GB
 # Bool, whether to bin or not; TRUE is highly recommened in clustCon mode,
@@ -103,7 +103,7 @@ isONclust:
   w: 20
 
 spoa:
-  l: 1 # global alignment (1) for multi-primer amplicons; local alignment (0) for common amplicons
+  l: 1 # global alignment (1); local alignment (0)
   r: 0
   g: -2
 
