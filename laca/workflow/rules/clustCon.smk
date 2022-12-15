@@ -317,7 +317,7 @@ use rule umap as umap2 with:
     input: 
         rules.kmer_freqs2.output
     output: 
-        cluster=temp("{cls}/kmerBin/{barcode}_{c}_{clust_id}/hdbscan.tsv"),
+        cluster="{cls}/kmerBin/{barcode}_{c}_{clust_id}/hdbscan.tsv",
 	    plot="{cls}/kmerBin/{barcode}_{c}_{clust_id}/hdbscan.png",
     log: 
         "logs/{cls}/kmerBin/umap/{barcode}_{c}_{clust_id}.log"
