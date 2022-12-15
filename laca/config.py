@@ -43,7 +43,7 @@ def init_conf(
         subsample (bool): if True, subsample the reads [default: False]
         no_trim (bool): if True, do not trim the primers [default: False]
         kmerbin (bool): if True, conduct kmer binning  [default: False]
-        cluster (list): list of methods to generate consensus (kmerCon, clustCon, NGSpeciesID, isONclustCon, isONcorCon, umiCon) [default: ["isONclustCon"]]
+        cluster (list): list of methods to generate consensus (kmerCon, clustCon, NGSpeciesID, NGSpeciesID2, isONcorCon, umiCon) [default: ["isONclustCon"]]
         quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
         chimer_filter (bool): if True, filter possible chimeras by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]

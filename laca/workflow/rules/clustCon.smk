@@ -1,35 +1,7 @@
-def get_fq4Con(kmerbin = config["kmerbin"]):
-    check_val("kmerbin", kmerbin, bool)
-    if kmerbin == True:
-        out = rules.split_bin.output
-    else:
-        out = rules.skip_bin.output
-    return out
-
-# kmerCon
-rule get_fqs_split:
-    input: get_fq4Con()
-    output: temp("kmerCon/split/{barcode}_{c}_0.fastq"),
-    log: "logs/kmerCon/get_fqs_split/{barcode}_{c}_0.log"
-    benchmark: "benchmarks/kmerCon/get_fqs_split/{barcode}_{c}_0.txt"
-    shell: "cp -f {input} {output} 2> {log}"
-
-rule spoa:
-    input: rules.get_fqs_split.output
-    output: temp("kmerCon/polish/{barcode}_{c}_0/minimap2/raw.fna")
-    conda: '../envs/spoa.yaml'
-    params:
-        l = config["spoa"]["l"],
-        r = config["spoa"]["r"],
-        g = config["spoa"]["g"],
-    log: "logs/kmerCon/spoa/{barcode}_{c}_0.log"
-    benchmark: "benchmarks/kmerCon/spoa/{barcode}_{c}_0.txt"
-    shell: "spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}"
-
 # clustCon
 # draw draft with max average score from pairwise alignments
 rule minimap2ava:
-    input: get_fq4Con()
+    input: rules.fqs_split.output
     output: temp("clustCon/minimap2va/{barcode}_{c}.paf")
     conda: '../envs/minimap2.yaml'
     params:
@@ -57,29 +29,19 @@ rule ava2clust:
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
-def get_clust(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
-    check_val("pool", pool, bool)
-    check_val("kmerbin", kmerbin, bool)
-        
-    if kmerbin == True:
-        bin2cls = []
-        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
-        for i in bc_kbs:
-            bc, kb = i.split("_")
-            bin2cls.append("clustCon/ava2clust/{bc}_{kb}.csv".format(bc=bc, kb=kb))
-    else:
-        if pool == True:
-           bcs = ["pooled"]
-        else:
-           bcs = get_qced_barcodes(wildcards)
-        bin2cls = expand("clustCon/ava2clust/{bc}_all.csv", bc=bcs)
+def get_clust(wildcards):
+    bin2cls = []
+    bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+    for i in bc_kbs:
+        bc, kb = i.split("_")
+        bin2cls.append("clustCon/ava2clust/{bc}_{kb}.csv".format(bc=bc, kb=kb))
     return bin2cls
 
 checkpoint cls_clustCon:
     input:
-        ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
+        ".qc_DONE",
         lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
-        lambda wc: get_kmerBin(wc),
+        lambda wc: get_kmerBin(wc, kmerbin=True),
         cls = lambda wc: get_clust(wc),
     output: directory("clustCon/clusters")
     params:
@@ -103,17 +65,17 @@ checkpoint cls_clustCon:
                         ref_read = df_clust.loc[ref_idx, ['read_id']]
                         ref_read.to_csv(output[0] + bc_kb_ci + ".ref", header=False, index=False)
    
-rule get_fqs_split2:
+rule fqs_split2:
     input:
         pool = "clustCon/clusters/{barcode}_{c}_{clust_id}.csv",
         ref = "clustCon/clusters/{barcode}_{c}_{clust_id}.ref",
-        binned = get_fq4Con(),
+        binned = rules.fqs_split.output,
     output:
         pool = temp("clustCon/split/{barcode}_{c}_{clust_id}.fastq"),
         ref = temp("clustCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna"),
     conda: '../envs/seqkit.yaml'
-    log: "logs/clustCon/{barcode}_{c}_{clust_id}/get_fqs_split.log"
-    benchmark: "benchmarks/clustCon/{barcode}_{c}_{clust_id}/get_fqs_split.txt"
+    log: "logs/clustCon/{barcode}_{c}_{clust_id}/fqs_split.log"
+    benchmark: "benchmarks/clustCon/{barcode}_{c}_{clust_id}/fqs_split.txt"
     shell:
         """
         seqkit grep -f {input.pool} {input.binned} -o {output.pool} --quiet 2> {log}
@@ -121,16 +83,25 @@ rule get_fqs_split2:
         seqkit replace -p '^(.+)$' -r '{wildcards.barcode}_{wildcards.c}_{wildcards.clust_id}' -o {output.ref} 2> {log}
         """
 
+def get_fq4Con(kmerbin = config["kmerbin"]):
+    check_val("kmerbin", kmerbin, bool)
+    if kmerbin == True:
+        out = rules.fqs_split.output
+    else:
+        out = "qc/qfilt/{barcode}.fastq"
+    return out
+
 rule run_NGSpeciesID:
     input: get_fq4Con()
     output:
         _dir = temp(directory("NGSpeciesID/isONclust/{barcode}_{c}")),
         tsv = temp("NGSpeciesID/isONclust/{barcode}_{c}.tsv"),
     params:
-        k = config["isONclust"]["k"],
-        w = config["isONclust"]["w"],
+        k = config["NGSpeciesID"]["k"],
+        w = config["NGSpeciesID"]["w"],
         abundance_ratio = config["NGSpeciesID"]["abundance_ratio"],
         barcode_c = "{barcode}_{c}",
+        min_reads = config["min_cluster_size"],
     conda: "../envs/NGSpeciesID.yaml"
     log: "logs/NGSpeciesID/isONclust/{barcode}_{c}.log"
     benchmark: "benchmarks/NGSpeciesID/isONclust/{barcode}_{c}.txt"
@@ -150,6 +121,10 @@ rule run_NGSpeciesID:
         PARENT=$(dirname $(dirname {output._dir}))
         mkdir -p $PARENT/split $PARENT/polish/ 
         for i in {output._dir}/reads_to_consensus*[0-9].fastq; do
+            # continue if less than {params.min_reads} reads
+            if [ $(sed -n "1~4p" $i | wc -l) -lt {params.min_reads} ]; then
+                continue
+            fi
             consensus_id=$(basename $i | sed "s/reads_to_consensus_//;s/.fastq//")
             sed -n "1~4p" $i | sed "s/^@/$consensus_id\t/;s/_[^_]*$//" >> {output.tsv}
             # mv fastq to split dir
@@ -200,83 +175,21 @@ checkpoint cls_NGSpeciesID:
                     df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c}_{clust_id}.csv".format(barcode=barcode, c=c, clust_id=clust_id),
                      header = False, index = False)
 
-rule touch_NGSpeciesID_out:
-    input: "NGSpeciesID/clusters/{barcode}_{c}_{clust_id}.csv"
-    output:
-        fna = temp("NGSpeciesID/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna"),
-        fastq = temp("NGSpeciesID/split/{barcode}_{c}_{clust_id}.fastq"),
-    shell:
-        """
-        touch {output.fna}
-        touch {output.fastq}
-        """
-
-# isONclust
-rule isONclust:
-    input: get_fq4Con()
-    output:
-        _dir = temp(directory("isONclustCon/isONclust/{barcode}_{c}")),
-        tsv = temp("isONclustCon/isONclust/{barcode}_{c}.tsv"),
-    params:
-        k = config["isONclust"]["k"],
-        w = config["isONclust"]["w"],
-    conda: "../envs/isONcorCon.yaml"
-    log: "logs/isONclustCon/isONclust/{barcode}_{c}.log"
-    benchmark: "benchmarks/isONclustCon/isONclust/{barcode}_{c}.txt"
-    threads: config["threads"]["large"]
-    shell:
-        """
-        isONclust --k {params.k} --w {params.w} --fastq {input} --outfolder {output._dir} --t {threads} > {log} 2>&1
-        mv {output._dir}/final_clusters.tsv {output.tsv}
-        """
-
-checkpoint cls_isONclust:
-    input:
-        ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
-        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
-        lambda wc: get_kmerBin(wc),
-        cls = lambda wc: get_isONclust(wc, cls="isONclustCon"),
-    output: directory("isONclustCon/clusters")
-    params:
-        min_size = config["min_cluster_size"],
-    run:
-        import pandas as pd
-        if not os.path.exists(output[0]):
-            os.makedirs(output[0])
-        for i in list(input.cls):
-            barcode, c = [ i.split('/')[-1].removesuffix(".tsv").split('_')[index] for index in [-2, -1] ]
-            df_i = pd.read_csv(i, sep = '\t', header = None)
-            df_i.columns = ['cluster', 'seqid']
-            for clust_id, df_clust in df_i.groupby('cluster'):
-                if len(df_clust) >= params.min_size:
-                    df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c}_{clust_id}.csv".format(barcode=barcode, c=c, clust_id=clust_id),
-                     header = False, index = False)
-
-rule get_fqs_split3:
-    input:
-        bin2clust = "isONclustCon/clusters/{barcode}_{c}_{clust_id}.csv",
-        binned = get_fq4Con(),
-    output: temp("isONclustCon/split/{barcode}_{c}_{clust_id}.fastq"),
-    conda: '../envs/seqkit.yaml'
-    log: "logs/isONclustCon/get_fqs_split/{barcode}_{c}_{clust_id}.log"
-    benchmark: "benchmarks/isONclustCon/get_fqs_split/{barcode}_{c}_{clust_id}.txt"
-    shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
-
-use rule spoa as spoa2 with:
-    input:
-        rules.get_fqs_split3.output
+use rule fqs_split as fqs_split3 with:
+    input: 
+        cluster = "NGSpeciesID/clusters/{barcode}_{c}_{clust_id}.csv",
+        fqs = get_fq4Con()
     output: 
-        temp("isONclustCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
+        temp("NGSpeciesID/split/{barcode}_{c}_{clust_id}.fastq")
     log: 
-        "logs/isONclustCon/spoa/{barcode}_{c}_{clust_id}.log"
-    benchmark: 
-        "benchmarks/isONclustCon/spoa/{barcode}_{c}_{clust_id}.txt"
+        "logs/NGSpeciesID/fqs_split/{barcode}_{c}_{clust_id}.log"
+    benchmark:
+        "benchmarks/NGSpeciesID/fqs_split/{barcode}_{c}_{clust_id}.txt"
 
 # isONcorCon
 # run_isoncorrect provide multithread processing for isONcorrect in batches
-# racon seems not to be supported in batch mode
 rule isONcorrect:
-    input: rules.get_fqs_split3.output
+    input: rules.fqs_split3.output
     output: temp("isONcorCon/{barcode}_{c}_{clust_id}/isONcor/{clust_id}/corrected_reads.fastq")
     conda: "../envs/isONcorCon.yaml"
     params:
@@ -307,7 +220,7 @@ def get_isoCon_input(isONcor = config["isONcor"]):
     if isONcor == True:
         return rules.isONcorrect.output
     else:
-        return rules.get_fqs_split3.output
+        return rules.fqs_split3.output
 
 rule isoCon:
     input: get_isoCon_input()
@@ -329,7 +242,7 @@ rule isoCon:
         """
 
 def get_isONcorCon(wildcards):
-    bc_kb_cis = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    bc_kb_cis = glob_wildcards(checkpoints.cls_NGSpeciesID.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     return {
     "cls": expand("isONcorCon/{bc_kb_ci}/IsoCon/cluster_info.tsv", bc_kb_ci = bc_kb_cis),
     "cands": expand("isONcorCon/{bc_kb_ci}/IsoCon/final_candidates.fa", bc_kb_ci = bc_kb_cis)
@@ -339,7 +252,7 @@ checkpoint cls_isONcorCon:
     input: 
         ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
         lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
-        lambda wc: expand("isONclustCon/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclust.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
+        lambda wc: expand("NGSpeciesID/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_NGSpeciesID.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
         unpack(get_isONcorCon),
     output: directory("isONcorCon/clusters"),
     run:
@@ -380,14 +293,14 @@ rule get_IsoCon_cand:
                         fo.write(lines[i+1])
                     break
 
-rule get_fqs_split4:
+rule fqs_split4:
     input:
         bin2clust = "isONcorCon/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
-        binned = rules.get_fqs_split3.output,
+        binned = rules.fqs_split3.output,
     output: temp("isONcorCon/split/{barcode}_{c}_{clust_id}cand{cand}.fastq")
     conda: "../envs/seqkit.yaml"
-    log: "logs/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/get_fqs_split.log"
-    benchmark: "benchmarks/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/get_fqs_split.txt"
+    log: "logs/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/fqs_split.log"
+    benchmark: "benchmarks/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/fqs_split.txt"
     shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"
 
 use rule kmer_freqs as kmer_freqs2 with:
@@ -410,42 +323,6 @@ use rule umap as umap2 with:
         "logs/{cls}/kmerBin/umap/{barcode}_{c}_{clust_id}.log"
     benchmark: 
         "benchmarks/{cls}/kmerBin/umap/{barcode}_{c}_{clust_id}.txt"
-
-checkpoint cls_isONclust2:
-    input:
-        ".qc_DONE",
-        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
-        lambda wc: expand("isONclustCon/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclust.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
-        bin = lambda wc: expand("isONclustCon/kmerBin/{bc_kb_ci}/hdbscan.tsv", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclust.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
-    output: directory("isONclustCon2/clusters"),
-    run:
-        import pandas as pd
-        if not os.path.exists(output[0]):
-            os.makedirs(output[0])
-        for i in list(input.bin):
-            bc_kb_ci = i.split("/")[-2]
-            df_i = pd.read_csv(i, sep="\t")
-            # unclustered reads are assigned to bin -1, drop
-            df_i = df_i[df_i.bin_id != -1]
-
-            if 'batch_id' in df_i.columns:
-                 # concatanate the batch_id bin_id column
-                 df_i['bin_id'] = df_i['bin_id'].astype(str) + df_i['batch_id'].astype(str)
-            df_i = df_i[["read", "bin_id"]]
-            for clust_id, df_clust in df_i.groupby('bin_id'):
-                df_clust['read'].to_csv(output[0] + "/{bc_kb_ci}cand{c}.csv".format(
-                    bc_kb_ci=bc_kb_ci, c=clust_id), header = False, index = False)
-
-use rule split_bin as split_bin_isONclust with:
-    input:
-        cluster = "isONclustCon2/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
-        fqs = "isONclustCon/split/{barcode}_{c}_{clust_id}.fastq"
-    output: 
-        temp("isONclustCon2/split/{barcode}_{c}_{clust_id}cand{cand}.fastq"),
-    log: 
-        "logs/isONclustCon2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.log"
-    benchmark: 
-        "benchmarks/isONclustCon2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.txt"
 
 checkpoint cls_NGSpeciesID2:
     input:
@@ -472,22 +349,40 @@ checkpoint cls_NGSpeciesID2:
                 df_clust['read'].to_csv(output[0] + "/{bc_kb_ci}cand{c}.csv".format(
                     bc_kb_ci=bc_kb_ci, c=clust_id), header = False, index = False)
 
-use rule split_bin as split_bin_NGSpeciesID with:
+use rule fqs_split as fqs_split_NGSpeciesID with:
     input:
         cluster = "NGSpeciesID2/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
         fqs = "NGSpeciesID/split/{barcode}_{c}_{clust_id}.fastq"
     output: 
         temp("NGSpeciesID2/split/{barcode}_{c}_{clust_id}cand{cand}.fastq"),
     log: 
-        "logs/NGSpeciesID2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.log"
+        "logs/NGSpeciesID2/fqs_split/{barcode}_{c}_{clust_id}cand{cand}.log"
     benchmark: 
-        "benchmarks/NGSpeciesID2/get_fqs_split/{barcode}_{c}_{clust_id}cand{cand}.txt"
+        "benchmarks/NGSpeciesID2/fqs_split/{barcode}_{c}_{clust_id}cand{cand}.txt"
 
-use rule spoa as spoa3 with:
-    input: "{cls}/split/{barcode}_{c}_{clust_id}cand{cand}.fastq"
-    output: temp("{cls}/polish/{barcode}_{c}_{clust_id}cand{cand}/minimap2/raw.fna")
-    log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}cand{cand}.log"
-    benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}cand{cand}.txt"
+# kmerCon
+rule spoa:
+    input: "{cls}/split/{barcode}_{c}_{clust_id}.fastq"
+    output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
+    conda: '../envs/spoa.yaml'
+    params:
+        l = config["spoa"]["l"],
+        r = config["spoa"]["r"],
+        g = config["spoa"]["g"],
+    log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}.txt"
+    shell: 
+        """
+        # touch if exists
+        if [ -f {output} ]; then
+            touch {output}
+        else
+            spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}
+        fi
+        """
+
+ruleorder: fqs_split2 > spoa
+ruleorder: get_IsoCon_cand > spoa
 
 # polish with racon and medaka
 # reused in racon iterations
@@ -632,12 +527,8 @@ def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter 
         candidates = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     elif wildcards.cls == "NGSpeciesID":
         candidates = glob_wildcards(checkpoints.cls_NGSpeciesID.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    elif wildcards.cls == "isONclustCon":
-        candidates = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     elif wildcards.cls == "NGSpeciesID2":
         candidates = glob_wildcards(checkpoints.cls_NGSpeciesID2.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
-    elif wildcards.cls == "isONclustCon2":
-        candidates = glob_wildcards(checkpoints.cls_isONclust2.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
     elif wildcards.cls == "isONcorCon":
         candidates = glob_wildcards(checkpoints.cls_isONcorCon.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
     elif wildcards.cls == "umiCon":

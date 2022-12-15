@@ -48,7 +48,7 @@ cutadapt:
   min_overlap: 6
 
 ##############################################################
-# Pre-kmer binning
+# Pre-read binning or not
 kmerbin: True
 bin_mem: 50 # GB
 # Bool, whether to bin or not; TRUE is highly recommened in clustCon mode,
@@ -75,17 +75,17 @@ hdbscan:
   epsilon: 0.5 # Lower this for more micro-clusters
 
 ##############################################################
-# cluster within kmer bins
-# mode for cluster consensus [ClustCon|isONclustCon|isONcorCon]
-# ClustCon: cluster based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
-# isONclustCon: isONclust consensus(divergent similarity)
-# NGSpeciesID: isONclust consensus refined by NGSpeciesID 
-# isONcorCon: isONclust followed by isONcorrect/IsoCon (close similarity)
+# consensus mode [kmerCon|ClustCon|NGSpeciesID|NGSpeciesID2|isONcorCon]
+# kmerCon: consensus from direct kmer bins
+# ClustCon: refined kmer consensus based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
+# NGSpeciesID: Refiended isONclust consensus by NGSpeciesID (divergent similarity)
+# NGSpeciesID2: NGSpeciesID followed by kmerCon
+# isONcorCon: NGSpeciesID followed by isONcorrect/IsoCon (close similarity)
 cluster:
-  #- isONclustCon # the first is the final kOTUs
-  #- NGSpeciesID
+  #- NGSpeciesID # the first is the final kOTUs
+  #- NGSpeciesID2
+  #- isONcorCon
   #- kmerCon 
-  #- isONcorCon # sinlge target/amplification region
   #- clustCon 
   #- umiCon
 min_cluster_size: 20
@@ -95,15 +95,14 @@ ava2clust: # [clustCon]
   max_recursion: -1 # non-zero value to override python's max recursion depth
 
 NGSpeciesID:
-  abundance_ratio: 0.1  
-
-isONclust:
-  # --ont: --k13 --w20; --isoseq: --k15 --w50
+  abundance_ratio: 0  
+  # isONclust --ont: --k13 --w20; --isoseq: --k15 --w50
   k: 13
   w: 20
 
 spoa:
-  l: 1 # global alignment (1); local alignment (0)
+  #0: local (Smith-Waterman); 1: global (Needleman-Wunsch); 2: - semi-global
+  l: 0 
   r: 0
   g: -2
 

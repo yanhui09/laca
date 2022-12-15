@@ -149,7 +149,7 @@ checkpoint cls_kmerbin_umi:
                 df_clust['read'].to_csv(output[0] + "/{barcode}_{c}.csv".format(
                     barcode=barcode, c=clust_id), header = False, index = False)
         
-use rule split_bin as split_bin_umi with:
+use rule fqs_split as fqs_split_umi with:
     input: 
         cluster = "umiCon/kmerBin/clusters/{barcode}_{c}.csv",
         fqs = rules.qfilter_umi.output,
@@ -160,20 +160,12 @@ use rule split_bin as split_bin_umi with:
     benchmark: 
         "benchmarks/umiCon/kmerBin/fqs_split/{barcode}_{c}.txt"
 
-use rule skip_bin as skip_bin_umi with:
-    input: 
-        rules.qfilter_umi.output
-    output: 
-        temp("umiCon/kmerBin/{barcode}_all.fastq")
-    log: 
-        "logs/umiCon/kmerBin/skip_bin/{barcode}.log"
-
 def get_fq4Con_umi(kmerbin = config["kmerbin"]):
     check_val("kmerbin", kmerbin, bool)
     if kmerbin == True:
-        out = rules.split_bin_umi.output
+        out = rules.fqs_split_umi.output
     else:
-        out = rules.skip_bin_umi.output
+        out = rules.qfilter_umi.output
     return out
 
 # trim umi region
@@ -862,7 +854,7 @@ checkpoint cls_umiCon:
             for umi in set(df.umi):
                 df.loc[df.umi == umi, "read"].to_csv(output[0] + "/" + b_c + "_" + str(umi) + ".csv", header=False, index=False)
         
-use rule split_bin as split_umibin with:
+use rule fqs_split as split_umibin with:
     input: 
         cluster = "umiCon/clusters/{barcode}_{c}_{clust_id}.txt",
         fqs = get_fq4Con_umi(),

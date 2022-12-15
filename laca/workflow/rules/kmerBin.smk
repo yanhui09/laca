@@ -138,22 +138,23 @@ checkpoint cls_kmerbin:
             for clust_id, df_clust in df_i.groupby('bin_id'):
                 df_clust['read'].to_csv(output[0] + "/{barcode}_{c}.csv".format(
                     barcode=barcode, c=clust_id), header = False, index = False)
-rule split_bin:
+rule fqs_split:
     input:
         cluster = "kmerBin/clusters/{barcode}_{c}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
-    output: temp("kmerBin/split/{barcode}_{c}.fastq"),
+    output: temp("kmerCon/split/{barcode}_{c}_0.fastq"),
     conda: "../envs/seqkit.yaml"
-    log: "logs/kmerBin/fqs_split/{barcode}_{c}.log"
-    benchmark: "benchmarks/kmerBin/fqs_split/{barcode}_{c}.txt"
+    log: "logs/kmerCon/fqs_split/{barcode}_{c}.log"
+    benchmark: "benchmarks/kmerCon/fqs_split/{barcode}_{c}.txt"
     shell:
-        "seqkit grep {input.fqs} -f {input.cluster} -o {output} 2> {log}"
-
-rule skip_bin:
-    input: "qc/qfilt/{barcode}.fastq"
-    output: temp("kmerBin/{barcode}/all.fastq")
-    log: "logs/kmerBin/skip_bin/{barcode}.log"
-    shell: "cp -p {input} {output} 2> {log}"
+        """
+        #if file exist, touch
+        if [ -f {output} ]; then
+            touch {output}
+        else
+            seqkit grep -f {input.cluster} {input.fqs} -w0 -o {output} 2> {log}
+        fi 
+        """
 
 # get {barcode} {c} from chekckpoint
 def get_kmerBin(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
@@ -165,11 +166,11 @@ def get_kmerBin(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            fqs.append("kmerBin/split/{bc}_{kb}.fastq".format(bc=bc, kb=kb))
+            fqs.append("kmerCon/split/{bc}_{kb}_0.fastq".format(bc=bc, kb=kb))
     else:
         if pool is True:
            bcs = ["pooled"]
         else:
            bcs = get_qced_barcodes(wildcards)
-        fqs = expand("kmerBin/{bc}/all.fastq", bc=bcs)
+        fqs = expand("qc/qfilt/{bc}.fastq", bc=bcs)
     return fqs
