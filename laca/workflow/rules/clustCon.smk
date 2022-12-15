@@ -364,7 +364,7 @@ use rule fqs_split as fqs_split_NGSpeciesID with:
 rule spoa:
     input: "{cls}/split/{barcode}_{c}_{clust_id}.fastq"
     output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
-    conda: '../envs/spoa.yaml'
+    conda: '../envs/NGSpeciesID.yaml'
     params:
         l = config["spoa"]["l"],
         r = config["spoa"]["r"],
@@ -532,7 +532,7 @@ def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter 
     elif wildcards.cls == "isONcorCon":
         candidates = glob_wildcards(checkpoints.cls_isONcorCon.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
     elif wildcards.cls == "umiCon":
-        candidates = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.txt").bc_kb_ci
+        candidates = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
     else:
         raise ValueError("Unknown consensus method: " + wildcards.cls)
     

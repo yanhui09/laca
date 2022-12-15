@@ -63,7 +63,7 @@ rule combine_cls:
         cls = input[0].split("/")[-2]
         if cls == "kmerBin":
             cand = "_0cand1"
-        elif cls == "isONclustCon" or cls == "clustCon" or cls == "umiCon":
+        elif cls == "NGSpeciesID" or cls == "clustCon" or cls == "umiCon":
             cand = "cand1"
         else:
             cand = ""

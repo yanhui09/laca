@@ -160,12 +160,17 @@ use rule fqs_split as fqs_split_umi with:
     benchmark: 
         "benchmarks/umiCon/kmerBin/fqs_split/{barcode}_{c}.txt"
 
+rule fqs_umi:
+    input: rules.qfilter_umi.output
+    output: temp("umiCon/kmerBin/{barcode}_all.fastq")
+    shell: "cp -p {input} {output}"
+
 def get_fq4Con_umi(kmerbin = config["kmerbin"]):
     check_val("kmerbin", kmerbin, bool)
     if kmerbin == True:
         out = rules.fqs_split_umi.output
     else:
-        out = rules.qfilter_umi.output
+        out = rules.fqs_umi.output
     return out
 
 # trim umi region
@@ -856,7 +861,7 @@ checkpoint cls_umiCon:
         
 use rule fqs_split as split_umibin with:
     input: 
-        cluster = "umiCon/clusters/{barcode}_{c}_{clust_id}.txt",
+        cluster = "umiCon/clusters/{barcode}_{c}_{clust_id}.csv",
         fqs = get_fq4Con_umi(),
     output:
         temp("umiCon/split/{barcode}_{c}_{clust_id}.fastq")
@@ -891,6 +896,8 @@ rule get_seedfa:
         vsearch --sortbysize {output.centroids} --topn 1 --relabel seed \
         --output {output.seed} --threads {threads} >> {log} 2>&1
         """
+
+ruleorder: get_seedfa > spoa
 # polish follows rules in clustCon.smk
 
 # trim primers 
