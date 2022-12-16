@@ -1,0 +1,7 @@
+name: badread
+channels:
+  - defaults
+dependencies:
+  - pip
+  - pip:
+    - git+https://github.com/rrwick/Badread.git

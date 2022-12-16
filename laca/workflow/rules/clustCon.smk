@@ -125,8 +125,10 @@ rule run_NGSpeciesID:
             if [ $(sed -n "1~4p" $i | wc -l) -lt {params.min_reads} ]; then
                 continue
             fi
+            # trim characters after the last '_' in 1~4p lines in fastq
+            sed -i "1~4s/_[^_]*$//" $i
             consensus_id=$(basename $i | sed "s/reads_to_consensus_//;s/.fastq//")
-            sed -n "1~4p" $i | sed "s/^@/$consensus_id\t/;s/_[^_]*$//" >> {output.tsv}
+            sed -n "1~4p" $i | sed "s/^@/$consensus_id\t/" >> {output.tsv}
             # mv fastq to split dir
             mv $i $PARENT/split/{params.barcode_c}_$consensus_id.fastq
             # mv fasta to polish dir
