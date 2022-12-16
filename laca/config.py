@@ -78,6 +78,9 @@ def init_conf(
         conf["umi"]["e"] = 90
         conf["umi"]["u"] = 3.5
         conf["umi"]["O"] = 0.2
+        # simulate
+        conf["simulate"]["badread"]["error_model"] = "nanopore2020"
+        conf["simulate"]["badread"]["qscore_model"] = "nanopore2020"
     
     if pacbio == True:
         # NGSpeciesID
@@ -96,6 +99,9 @@ def init_conf(
         conf["umi"]["e"] = 60
         conf["umi"]["u"] = 3
         conf["umi"]["O"] = 0.05
+        # simulate
+        conf["simulate"]["badread"]["error_model"] = "pacbio2016"
+        conf["simulate"]["badread"]["qscore_model"] = "pacbio2016"
         
     if longumi == True:
         conf["seqkit"]["min_qual"] = -1
