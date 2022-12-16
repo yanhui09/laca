@@ -19,7 +19,7 @@ def init_conf(
     kmerbin=False,
     cluster=["NGSpeciesID"],
     quant=["seqid"],
-    chimer_filter=False,
+    uchime=False,
     jobs_m=2,
     jobs_M=6,
     nanopore=False,
@@ -45,7 +45,7 @@ def init_conf(
         kmerbin (bool): if True, conduct kmer binning  [default: False]
         cluster (list): list of methods to generate consensus (kmerCon, clustCon, NGSpeciesID, NGSpeciesID2, isONcorCon, umiCon) [default: ["NGSpeciesID"]]
         quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
-        chimer_filter (bool): if True, filter possible chimeras by vsearch [default: False]
+        uchime (bool): if True, filter possible chimeras by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
         jobs_M (int): number of jobs for threads-dependent tasks [default: 6]
         nanopore (bool): if True, use template for nanopore reads [default: False]
@@ -138,7 +138,7 @@ def init_conf(
     conf["kmerbin"] = kmerbin
     conf["cluster"] = list(cluster)
     conf["quant"] = list(quant)
-    conf["chimeraF"] = chimer_filter
+    conf["uchime"] = uchime
     conf["threads"]["normal"] = jobs_m
     conf["threads"]["large"] = jobs_M
     
