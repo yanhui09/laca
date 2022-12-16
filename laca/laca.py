@@ -176,7 +176,7 @@ def cli(self):
         ["demux", "qc", "kmerBin",
          "kmerCon", "clustCon", "NGSpeciesID", "NGSpeciesID2","isONcorCon", "umiCon",
          "quant", "taxa", "tree", "all", "merge",
-         "initDB", "nanosim"]
+         "initDB", "simulate"]
     ),
 )
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
@@ -184,8 +184,8 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     """
     Run LACA workflow.
     """
-    if workflow == "nanosim":
-        sf = "workflow/rules/nanosim.smk"
+    if workflow == "simulate":
+        sf = "workflow/rules/simulate.smk"
     else:
         sf = "workflow/Snakefile" 
     snakefile = get_snakefile(sf)

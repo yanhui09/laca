@@ -219,14 +219,27 @@ flinker: "GTCTCGTGGGCTCGG"
 rlinker: "GTCTCGTGGGCTCGG"
 
 #########################################################################################
-# in silico test with NanoSim
-nanosim:
-  min_id: 80,90,90,95,95,97,97,97,98,98,99
-  max_id: 90,100,95,100,97,100,99,98,100,99,100
+# in silico test with Badreads
+simulate:
+  min_id: 60,80,90,90,95,95,97,97,97,98,98,99
+  max_id: 80,90,100,95,100,97,100,99,98,100,99,100
   min_len: -1 # -1 infinite 
   max_len: -1
-  subsample_n: 10 # n sequences in ref
-  simulator: 
-    n: 100,200,400,600,800,1000,2000
-    dna_type: linear
-        
+  n_refs: 10 # n sequences as reference
+  # n depth values for the reference sequences, following its order of ref_1,ref_2,...ref_n
+  # appended in fasta header, used by Badread
+  depth: 1,1,1,1,1,1,1,1,1,1 
+  badread:
+    # an absolute value (e.g. 250M) or a relative depth (e.g. 25x) 
+    quantity: 10x,20x,40x,60x,80x,100x,150x,200x
+    identity: 87.5,97.5,5
+    error_model: nanopore2020
+    qscore_model: nanopore2020
+    start_adapter: 100,100
+    end_adapter: 100,100
+    start_adapter_seq: TACGGCTACCTTGTTACGACT
+    end_adapter_seq: TACGGCTACCTTGTTACGACT
+    junk_reads: 1
+    random_reads: 1
+    chimeras: 1
+    glitches: 1500,3,3

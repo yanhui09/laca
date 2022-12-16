@@ -35,7 +35,7 @@ rule all:
         "tree.nwk",
 
 include: "rules/init.smk"
-#include: "rules/nanosim.smk"
+#include: "rules/simulate.smk"
 include: "rules/demux.smk"
 include: "rules/qc.smk"
 include: "rules/kmerBin.smk"
