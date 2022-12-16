@@ -62,9 +62,9 @@ def init_conf(
         conf = yaml.load(template_conf)
         
     if nanopore == True:
-        # isONclust
-        conf["isONclust"]["k"] = 13
-        conf["isONclust"]["w"] = 20
+        # NGSpeciesID
+        conf["NGSpeciesID"]["k"] = 13
+        conf["NGSpeciesID"]["w"] = 20
         # minimap2
         conf["minimap2"]["x_ava"] = "ava-ont"
         conf["minimap2"]["x_map"] = "map-ont"
@@ -80,7 +80,7 @@ def init_conf(
         conf["umi"]["O"] = 0.2
     
     if pacbio == True:
-        # isONclust
+        # NGSpeciesID
         conf["NGSpeciesID"]["k"] = 15
         conf["NGSpeciesID"]["w"] = 50
         # minimap2
