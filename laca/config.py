@@ -23,8 +23,9 @@ def init_conf(
     jobs_m=2,
     jobs_M=6,
     nanopore=False,
-    pacbio=False,
+    isoseq=False,
     longumi=False,
+    simulate=False,
 ):
     """
     Reads template config file with comments from ./template_config.yaml
@@ -49,7 +50,7 @@ def init_conf(
         jobs_m (int): number of jobs for common tasks [default: 2]
         jobs_M (int): number of jobs for threads-dependent tasks [default: 6]
         nanopore (bool): if True, use template for nanopore reads [default: False]
-        pacbio (bool): if True, use template for pacbio reads [default: False]
+        isoseq (bool): if True, use template for isoseq reads [default: False]
         longumi (bool): if True, use primer design from longumi paper (https://doi.org/10.1038/s41592-020-01041-y) [default: False]       
     """
     os.makedirs(dbdir, exist_ok=True)
@@ -82,7 +83,7 @@ def init_conf(
         conf["simulate"]["badread"]["error_model"] = "nanopore2020"
         conf["simulate"]["badread"]["qscore_model"] = "nanopore2020"
     
-    if pacbio == True:
+    if isoseq == True:
         # NGSpeciesID
         conf["NGSpeciesID"]["k"] = 15
         conf["NGSpeciesID"]["w"] = 50
@@ -123,6 +124,21 @@ def init_conf(
         conf["umi"]["cutadapt"]["min_overlap"] = 11
         conf["flinker"] = "CAAGCAGAAGACGGCATACGAGAT"
         conf["rlinker"] = "AATGATACGGCGACCACCGAGATC"
+        
+    if simulate == True:
+        conf["fprimer"].clear()
+        conf["fprimer"]["F"] = "AGAGTTTGATCATGGCTCAG"
+        conf["rprimer"].clear()
+        conf["rprimer"]["R"] = "TACGGCTACCTTGTTACGACT"
+        conf["fprimer_max"].clear()
+        conf["fprimer_max"]["F"] = "AGAGTTTGATCATGGCTCAG"
+        conf["rprimer_min"].clear()
+        conf["rprimer_min"]["R"] = "TACGGCTACCTTGTTACGACT"
+        # simulate
+        conf["simulate"]["badread"]["start_adapter_seq"] = "AGAGTTTGATCATGGCTCAG"
+        conf["simulate"]["badread"]["end_adapter_seq"] = "TACGGCTACCTTGTTACGACT"
+        # medaka 
+        conf["medaka"]["iter"] = 0
             
     conf["basecalled_dir"] = bascdir
     conf["demultiplexed_dir"] = demuxdir

@@ -335,14 +335,20 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     is_flag=True,
     default=False,
     show_default=True,
-    help="Config template for nanopore reads.",
+    help="Use config template for nanopore reads.",
+    cls = AloMutex,
+    required_if_not = [],
+    not_required_if = ["isoseq"],
 )
 @click.option(
-    "--pacbio",
+    "--isoseq",
     is_flag=True,
     default=False,
     show_default=True,
-    help="Config template for pacbio CCS reads.",
+    help="Use config template for pacbio CCS reads.",
+    cls = AloMutex,
+    required_if_not = [],
+    not_required_if = ["nanopore"],
 )
 @click.option(
     "--longumi",
@@ -350,7 +356,49 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
     default=False,
     show_default=True,
     help="Use primer design from longumi paper (https://doi.org/10.1038/s41592-020-01041-y).",
+    cls = AloMutex,
+    required_if_not = [],
+    not_required_if = ["simulate"],
 )
+@click.option(
+    "--simulate",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Use config template for in silicon test.",
+    cls = AloMutex,
+    required_if_not = [],
+    not_required_if = ["longumi"],
+)
+@click.option(
+    "--clean-flags",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Clean flag files.",
+)
+def run_init(
+    bascdir, demuxdir, merge, merge_parent, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
+    kmerbin, cluster, quant, uchime, jobs_min, jobs_max, nanopore, isoseq, longumi, simulate, clean_flags):
+    """
+    Prepare config file for LACA.
+    """ 
+    logger.info(f"LACA version: {__version__}")
+    init_conf(
+        bascdir, demuxdir, merge, merge_parent, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
+        no_trim, kmerbin, cluster, quant, uchime, jobs_min, jobs_max, nanopore, isoseq, longumi, simulate)
+    # clean flags if requested
+    if clean_flags:
+        # rm .*_DONE in workdir
+        flags = [".simulated_DONE", ".qc_DONE"]
+        for flag in flags:
+            file = os.path.join(workdir, flag)
+            if os.path.exists(file):
+                os.remove(file)
+        logger.warning(f"All flags files (.*_DONE) in {workdir} are removed.")
+    
+if __name__ == "__main__":
+    cli()
 @click.option(
     "--clean-flags",
     is_flag=True,

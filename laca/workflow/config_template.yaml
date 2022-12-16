@@ -101,7 +101,7 @@ NGSpeciesID:
   w: 20
 
 spoa:
-  #0: local (Smith-Waterman); 1: global (Needleman-Wunsch); 2: - semi-global
+  #0: local (Smith-Waterman); 1: global (Needleman-Wunsch); 2: semi-global
   l: 0 
   r: 0
   g: -2
@@ -237,8 +237,8 @@ simulate:
     qscore_model: nanopore2020
     start_adapter: 100,100
     end_adapter: 100,100
-    start_adapter_seq: TACGGCTACCTTGTTACGACT
-    end_adapter_seq: TACGGCTACCTTGTTACGACT
+    start_adapter_seq:
+    end_adapter_seq:
     junk_reads: 1
     random_reads: 1
     chimeras: 1
