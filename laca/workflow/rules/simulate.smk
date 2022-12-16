@@ -104,7 +104,7 @@ rule cls_pick:
 use rule cls_ref1 as cls_ref2 with:
     input: rules.cls_pick.output
     output: 
-        rep = temp("simulate/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_rep_seq.fasta"),
+        rep = "simulate/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_rep_seq.fasta",
         all_by_cluster = temp("simulate/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_all_seqs.fasta"),
         tsv = temp("simulate/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_cluster.tsv"),
         tmp = temp(directory("simulate/tmp/{db}/cls_ref/id_{minid}_{maxid}")),
