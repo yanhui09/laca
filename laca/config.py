@@ -17,7 +17,7 @@ def init_conf(
     subsample=False,
     no_trim=False,
     kmerbin=False,
-    cluster=["isONclustCon"],
+    cluster=["NGSpeciesID"],
     quant=["seqid"],
     chimer_filter=False,
     jobs_m=2,
@@ -43,7 +43,7 @@ def init_conf(
         subsample (bool): if True, subsample the reads [default: False]
         no_trim (bool): if True, do not trim the primers [default: False]
         kmerbin (bool): if True, conduct kmer binning  [default: False]
-        cluster (list): list of methods to generate consensus (kmerCon, clustCon, NGSpeciesID, NGSpeciesID2, isONcorCon, umiCon) [default: ["isONclustCon"]]
+        cluster (list): list of methods to generate consensus (kmerCon, clustCon, NGSpeciesID, NGSpeciesID2, isONcorCon, umiCon) [default: ["NGSpeciesID"]]
         quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
         chimer_filter (bool): if True, filter possible chimeras by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
@@ -81,8 +81,8 @@ def init_conf(
     
     if pacbio == True:
         # isONclust
-        conf["isONclust"]["k"] = 15
-        conf["isONclust"]["w"] = 50
+        conf["NGSpeciesID"]["k"] = 15
+        conf["NGSpeciesID"]["w"] = 50
         # minimap2
         conf["minimap2"]["x_ava"] = "ava-pb"
         conf["minimap2"]["x_map"] = "asm20"
