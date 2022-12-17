@@ -222,10 +222,10 @@ rule simulate:
     output: directory("demultiplexed"),
     run:
         # if demultiplexed directory exists, exit with error
-        if os.path.exists(output[1]):
-            raise Exception("  Demultiplexed directory ({demux_dir}) already exists.\n  To avoid unwanted overwriting, please manually remove it and re-run 'laca simulate'.".format(demux_dir=output[1]))
+        if os.path.exists(output[0]):
+            raise Exception("  Demultiplexed directory ({demux_dir}) already exists.\n  To avoid unwanted overwriting, please manually remove it and re-run 'laca simulate'.".format(demux_dir=output[0]))
         else:
-            os.makedirs(output[1])
+            os.makedirs(output[0])
         for fq in input:
             # no wildcards, use input path, keep digits only
             # last second directory name, trim "id_", replace "_" with ""
@@ -233,7 +233,7 @@ rule simulate:
             # file name, trim ".fastq", "reads"
             quantity = os.path.basename(fq).removesuffix(".fastq").replace("reads", "")
             quantity_digits = ''.join(str(i) for i in quantity if i.isdigit())
-            dirname = os.path.join(output[1], "si" + mixid_digits + quantity_digits) 
+            dirname = os.path.join(output[0], "si" + mixid_digits + quantity_digits) 
             os.makedirs(dirname)
             with open (fq, "r") as fi:
                 with open (os.path.join(dirname, "badread.fastq"), "w") as fo:
