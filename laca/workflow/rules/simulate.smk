@@ -219,9 +219,7 @@ rule badread:
 
 rule simulate:
     input: expand("simulate/{db}/badread/id_{mixid}/reads{quantity}.fastq", db = [k for k in dict_db.keys()], mixid = [f"{minid}_{maxid}" for (minid, maxid) in zip(minids, maxids)], quantity=quantities)
-    output: 
-        touch(".simulated_DONE"),
-        directory("demultiplexed"),
+    output: directory("demultiplexed"),
     run:
         # if demultiplexed directory exists, exit with error
         if os.path.exists(output[1]):

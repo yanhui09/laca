@@ -419,7 +419,7 @@ def run_init(
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir
-        flags = [".simulated_DONE", ".qc_DONE"]
+        flags = [".qc_DONE"]
         for flag in flags:
             file = os.path.join(workdir, flag)
             if os.path.exists(file):
