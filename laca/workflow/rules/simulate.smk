@@ -229,9 +229,11 @@ rule simulate:
         else:
             os.makedirs(output[1])
         for fq in input:
-            # keep digits only
-            mixid_digits = wildcards.mixid.replace("_", "") 
-            quantity_digits = ''.join(str(i) for i in wildcards.quantity if i.isdigit())
+            # no wildcards, use input path, keep digits only
+            # last second directory name, trim "id_", replace "_" with ""
+            mixid_digits = os.path.basename(os.path.dirname(fq)).replace("id_", "").replace("_", "")
+            # file name, trim ".fastq", "reads"
+            quantity_digits = os.path.basename(fq).removesuffix(".fastq").replace("reads", "")
             dirname = os.path.join(output[1], "si" + mixid_digits + quantity_digits) 
             os.makedirs(dirname)
             with open (fq, "r") as fi:
