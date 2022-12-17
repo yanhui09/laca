@@ -146,15 +146,7 @@ rule fqs_split:
     conda: "../envs/seqkit.yaml"
     log: "logs/kmerCon/fqs_split/{barcode}_{c}.log"
     benchmark: "benchmarks/kmerCon/fqs_split/{barcode}_{c}.txt"
-    shell:
-        """
-        #if file exist, touch
-        if [ -f {output} ]; then
-            touch {output}
-        else
-            seqkit grep -f {input.cluster} {input.fqs} -w0 -o {output} 2> {log}
-        fi 
-        """
+    shell: "seqkit grep -f {input.cluster} {input.fqs} -w0 -o {output} --quiet 2> {log}"
 
 # get {barcode} {c} from chekckpoint
 def get_kmerBin(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):

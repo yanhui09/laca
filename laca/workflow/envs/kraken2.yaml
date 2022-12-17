@@ -6,4 +6,4 @@ channels:
 dependencies:
   - kraken2
 # Known ftp issue for 2.1.2 on conda: https://github.com/DerrickWood/kraken2/commit/4f648f5a83498f666193be7b9b71a38e3b99ee24
-# wait for rolling-update on conda 
+# wait for rolling-update on conda

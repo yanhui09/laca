@@ -75,15 +75,15 @@ hdbscan:
   epsilon: 0.5 # Lower this for more micro-clusters
 
 ##############################################################
-# consensus mode [kmerCon|ClustCon|NGSpeciesID|NGSpeciesID2|isONcorCon]
+# consensus mode [kmerCon|ClustCon|isONclustCon|isONclustCon2|isONcorCon]
 # kmerCon: consensus from direct kmer bins
 # ClustCon: refined kmer consensus based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
-# NGSpeciesID: Refiended isONclust consensus by NGSpeciesID (divergent similarity)
-# NGSpeciesID2: NGSpeciesID followed by kmerCon
-# isONcorCon: NGSpeciesID followed by isONcorrect/IsoCon (close similarity)
+# isONclustCon: isONclust consensus (divergent similarity)
+# isONclustCon2: isONclust followed by kmerCon
+# isONcorCon: isONclust followed by isONcorrect/IsoCon (close similarity)
 cluster:
-  #- NGSpeciesID # the first is the final kOTUs
-  #- NGSpeciesID2
+  #- isONclustCon # the first is the final kOTUs
+  #- isONclustCon2
   #- isONcorCon
   #- kmerCon 
   #- clustCon 
@@ -94,9 +94,8 @@ ava2clust: # [clustCon]
   min_score_frac: 0.8
   max_recursion: -1 # non-zero value to override python's max recursion depth
 
-NGSpeciesID:
-  abundance_ratio: 0  
-  # isONclust --ont: --k13 --w20; --isoseq: --k15 --w50
+isONclust:
+  # --ont: --k13 --w20; --isoseq: --k15 --w50
   k: 13
   w: 20
 

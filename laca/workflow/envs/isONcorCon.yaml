@@ -4,8 +4,9 @@ channels:
   - defaults
 dependencies:
   - python=3.8
-  - spoa
   - pip
+  - spoa
   - pip:
     - isONcorrect
+    - isONclust
     - IsoCon

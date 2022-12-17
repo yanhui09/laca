@@ -174,7 +174,7 @@ def cli(self):
     "workflow",
     type=click.Choice(
         ["demux", "qc", "kmerBin",
-         "kmerCon", "clustCon", "NGSpeciesID", "NGSpeciesID2","isONcorCon", "umiCon",
+         "kmerCon", "clustCon", "isONclustCon", "isONclustCon2","isONcorCon", "umiCon",
          "quant", "taxa", "tree", "all", "merge",
          "initDB", "simulate"]
     ),
@@ -294,9 +294,9 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
 @click.option(
     "--cluster",
     type=click.Choice(
-        ["kmerCon", "clustCon", "NGSpeciesID", "NGSpeciesID2", "isONcorCon", "umiCon"]
+        ["kmerCon", "clustCon", "isONclustCon", "isONclustCon2", "isONcorCon", "umiCon"]
         ),
-    default=["NGSpeciesID"],
+    default=["isONclustCon"],
     show_default=True,
     multiple=True,
     help="Consensus methods.  [Mutiple]",

@@ -17,7 +17,7 @@ def init_conf(
     subsample=False,
     no_trim=False,
     kmerbin=False,
-    cluster=["NGSpeciesID"],
+    cluster=["isONclustCon"],
     quant=["seqid"],
     uchime=False,
     jobs_m=2,
@@ -44,7 +44,7 @@ def init_conf(
         subsample (bool): if True, subsample the reads [default: False]
         no_trim (bool): if True, do not trim the primers [default: False]
         kmerbin (bool): if True, conduct kmer binning  [default: False]
-        cluster (list): list of methods to generate consensus (kmerCon, clustCon, NGSpeciesID, NGSpeciesID2, isONcorCon, umiCon) [default: ["NGSpeciesID"]]
+        cluster (list): list of methods to generate consensus (kmerCon, clustCon, isONclustCon, isONclustCon2, isONcorCon, umiCon) [default: ["isONclustCon"]]
         quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
         uchime (bool): if True, filter possible chimeras by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
@@ -63,9 +63,9 @@ def init_conf(
         conf = yaml.load(template_conf)
         
     if nanopore == True:
-        # NGSpeciesID
-        conf["NGSpeciesID"]["k"] = 13
-        conf["NGSpeciesID"]["w"] = 20
+        # isONclustCon
+        conf["isONclust"]["k"] = 13
+        conf["isONclust"]["w"] = 20
         # minimap2
         conf["minimap2"]["x_ava"] = "ava-ont"
         conf["minimap2"]["x_map"] = "map-ont"
@@ -84,9 +84,9 @@ def init_conf(
         conf["simulate"]["badread"]["qscore_model"] = "nanopore2020"
     
     if isoseq == True:
-        # NGSpeciesID
-        conf["NGSpeciesID"]["k"] = 15
-        conf["NGSpeciesID"]["w"] = 50
+        # isONclustCon
+        conf["isONclust"]["k"] = 15
+        conf["isONclust"]["w"] = 50
         # minimap2
         conf["minimap2"]["x_ava"] = "ava-pb"
         conf["minimap2"]["x_map"] = "asm20"

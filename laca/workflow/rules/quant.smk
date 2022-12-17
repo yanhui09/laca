@@ -1,5 +1,5 @@
 # check classifier choice
-check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "NGSpeciesID", "NGSpeciesID2", "isONcorCon", "umiCon"])
+check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustCon", "isONclustCon2", "isONcorCon", "umiCon"])
 # check quantification method
 check_list_ele("quant", config["quant"], ["seqid", "minimap2"])
 
@@ -63,7 +63,7 @@ rule combine_cls:
         cls = input[0].split("/")[-2]
         if cls == "kmerBin":
             cand = "_0cand1"
-        elif cls == "NGSpeciesID" or cls == "clustCon" or cls == "umiCon":
+        elif cls == "isONclustCon" or cls == "clustCon" or cls == "umiCon":
             cand = "cand1"
         else:
             cand = ""
