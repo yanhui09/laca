@@ -1,4 +1,4 @@
-# This file should contain everything to configure the workflow on a global scale.
+# variables to configure the workflow on a global scale
 basecalled_dir: 
 database_dir: 
 demultiplexed_dir:
@@ -8,10 +8,10 @@ threads:
   normal: 2 # common jobs
   large: 6 # threads-dependent jobs
 
-# Pooling samples for denoise [TRUE|FALSE]
-pool: True
+# Pooling samples for denoise [true|false]
+pool: true
 ##############################################################
-# Demultiplex [Nanopore]
+# Demultiplex [nanopore]
 demuxer: guppy # guppy | minibar 
 guppy:
   barcode_kits: "SQK16S-GXO192"
@@ -20,10 +20,10 @@ minibar:
 nreads_m: 1000 # rm barcoded samples in shallow sequencing
 ##############################################################
 # Quality control
-# Subsample raw reads if with inadequate memory
+# subsample reads if with inadequate memory
 subsample: True
 
-# Quality filtering
+# filter reads by quality and length range
 seqkit:
   n: 5000 # subsampling number [int]
   min_qual: 7
@@ -38,7 +38,6 @@ fprimer:
   27Fb: "AGGGTTCGATTCTGGCTCAG"
   338Fa: "ACWCCTACGGGWGGCAGCAG"
   338Fb: "GACTCCTACGGGAGGCWGCAG"
-
 rprimer: 
   1540R: "TACGGYTACCTTGTTACGACT"
   1391R: "GACGGGCGGTGTGTRCA"
@@ -46,24 +45,16 @@ rprimer:
 cutadapt:
   max_errors: 0.2
   min_overlap: 6
-
 ##############################################################
 # Pre-read binning or not
 kmerbin: True
 bin_mem: 50 # GB
-# Bool, whether to bin or not; TRUE is highly recommened in clustCon mode,
-# considering the massive pairwise alignments inside.
-
-# To mitagate the memory bottleneck of umap in pooling mode,
-# batch mode is induced. kmer binning is done in batches and
-# all unbinned reads will be re-collected for re-binning. 
-# It's an alternative for users with limited computing resources.
-batch_size: auto
+# To mitagate the memory bottleneck of umap in pooling mode, batch mode is induced. 
 # zero or negative values to bin all reads together; 
-# use manual postive value to bin in batches due to limited rams 
-# or choose auto estimation with "auto"
+# postive integer to bin in n batches due to limited rams; 
+# or use "auto" estimation;
+batch_size: auto
 kmer_size: 5
-# umap reduction and hdbscan cluster
 umap:
   n_neighbors: 15 # Increase this for global structure
   min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
@@ -73,11 +64,10 @@ hdbscan:
   min_bin_size: 50 # Define the smallest size to bin
   min_samples: 50 # Increase this for more conservative clustering - more points as noise
   epsilon: 0.5 # Lower this for more micro-clusters
-
 ##############################################################
-# consensus mode [kmerCon|ClustCon|isONclustCon|isONclustCon2|isONcorCon]
+# consensus mode [kmerCon|clustCon|isONclustCon|isONclustCon2|isONcorCon]
 # kmerCon: consensus from direct kmer bins
-# ClustCon: refined kmer consensus based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
+# clustCon: refined kmer consensus based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
 # isONclustCon: isONclust consensus (divergent similarity)
 # isONclustCon2: isONclust followed by kmerCon
 # isONcorCon: isONclust followed by isONcorrect/IsoCon (close similarity)
@@ -131,9 +121,8 @@ isONcor: True # [isONcorCon]
 
 IsoCon:
   min_candidates: 2
-
 ##############################################################
-# create abundance matrix by sequence id or minimap2 mapping, 
+# create abundance matrix by sequence id or minimap2 mapping 
 # seqid | minimap2, the first is the final
 quant: 
   - seqid
@@ -162,7 +151,6 @@ kraken2:
 
 q2blast:
   split_by_nseq: 20 # split by N sequence for parallel
-
 ##############################################################
 # Build a de novo phylogenetic tree
 # shortest amplified region in multi-primer PCR design
@@ -183,7 +171,6 @@ q2phylo:
   fasttree: ""
   iqtree: ""
   raxml: ""
-
 ##############################################################
 # UMI extraction with seqkit and cutadapt
 umi:
@@ -216,7 +203,6 @@ umi:
 # linker and primer for umi extraction
 flinker: "GTCTCGTGGGCTCGG"
 rlinker: "GTCTCGTGGGCTCGG"
-
 #########################################################################################
 # in silico test with Badreads
 simulate:
