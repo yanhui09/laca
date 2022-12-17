@@ -139,6 +139,10 @@ def init_conf(
         conf["simulate"]["badread"]["end_adapter_seq"] = "TACGGCTACCTTGTTACGACT"
         # medaka 
         conf["medaka"]["iter"] = 0
+        # cluster
+        conf["hdbscan"]["min_bin_size"] = 10
+        conf["hdbscan"]["min_samples"] = 10
+        conf["min_cluster_size"] = 10
             
     conf["basecalled_dir"] = bascdir
     conf["demultiplexed_dir"] = demuxdir
