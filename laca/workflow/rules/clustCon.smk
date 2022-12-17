@@ -1,3 +1,15 @@
+# kmerCon
+use rule fqs_split as fqs_split1 with:
+    input:
+        cluster = "kmerBin/clusters/{barcode}_{c}.csv",
+        fqs = "qc/qfilt/{barcode}.fastq",
+    output: 
+        temp("kmerCon/split/{barcode}_{c}_0.fastq"),
+    log: 
+        "logs/kmerCon/fqs_split/{barcode}_{c}.log"
+    benchmark: 
+        "benchmarks/kmerCon/fqs_split/{barcode}_{c}.txt"
+
 # clustCon
 # draw draft with max average score from pairwise alignments
 rule minimap2ava:
@@ -335,7 +347,6 @@ use rule fqs_split as fqs_split_isONclust with:
     benchmark: 
         "benchmarks/isONclustCon2/fqs_split/{barcode}_{c}_{clust_id}cand{cand}.txt"
 
-# kmerCon
 rule spoa:
     input: "{cls}/split/{barcode}_{c}_{clust_id}.fastq"
     output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")

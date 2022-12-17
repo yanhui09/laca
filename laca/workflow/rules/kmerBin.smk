@@ -142,10 +142,10 @@ rule fqs_split:
     input:
         cluster = "kmerBin/clusters/{barcode}_{c}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
-    output: temp("kmerCon/split/{barcode}_{c}_0.fastq"),
+    output: temp("kmerBin/split/{barcode}_{c}_0.fastq"),
     conda: "../envs/seqkit.yaml"
-    log: "logs/kmerCon/fqs_split/{barcode}_{c}.log"
-    benchmark: "benchmarks/kmerCon/fqs_split/{barcode}_{c}.txt"
+    log: "logs/kmerBin/fqs_split/{barcode}_{c}.log"
+    benchmark: "benchmarks/kmerBin/fqs_split/{barcode}_{c}.txt"
     shell: "seqkit grep -f {input.cluster} {input.fqs} -w0 -o {output} --quiet 2> {log}"
 
 # get {barcode} {c} from chekckpoint
@@ -158,7 +158,7 @@ def get_kmerBin(wildcards, pool = config["pool"], kmerbin = config["kmerbin"]):
         bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
         for i in bc_kbs:
             bc, kb = i.split("_")
-            fqs.append("kmerCon/split/{bc}_{kb}_0.fastq".format(bc=bc, kb=kb))
+            fqs.append("kmerBin/split/{bc}_{kb}_0.fastq".format(bc=bc, kb=kb))
     else:
         if pool is True:
            bcs = ["pooled"]
