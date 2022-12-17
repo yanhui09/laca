@@ -390,35 +390,6 @@ def run_init(
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir
-        flags = [".simulated_DONE", ".qc_DONE"]
-        for flag in flags:
-            file = os.path.join(workdir, flag)
-            if os.path.exists(file):
-                os.remove(file)
-        logger.warning(f"All flags files (.*_DONE) in {workdir} are removed.")
-    
-if __name__ == "__main__":
-    cli()
-@click.option(
-    "--clean-flags",
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="Clean flag files.",
-)
-def run_init(
-    bascdir, demuxdir, merge, merge_parent, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
-    kmerbin, cluster, quant, uchime, jobs_min, jobs_max, nanopore, pacbio, longumi, clean_flags):
-    """
-    Prepare config file for LACA.
-    """ 
-    logger.info(f"LACA version: {__version__}")
-    init_conf(
-        bascdir, demuxdir, merge, merge_parent, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
-        no_trim, kmerbin, cluster, quant, uchime, jobs_min, jobs_max, nanopore, pacbio, longumi)
-    # clean flags if requested
-    if clean_flags:
-        # rm .*_DONE in workdir
         flags = [".qc_DONE"]
         for flag in flags:
             file = os.path.join(workdir, flag)
