@@ -233,7 +233,8 @@ rule simulate:
             # last second directory name, trim "id_", replace "_" with ""
             mixid_digits = os.path.basename(os.path.dirname(fq)).replace("id_", "").replace("_", "")
             # file name, trim ".fastq", "reads"
-            quantity_digits = os.path.basename(fq).removesuffix(".fastq").replace("reads", "")
+            quantity = os.path.basename(fq).removesuffix(".fastq").replace("reads", "")
+            quantity_digits = ''.join(str(i) for i in quantity if i.isdigit())
             dirname = os.path.join(output[1], "si" + mixid_digits + quantity_digits) 
             os.makedirs(dirname)
             with open (fq, "r") as fi:
