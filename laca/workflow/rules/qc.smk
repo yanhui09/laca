@@ -137,7 +137,7 @@ def get_qced_barcodes(wildcards):
 #  sample pooling to increase sensitivity 
 rule combine_fastq:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc))
-    output: temp("qc/qfilt/pooled.fastq")
+    output: "qc/qfilt/pooled.fastq"
     shell:
         "cat {input} > {output}"
 
