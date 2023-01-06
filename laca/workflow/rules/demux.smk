@@ -129,6 +129,7 @@ def get_demux(demux=config["demuxer"], demux_external=config["demultiplexed_dir"
         check_basecall_dir()
         return "demux_" + demux
 
+localrules: demux_check, collect_fastq
 checkpoint demux_check:
     input: get_demux()
     output: directory("demultiplexed")

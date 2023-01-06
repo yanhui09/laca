@@ -134,6 +134,7 @@ def get_qced_barcodes(wildcards):
             barcodes.remove(i)
     return barcodes
 
+localrules: combine_fastq
 #  sample pooling to increase sensitivity 
 rule combine_fastq:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc))

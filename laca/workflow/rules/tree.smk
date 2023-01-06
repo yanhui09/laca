@@ -145,7 +145,7 @@ rule q2export_tree:
         --output-path {params._dir} \
         > {log} 2>&1
         """
-
+localrules: get_tree
 rule get_tree:
     input: "tree/" + config["phylogeny"][0] + "/tree.nwk",
     output: "tree.nwk"

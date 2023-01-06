@@ -28,7 +28,8 @@ def collect_laca_runs(laca_run):
         "seqs": seqs,
         "tables": tables
     }
-    
+
+localrules: merge_repseqs, rename_drep_seqs_merged, matrix_merged    
 rule merge_repseqs:
     output: temp("merge/seqs_combined.fasta")
     run:

@@ -217,6 +217,7 @@ rule badread:
             --glitches {params.glitches} > {output} 2> {log}
         """
 
+localrules: simulate
 rule simulate:
     input: expand("simulate/{db}/badread/id_{mixid}/reads{quantity}.fastq", db = [k for k in dict_db.keys()], mixid = [f"{minid}_{maxid}" for (minid, maxid) in zip(minids, maxids)], quantity=quantities)
     output: directory("demultiplexed"),

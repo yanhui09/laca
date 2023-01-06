@@ -91,6 +91,7 @@ def get_kmerbatch(wildcards):
     batches = glob_wildcards(checkpoints.shuffle_batch.get(**wildcards).output[0] + "/{batch}.tsv").batch
     return expand("kmerBin/{{barcode}}/{batch}/hdbscan.tsv", batch=batches)
 
+localrules: col_kmerbatch, cls_kmerbin, fqs_split
 rule col_kmerbatch:
     input: 
         "kmerBin/{barcode}/batch_check",

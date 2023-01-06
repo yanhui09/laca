@@ -34,6 +34,7 @@ rule drep_consensus:
         "mmseqs easy-cluster {input[0]} {params.prefix} {output.tmp} "
         "--threads {threads} --min-seq-id {params.mid} -c {params.c} --cluster-reassign > {log} 2>&1"
 
+localrules: rename_drep_seqs, combine_cls, matrix_seqid, matrix_minimap2, count_matrix,
 # keep fasta header unique
 rule rename_drep_seqs:
     input: rules.drep_consensus.output.rep

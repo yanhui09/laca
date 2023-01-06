@@ -26,6 +26,7 @@ def chimera_filt(uchime = config["uchime"]):
     else:
         return ["count_matrix_filt.tsv", "rep_seqs_filt.fasta"]
 
+localrules: all, demux, qc, kmerBin, kmerCon, clustCon, isONclustCon, isONclustCon2, isONcorCon, umiCon, quant, taxa, tree, merge
 rule all:
     input:
         chimera_filt(),

@@ -1,3 +1,4 @@
+localrules: fqs_split1, cls_clustCon, fqs_split2, cls_isONclustCon, fqs_split3, cls_isONcorCon, get_IsoCon_cand, fqs_split4, cls_isONcorCon2, fqs_split_isONclust, collect_consensus 
 # kmerCon
 use rule fqs_split as fqs_split1 with:
     input:
