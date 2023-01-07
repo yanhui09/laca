@@ -1,4 +1,4 @@
-localrules: fqs_split1, cls_clustCon, fqs_split2, cls_isONclustCon, fqs_split3, cls_isONcorCon, get_IsoCon_cand, fqs_split4, cls_isONcorCon2, fqs_split_isONclust, collect_consensus 
+localrules: fqs_split1, cls_clustCon, fqs_split2, cls_isONclustCon, fqs_split3, cls_isONcorCon, get_IsoCon_cand, fqs_split4, cls_isONclustCon2, fqs_split_isONclust, collect_consensus 
 # kmerCon
 use rule fqs_split as fqs_split1 with:
     input:
@@ -86,7 +86,6 @@ rule fqs_split2:
     output:
         pool = temp("clustCon/split/{barcode}_{c}_{clust_id}.fastq"),
         ref = temp("clustCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna"),
-    conda: '../envs/seqkit.yaml'
     log: "logs/clustCon/{barcode}_{c}_{clust_id}/fqs_split.log"
     benchmark: "benchmarks/clustCon/{barcode}_{c}_{clust_id}/fqs_split.txt"
     shell:
@@ -286,7 +285,6 @@ rule fqs_split4:
         bin2clust = "isONcorCon/clusters/{barcode}_{c}_{clust_id}cand{cand}.csv",
         binned = rules.fqs_split3.output,
     output: temp("isONcorCon/split/{barcode}_{c}_{clust_id}cand{cand}.fastq")
-    conda: "../envs/seqkit.yaml"
     log: "logs/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/fqs_split.log"
     benchmark: "benchmarks/isONcorCon/{barcode}_{c}_{clust_id}cand{cand}/fqs_split.txt"
     shell: "seqkit grep -f {input.bin2clust} {input.binned} -o {output} --quiet 2> {log}"

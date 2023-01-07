@@ -161,8 +161,6 @@ checkpoint demux_check:
 rule collect_fastq:
     input:  "demultiplexed/{barcode}"
     output: temp("qc/{barcode}.fastq")
-    conda: "../envs/seqkit.yaml"
-    threads: 1
     log: "logs/demultiplex/collect_fastq/{barcode}.log"
     benchmark: "benchmarks/demultiplex/collect_fastq/{barcode}.txt"
     shell: "cat {input}/*.fastq | seqkit sana 2> {log} | seqkit rename -w0 -o {output} 2>> {log}"

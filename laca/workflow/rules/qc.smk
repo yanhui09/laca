@@ -139,8 +139,7 @@ localrules: combine_fastq
 rule combine_fastq:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc))
     output: "qc/qfilt/pooled.fastq"
-    shell:
-        "cat {input} > {output}"
+    shell: "cat {input} > {output}"
 
 def get_filt(wildcards, pool = config["pool"]):
     barcodes = get_qced_barcodes(wildcards) 

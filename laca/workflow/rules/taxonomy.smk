@@ -63,7 +63,7 @@ rule createtsv:
         " --full-header --threads {threads}"
         " 1> {log} 2>&1"
 
-localrules: lineage_taxonkit_mmseqs2, taxonomy_mmseqs2_taxonkit, taxonomy_mmseqs2_silva, taxonomy_mmseqs2, taxonomy_kraken2, repseqs_split, col_q2blast_batch, get_taxonomy
+localrules: taxonomy_mmseqs2_taxonkit, taxonomy_mmseqs2_silva, taxonomy_mmseqs2, taxonomy_kraken2, repseqs_split, col_q2blast_batch, get_taxonomy
 # use taxonkit to get NCBI taxonomy, not for silva
 rule lineage_taxonkit_mmseqs2:
     input:
@@ -164,7 +164,6 @@ rule taxonomy_kraken2:
 checkpoint repseqs_split:
     input: get_repseqs()
     output: temp(directory("taxonomy/q2blast/split"))
-    conda: "../envs/seqkit.yaml"
     params:
         s = config["q2blast"]["split_by_nseq"],
     log: "logs/taxonomy/q2blast/repseqs_split.log"

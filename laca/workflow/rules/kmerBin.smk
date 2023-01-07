@@ -144,7 +144,6 @@ rule fqs_split:
         cluster = "kmerBin/clusters/{barcode}_{c}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
     output: temp("kmerBin/split/{barcode}_{c}_0.fastq"),
-    conda: "../envs/seqkit.yaml"
     log: "logs/kmerBin/fqs_split/{barcode}_{c}.log"
     benchmark: "benchmarks/kmerBin/fqs_split/{barcode}_{c}.txt"
     shell: "seqkit grep -f {input.cluster} {input.fqs} -w0 -o {output} --quiet 2> {log}"
