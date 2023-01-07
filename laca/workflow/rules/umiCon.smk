@@ -31,7 +31,7 @@ r_pattern2 = linked_pattern_umi(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
-localrules: collect_fastq_umi, exclude_shallow_umi, cls_kmerbin_umi, fqs_split_umi, umi_check1, umi_check2, cls_umiCon, collect_umiCon_trimmed
+localrules: collect_fastq_umi, exclude_shallow_umi, cls_kmerbin_umi, fqs_split_umi, umi_check1, umi_check2, cls_umiCon, split_umibin, collect_umiCon_trimmed
 # avoid re-run caused by temp()
 use rule collect_fastq as collect_fastq_umi with:
     input:  
