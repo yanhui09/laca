@@ -8,6 +8,43 @@ from .config import init_conf
 from snakemake import load_configfile
 from . import __version__
 
+def handle_max_mem(max_mem, profile):
+    "Specify maximum memory (GB) to use. Memory is controlled by profile in cluster execution."
+    "For numbers >1 its the memory in GB. "
+    "For numbers <1 it's the fraction of available memory."
+
+    if profile is not None:
+
+        if max_mem is not None:
+            logger.info(
+                "Memory requirements are handled by the profile, I ignore max-mem argument."
+            )
+        # memory is handled via the profile, user should know what he is doing
+        return ""
+    else:
+        import psutil
+        from math import floor
+
+        # calulate max  system meory in GB (float!)
+        max_system_memory = psutil.virtual_memory().total / (1024**3)
+
+        if max_mem is None:
+            max_mem = 0.95
+        if max_mem > 1:
+
+            if max_mem > max_system_memory:
+                logger.critical(
+                    f"You specified {max_mem} GB as maximum memory, but your system only has {floor(max_system_memory)} GB"
+                )
+                sys.exit(1)
+
+        else:
+
+            max_mem = max_mem * max_system_memory
+
+        # specify max_mem_string including java mem and max mem
+
+        return f" --resources mem={floor(max_mem)} mem_mb={floor(max_mem*1024)} java_mem={floor(0.85* max_mem)} "
 
 def get_snakefile(file="workflow/Snakefile"):
     sf = os.path.join(os.path.dirname(os.path.abspath(__file__)), file)
@@ -15,7 +52,7 @@ def get_snakefile(file="workflow/Snakefile"):
         sys.exit("Unable to locate the Snakemake workflow file; tried %s" % sf)
     return sf
 
-def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error, suppress):
+def run_smk(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, snake_args, snakefile, exit_on_error, suppress):
     """
     Run Long Amplicon Consensus analysis (LACA).
     Most snakemake arguments can be appended, for more info see 'snakemake --help'
@@ -46,6 +83,7 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         "--rerun-triggers mtime --rerun-incomplete --scheduler greedy "
         "--jobs {jobs} --nolock "
         " {max_mem} "
+        " {profile} "
         " {args} "
     ).format(
         wf=workflow if workflow is not None else "",
@@ -60,7 +98,8 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args, sna
         if basecalled_dir is not None else "",
         dryrun="--dryrun" if dryrun else "",
         jobs=int(jobs) if jobs is not None else 1,
-        max_mem="--resources mem_mb={}".format(int(float(maxmem)*1024)) if maxmem is not None else 50,
+        max_mem=handle_max_mem(maxmem, profile),
+        profile="" if (profile is None) else "--profile {}".format(profile),
         args=" ".join(snake_args),
     )
     if not suppress:
@@ -157,9 +196,14 @@ def cli(self):
     "-m",
     "--maxmem",
     type=float,
-    default=50,
+    default=None,
     show_default=True,
-    help="Maximum memory to use in GB.",
+    help=handle_max_mem.__doc__,
+)
+@click.option(
+    "--profile",
+    default=None,
+    help="Snakemake profile for cluster execution.",
 )
 @click.option(
     "-n",
@@ -180,7 +224,7 @@ def cli(self):
     ),
 )
 @click.argument("snake_args", nargs=-1, type=click.UNPROCESSED)
-def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args):
+def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, snake_args):
     """
     Run LACA workflow.
     """
@@ -190,7 +234,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, dryrun, snake_args
         sf = "workflow/Snakefile" 
     snakefile = get_snakefile(sf)
     configfile_run = os.path.join(workdir, "config.yaml") if configfile is None else configfile
-    run_smk(workflow, workdir, configfile_run, jobs, maxmem, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)
+    run_smk(workflow, workdir, configfile_run, jobs, maxmem, profile, dryrun, snake_args, snakefile, exit_on_error=True, suppress=False)
 
 # laca init
 # initialize config file

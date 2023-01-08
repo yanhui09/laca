@@ -221,6 +221,8 @@ rule isoCon:
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["large"]
+    resources:
+        time = 5
     shell: 
         """
         IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} \

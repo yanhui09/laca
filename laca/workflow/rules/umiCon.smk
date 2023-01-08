@@ -31,7 +31,7 @@ r_pattern2 = linked_pattern_umi(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
-localrules: collect_fastq_umi, exclude_shallow_umi, cls_kmerbin_umi, fqs_split_umi, umi_check1, umi_check2, cls_umiCon, split_umibin, collect_umiCon_trimmed
+localrules: collect_fastq_umi, exclude_shallow_umi, cls_kmerbin_umi, fqs_split_umi, umi_check1, umi_check2, cls_umiCon, split_umibin, fq2fa_umi, collect_umiCon_trimmed
 # avoid re-run caused by temp()
 use rule collect_fastq as collect_fastq_umi with:
     input:  
@@ -875,7 +875,6 @@ use rule fqs_split as split_umibin with:
 rule fq2fa_umi:
     input: rules.split_umibin.output
     output: temp("umiCon/polish/{barcode}_{c}_{clust_id}/split.fna")
-    conda: "../envs/seqkit.yaml"
     log: "logs/umiCon/polish/{barcode}_{c}_{clust_id}/fq2fa.log"
     benchmark: "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/fq2fa.txt"
     shell: "seqkit fq2fa {input} -o {output} 2> {log}"

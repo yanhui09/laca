@@ -79,7 +79,8 @@ rule umap:
         "benchmarks/kmerBin/umap/{barcode}_{batch}.txt"
     threads: config["threads"]["large"]
     resources:
-        mem_mb = config["bin_mem"] * 1024
+        mem_mb = config["bin_mem"] * 1024,
+        time = 10
     shell:
        "NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/kmerBin.py -k {input}"
        " -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components}"
