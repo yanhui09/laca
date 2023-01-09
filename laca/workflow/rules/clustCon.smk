@@ -186,6 +186,8 @@ rule isONcorrect:
     log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        time = 5
     shell:
         """
         mkdir -p {params._dir}/isONclust
@@ -222,7 +224,7 @@ rule isoCon:
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["large"]
     resources:
-        time = 5
+        time = 10
     shell: 
         """
         IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} \
