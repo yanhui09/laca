@@ -129,11 +129,11 @@ def init_conf(
         conf["fprimer"].clear()
         conf["fprimer"]["F"] = "AATGTACTTCGTTCAGTTACGTATTGCT"
         conf["rprimer"].clear()
-        conf["rprimer"]["R"] = "GCAATACGTAACTGAACGAAGT"
+        conf["rprimer"]["R"] = "ACTTCGTTCAGTTACGTATTGC"
         conf["fprimer_max"].clear()
         conf["fprimer_max"]["F"] = "AATGTACTTCGTTCAGTTACGTATTGCT"
         conf["rprimer_min"].clear()
-        conf["rprimer_min"]["R"] = "GCAATACGTAACTGAACGAAGT"
+        conf["rprimer_min"]["R"] = "ACTTCGTTCAGTTACGTATTGC"
         # simulate
         conf["simulate"]["badread"]["start_adapter_seq"] = "AATGTACTTCGTTCAGTTACGTATTGCT"
         conf["simulate"]["badread"]["end_adapter_seq"] = "GCAATACGTAACTGAACGAAGT"
