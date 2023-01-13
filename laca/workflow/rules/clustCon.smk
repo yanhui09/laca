@@ -360,6 +360,8 @@ rule spoa:
         g = config["spoa"]["g"],
     log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}.txt"
+    resources:
+        time = 10
     shell: 
         """
         # touch if exists
