@@ -127,16 +127,16 @@ def init_conf(
         
     if simulate == True:
         conf["fprimer"].clear()
-        conf["fprimer"]["F"] = "AGAGTTTGATCATGGCTCAG"
+        conf["fprimer"]["F"] = "AATGTACTTCGTTCAGTTACGTATTGCT"
         conf["rprimer"].clear()
-        conf["rprimer"]["R"] = "TACGGCTACCTTGTTACGACT"
+        conf["rprimer"]["R"] = "GCAATACGTAACTGAACGAAGT"
         conf["fprimer_max"].clear()
-        conf["fprimer_max"]["F"] = "AGAGTTTGATCATGGCTCAG"
+        conf["fprimer_max"]["F"] = "AATGTACTTCGTTCAGTTACGTATTGCT"
         conf["rprimer_min"].clear()
-        conf["rprimer_min"]["R"] = "TACGGCTACCTTGTTACGACT"
+        conf["rprimer_min"]["R"] = "GCAATACGTAACTGAACGAAGT"
         # simulate
-        conf["simulate"]["badread"]["start_adapter_seq"] = "AGAGTTTGATCATGGCTCAG"
-        conf["simulate"]["badread"]["end_adapter_seq"] = "TACGGCTACCTTGTTACGACT"
+        conf["simulate"]["badread"]["start_adapter_seq"] = "AATGTACTTCGTTCAGTTACGTATTGCT"
+        conf["simulate"]["badread"]["end_adapter_seq"] = "GCAATACGTAACTGAACGAAGT"
         # medaka 
         conf["medaka"]["iter"] = 0
         # cluster
