@@ -361,11 +361,11 @@ rule spoa:
     log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}.txt"
     resources:
-        time = 10
+        time = 30
     shell: 
         """
-        # touch if exists
-        if [ -f {output} ]; then
+        # touch if not empty
+        if [ -s {output} ]; then
             touch {output}
         else
             spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}
