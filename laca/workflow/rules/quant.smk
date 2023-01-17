@@ -27,6 +27,9 @@ rule drep_consensus:
     log: "logs/quant/derep_denoised_seqs.log"
     benchmark: "benchmarks/quant/derep_denoised_seqs.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         #https://github.com/soedinglab/MMseqs2/wiki#how-do-parameters-of-cd-hit-relate-to-mmseqs2
         #divergent amplicons for local alignment, mmseqs2 yes, cd-hit no.
@@ -135,6 +138,9 @@ rule index_repseqs:
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/index_repseqs.log"
     benchmark: "benchmarks/quant/index_repseqs.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell: 
         """
         minimap2 -I {params.index_size} -d {output.mmi} {input} 2> {log}
@@ -162,6 +168,9 @@ rule minimap2repseqs:
     log: "logs/quant/minimap2/{barcode}.log"
     benchmark: "benchmarks/quant/minimap2/{barcode}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         # de:f: divergence < max_de
         # no supplementary alignments, primary alignments only, exclude unmapped reads
@@ -199,6 +208,9 @@ rule rowname_OTU:
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/rowname_OTU.log"
     benchmark: "benchmarks/quant/rowname_OTU.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         echo '#OTU ID' > {output}
@@ -232,6 +244,9 @@ rule q2repseqs_import:
     conda: "../envs/q2plugs.yaml"
     log: "logs/uchime/q2_repseqs_import.log"
     benchmark: "benchmarks/uchime/q2_repseqs_import.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools import \
@@ -249,6 +264,9 @@ rule q2ftable_import:
     conda: "../envs/q2plugs.yaml"
     log: "logs/uchime/q2_ftable_import.log"
     benchmark: "benchmarks/uchime/q2_ftable_import.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         biom convert -i {input} -o {output.biom} --to-hdf5 > {log} 2>&1
@@ -271,6 +289,9 @@ rule q2uchime_denovo:
     conda: "../envs/q2plugs.yaml"
     log: "logs/uchime/uchime_denovo.log"
     benchmark: "benchmarks/uchime/uchime_denovo.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime vsearch uchime-denovo \
@@ -290,6 +311,9 @@ rule q2filter_features:
     conda: "../envs/q2plugs.yaml"
     log: "logs/uchime/filter_features.log"
     benchmark: "benchmarks/uchime/filter_features.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime feature-table filter-features \
@@ -307,6 +331,9 @@ rule q2filter_seqs:
     conda: "../envs/q2plugs.yaml"
     log: "logs/uchime/filter_seqs.log"
     benchmark: "benchmarks/uchime/filter_seqs.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime feature-table filter-seqs \
@@ -326,6 +353,9 @@ rule q2ftable_export:
     conda: "../envs/q2plugs.yaml"
     log: "logs/uchime/ftable_export.log"
     benchmark: "benchmarks/uchime/ftable_export.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools export \
@@ -344,6 +374,9 @@ rule q2repseqs_export:
         _dir = "uchime"
     log: "logs/uchime/repseqs_export.log"
     benchmark: "benchmarks/uchime/repseqs_export.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools export \

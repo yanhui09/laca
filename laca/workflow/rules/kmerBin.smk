@@ -7,6 +7,9 @@ rule kmer_freqs:
     log: "logs/kmerBin/kmer_freqs/{barcode}.log"
     benchmark: "benchmarks/kmerBin/kmer_freqs/{barcode}.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         "python {workflow.basedir}/scripts/kmerFreqs.py"
         " -k {params.kmer_size}"
@@ -79,8 +82,8 @@ rule umap:
         "benchmarks/kmerBin/umap/{barcode}_{batch}.txt"
     threads: config["threads"]["large"]
     resources:
-        mem_mb = config["bin_mem"] * 1024,
-        time = 10
+        mem = config["bin_mem"],
+        time = config["runtime"]["default"],
     shell:
        "NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/kmerBin.py -k {input}"
        " -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components}"

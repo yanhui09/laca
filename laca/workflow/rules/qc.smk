@@ -27,7 +27,9 @@ rule subsample:
         n = config["seqkit"]["n"],
     log: "logs/qc/subsample/{barcode}.log"
     benchmark: "benchmarks/qc/subsample/{barcode}.txt"
-    threads: 1
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         nlines=$(cat {input} | wc -l)
@@ -63,6 +65,9 @@ rule trim_primers:
     log: "logs/qc/trim_primersF/{barcode}.log"
     benchmark: "benchmarks/qc/trim_primersF/{barcode}.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         cutadapt \
@@ -99,6 +104,9 @@ rule revcomp_fq:
     log: "logs/qc/revcomp_fq/{barcode}.log"
     benchmark: "benchmarks/qc/revcomp_fq/{barcode}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
 # option to trim or not
@@ -120,6 +128,9 @@ rule q_filter:
     log: "logs/qc/q_filter/{barcode}.log"
     benchmark: "benchmarks/qc/q_filter/{barcode}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell: "cat {input} | seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i > {output} 2> {log}"
 
 checkpoint exclude_empty_fqs:

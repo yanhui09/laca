@@ -22,6 +22,9 @@ rule minimap2ava:
     log: "logs/clustCon/minimap2ava/{barcode}_{c}.log"
     benchmark: "benchmarks/clustCon/minimap2ava/{barcode}_{c}.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell:
         "minimap2 -t {threads} -x {params.x} --no-long-join -r100"
         " {input} {input} > {output} 2> {log}"
@@ -37,6 +40,9 @@ rule ava2clust:
         max_recurs = config["ava2clust"]["max_recursion"],
     log: "logs/clustCon/ava2clust/{barcode}_{c}.log"
     benchmark: "benchmarks/clustCon/ava2clust/{barcode}_{c}.txt"
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell:
         "python {workflow.basedir}/scripts/binClust.py -p {params.prefix}"
         " -R {params.max_recurs}"
@@ -116,6 +122,9 @@ rule isONclust:
     log: "logs/isONclustCon/isONclust/{barcode}_{c}.log"
     benchmark: "benchmarks/isONclustCon/isONclust/{barcode}_{c}.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell:
         """
         isONclust --k {params.k} --w {params.w} --fastq {input} --outfolder {output._dir} --t {threads} > {log} 2>&1
@@ -187,7 +196,8 @@ rule isONcorrect:
     benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
     resources:
-        time = 5
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         mkdir -p {params._dir}/isONclust
@@ -224,7 +234,8 @@ rule isoCon:
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["large"]
     resources:
-        time = 20
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell: 
         """
         IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} \
@@ -362,7 +373,8 @@ rule spoa:
     log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}.txt"
     resources:
-        time = 30
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell: 
         """
         # touch if not empty
@@ -397,6 +409,9 @@ rule minimap2polish:
     log: "logs/{cls}/{barcode}_{c}_{clust_id}/minimap2_{assembly}.log"
     benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/minimap2_{assembly}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         # if ref is empty, make dummy output
@@ -431,6 +446,9 @@ rule racon:
     log: "logs/{cls}/{barcode}_{c}_{clust_id}/racon_{iter}.log"
     benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/racon_{iter}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         # if paf file is empty, make dummy output
@@ -476,6 +494,9 @@ rule medaka_consensus:
     log: "logs/{cls}/{barcode}_{c}_{clust_id}/medaka_{iter2}.log"
     benchmark: "benchmarks/{cls}/{barcode}_{c}_{clust_id}/medaka_{iter2}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         # if fna file is empty, make dummy output

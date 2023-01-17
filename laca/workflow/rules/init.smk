@@ -11,6 +11,7 @@ def get_classifier(c = config["classifier"][0]):
         out = expand(DATABASE_DIR + "/rescript/silva_{prefix}.qza", prefix = ["seqs", "tax"])
     return out 
 
+localrules: initDB, update_taxdump, kraken2_prebuilt
 rule initDB:
     input: get_classifier()
 
@@ -28,6 +29,9 @@ rule databases_mmseqs2:
         targetDB = DATABASE_DIR + "/mmseqs2/" + config["mmseqs2"]["taxdb"] + "/" + config["mmseqs2"]["taxdb"],
     log: "logs/taxonomy/mmseqs2/databases_mmseqs2.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/databases_mmseqs2.txt"
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell: 
         "mmseqs databases {params.taxdb} {params.targetDB} {output.tmp} 1> {log} 2>&1"
 
@@ -50,6 +54,9 @@ rule update_blastdb:
         blastdb_alias = config["mmseqs2"]["blastdb_alias"],
     log: "logs/taxonomy/update_blastdb.log"
     benchmark: "benchmarks/taxonomy/update_blastdb.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["long"],
     shell:
         """
         rsync -rv --include="{params.blastdb_alias}*.tar.gz" --exclude="*" rsync://ftp.ncbi.nlm.nih.gov/blast/db/ {output} 1> {log} 2>&1
@@ -66,6 +73,9 @@ rule blastdbcmd:
         db = DATABASE_DIR + "/mmseqs2/customDB/blastdb/" + config["mmseqs2"]["blastdb_alias"],
     log: "logs/taxonomy/blast/blastdbcmd.log"
     benchmark: "benchmarks/taxonomy/blast/blastdbcmd.txt"
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell:
     # ignore err: [blastdbcmd] error while reading seqid
     # I don't know how to escape it using blastdbcmd
@@ -85,6 +95,9 @@ rule createdb_seqTax:
         DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
     log: "logs/taxonomy/mmseqs2/create_customDB.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/create_customDB.txt"
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell: 
         "mmseqs createdb {input} {params.DB} 1> {log} 2>&1"
 
@@ -102,6 +115,9 @@ rule createtaxdb_seqTax:
         DB = DATABASE_DIR + "/mmseqs2/customDB/customDB",
     log: "logs/taxonomy/mmseqs2/create_taxdb.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/create_taxdb.txt"
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["long"],
     shell: 
         "mmseqs createtaxdb {params.DB} {output.tmp} "
         "--ncbi-tax-dump {input.taxdump} --tax-mapping-file {input.taxidmapping} 1> {log} 2>&1"
@@ -129,7 +145,6 @@ rule kraken2_prebuilt:
         dbloc = directory(DATABASE_DIR + "/kraken2"),
     log: "logs/taxonomy/kraken2/kraken2_prebuilt.log"
     benchmark: "benchmarks/taxonomy/kraken2/kraken2_prebuilt.txt"
-    threads: 1
     shell:
         """
         wget {params.address} -O {params.dbloc}/kraken2.tar.gz 1> {log} 2>&1
@@ -146,6 +161,9 @@ rule rescript_get_silva:
     conda: "../envs/rescript.yaml"
     log: "logs/taxonomy/q2blast/rescript/get_silva.log"
     benchmark: "benchmarks/taxonomy/q2blast/rescript/get_silva.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime rescript get-silva-data \
@@ -163,6 +181,9 @@ rule rescript_reverse_transcribe:
     conda: "../envs/rescript.yaml"
     log: "logs/taxonomy/q2blast/rescript/reverse_transcribe.log"
     benchmark: "benchmarks/taxonomy/q2blast/rescript/reverse_transcribe.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime rescript reverse-transcribe \
@@ -177,6 +198,9 @@ rule rescript_cull:
     log: "logs/taxonomy/q2blast/rescript/cull.log"
     benchmark: "benchmarks/taxonomy/q2blast/rescript/cull.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime rescript cull-seqs \
@@ -195,6 +219,9 @@ rule rescript_filter:
     conda: "../envs/rescript.yaml"
     log: "logs/taxonomy/q2blast/rescript/filter.log"
     benchmark: "benchmarks/taxonomy/q2blast/rescript/filter.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime rescript filter-seqs-length-by-taxon \
@@ -217,6 +244,9 @@ rule rescript_drep:
     log: "logs/taxonomy/q2blast/rescript/drep.log"
     benchmark: "benchmarks/taxonomy/q2blast/rescript/drep.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime rescript dereplicate \

@@ -13,6 +13,9 @@ rule createdb_query:
         DB = "taxonomy/mmseqs2/queryDB",
     log: "logs/taxonomy/mmseqs2/create_queryDB.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/create_queryDB.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell: "mmseqs createdb {input} {params.DB} 1> {log} 2>&1"
 
 def get_seqTaxDB(blastdb_alias, db):
@@ -41,6 +44,9 @@ rule classify_mmseqs2:
     log: "logs/taxonomy/mmseqs2/taxonomy.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/taxonomy.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         "mmseqs taxonomy {input.queryDB} {input.targetDB} {params.resultDB} {output.tmp}"
         " --search-type 3 --lca-mode {params.lca_mode} --tax-lineage 1"
@@ -58,6 +64,9 @@ rule createtsv:
     log: "logs/taxonomy/mmseqs2/createtsv_mmseqs2.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/createtsv_mmseqs2.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         "mmseqs createtsv  {input.queryDB} {params.resultDB} {output}"
         " --full-header --threads {threads}"
@@ -76,6 +85,9 @@ rule lineage_taxonkit_mmseqs2:
     log: "logs/taxonomy/mmseqs2/lineage_taxonkit.log"
     benchmark: "benchmarks/taxonomy/mmseqs2/lineage_taxonkit.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         "cut -f {params.f} {input.tsv} | sort -u | taxonkit reformat -I 1 -P -j {threads}"
         " --data-dir {input.taxdump} -o {output} 1> {log} 2>&1"
@@ -125,6 +137,9 @@ rule classify_kraken2:
     log: "logs/taxonomy/kraken2/classify.log"
     benchmark: "benchmarks/taxonomy/kraken2/classify.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["simple"],
     shell:
         "kraken2 --db {params.dbloc} --threads {threads} --output {output} {input.fna}"
         " {params.classify_cmd} 1> {log} 2>&1"
@@ -176,6 +191,9 @@ rule q2import:
     conda: "../envs/rescript.yaml"
     log: "logs/taxonomy/q2blast/q2import_{part}.log"
     benchmark: "benchmarks/taxonomy/q2blast/q2import_{part}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools import \
@@ -200,6 +218,9 @@ rule classify_q2blast:
     conda: "../envs/rescript.yaml"
     log: "logs/taxonomy/q2blast/q2classify_{part}.log"
     benchmark: "benchmarks/taxonomy/q2blast/q2classify_{part}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime feature-classifier classify-consensus-blast \
@@ -217,6 +238,9 @@ rule q2export_tax:
     conda: "../envs/rescript.yaml"
     log: "logs/taxonomy/q2blast/q2export_tax_{part}.log"
     benchmark: "benchmarks/taxonomy/q2blast/q2export_tax_{part}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools export \
@@ -232,6 +256,9 @@ rule q2export_hits:
     conda: "../envs/rescript.yaml"
     log: "logs/taxonomy/q2blast/q2export_hits_{part}.log"
     benchmark: "benchmarks/taxonomy/q2blast/q2export_hits_{part}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools export \

@@ -20,6 +20,7 @@ dict_db = {
 def get_val(key, dict_i):
     return dict_i[key]
 
+localrules: download_markerDB, cls_pick, filter_ref_len, subsample_cls_ref, reheader, simulate
 rule download_markerDB:
     output: temp("simulate/{db}/rep.fna")
     params:
@@ -40,6 +41,7 @@ rule download_markerDB:
         fi
         mv {params._dir}/$file {output}
         """
+
 # exclude sequences with "N", rna2dna
 rule rna2dna:
     input: rules.download_markerDB.output
@@ -47,6 +49,9 @@ rule rna2dna:
     conda: "../envs/seqkit.yaml"
     log: "logs/simulate/{db}/rna2dna.log"
     benchmark: "benchmarks/simulate/{db}/rna2dna.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell: "seqkit grep -s -v -i -p N {input} | seqkit seq --rna2dna -w0 -o {output} 2> {log}"
 
 # two round clustering to select refs
@@ -67,6 +72,9 @@ rule cls_ref1:
     log: "logs/simulate/{db}/cls_ref/id_{minid}.log"
     benchmark: "benchmarks/simulate/{db}/cls_ref/id_{minid}.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         "mmseqs easy-cluster {input} "
         "{params.prefix} {output.tmp} "
@@ -119,7 +127,6 @@ use rule cls_ref1 as cls_ref2 with:
 rule filter_ref_len:
     input: rules.cls_ref2.output.rep    
     output: temp("simulate/{db}/cls_ref/id_{minid}_{maxid}/mmseqs2_rep_seq_f.fasta")
-    conda: "../envs/seqkit.yaml"
     params:
         m = config["simulate"]["min_len"],
         M = config["simulate"]["max_len"],
@@ -134,7 +141,6 @@ rule subsample_cls_ref:
     output:
         p = temp("simulate/{db}/cls_ref/id_{minid}_{maxid}/subsampled_p.fasta"),
         n = temp("simulate/{db}/cls_ref/id_{minid}_{maxid}/subsampled.fasta"),
-    conda: "../envs/seqkit.yaml"
     params:
         p = 1,
         n = config["simulate"]["n_refs"],
@@ -205,6 +211,9 @@ rule badread:
         glitches = config["simulate"]["badread"]["glitches"],
     log: "logs/simulate/{db}/badread/id_{minid}_{maxid}/reads{quantity}.log"
     benchmark: "benchmarks/simulate/{db}/badread/id_{minid}_{maxid}/reads{quantity}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         badread simulate --reference {input} --quantity {wildcards.quantity} \
@@ -217,7 +226,6 @@ rule badread:
             --glitches {params.glitches} > {output} 2> {log}
         """
 
-localrules: simulate
 rule simulate:
     input: expand("simulate/{db}/badread/id_{mixid}/reads{quantity}.fastq", db = [k for k in dict_db.keys()], mixid = [f"{minid}_{maxid}" for (minid, maxid) in zip(minids, maxids)], quantity=quantities)
     output: directory("demultiplexed"),

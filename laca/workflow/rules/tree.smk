@@ -19,6 +19,9 @@ rule trim_repseqs:
     log: "logs/tree/trim_repseqs.log"
     benchmark: "benchmarks/tree/trim_repseqs.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell: "cutadapt -j {threads} {params.f} -o {output} {input} > {log} 2>&1"
 
 def trim_check2(
@@ -40,6 +43,9 @@ rule q2_repseqs:
     conda: "../envs/q2plugs.yaml"
     log: "logs/tree/q2_repseqs.log"
     benchmark: "benchmarks/tree/q2_repseqs.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools import \
@@ -64,6 +70,9 @@ rule q2_fasttree:
     log: "logs/tree/q2_fasttree.log"
     benchmark: "benchmarks/tree/q2_fasttree.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime phylogeny align-to-tree-mafft-fasttree \
@@ -91,6 +100,9 @@ rule q2_iqtree:
     log: "logs/tree/q2_iqtree.log"
     benchmark: "benchmarks/tree/q2_iqtree.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime phylogeny align-to-tree-mafft-iqtree \
@@ -118,6 +130,9 @@ rule q2_raxml:
     log: "logs/tree/q2_raxml.log"
     benchmark: "benchmarks/tree/q2_raxml.txt"
     threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell:
         """
         qiime phylogeny align-to-tree-mafft-raxml \
@@ -138,6 +153,9 @@ rule q2export_tree:
         _dir = "tree/{phylogen}",
     log: "logs/tree/{phylogen}_export.log"
     benchmark: "benchmarks/tree/{phylogen}_export.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         qiime tools export \
@@ -145,6 +163,7 @@ rule q2export_tree:
         --output-path {params._dir} \
         > {log} 2>&1
         """
+
 localrules: get_tree
 rule get_tree:
     input: "tree/" + config["phylogeny"][0] + "/tree.nwk",

@@ -1,3 +1,4 @@
+localrules: guppy, collect_minibars, demux_check, collect_fastq
 rule guppy:
     # need to bind INPUT_DIR if not in workdir
     output: temp(directory("demux_guppy"))
@@ -8,6 +9,8 @@ rule guppy:
     params:
         indir = config["basecalled_dir"],
         barcode_kits = config["guppy"]["barcode_kits"],
+    resources:
+        mem = config["mem"]["large"],
     shell: 
         """
         if [ {params.indir} == "None" ]; then
@@ -35,6 +38,9 @@ rule minibar:
         args = config["minibar"]["args"],
     log: "logs/demultiplex/minibar/{basecalled_fq}.log"
     benchmark: "benchmarks/demultiplex/minibar/{basecalled_fq}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
     shell: 
         """
         mkdir -p {params.outdir}
@@ -49,6 +55,8 @@ rule collect_minibars:
         indir = os.path.join(os.getcwd(), "minibar"),
     log: "logs/demultiplex/minibar/collect_batch.log"
     benchmark: "benchmarks/demultiplex/minibar/collect_batch.txt"
+    resources:
+        mem = config["mem"]["normal"],
     shell:
         """
         if [ ! -d {params.indir} ]; then
@@ -129,7 +137,6 @@ def get_demux(demux=config["demuxer"], demux_external=config["demultiplexed_dir"
         check_basecall_dir()
         return "demux_" + demux
 
-localrules: demux_check, collect_fastq
 checkpoint demux_check:
     input: get_demux()
     output: directory("demultiplexed")

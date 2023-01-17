@@ -7,6 +7,14 @@ merge_runs:
 threads:
   normal: 2 # common jobs
   large: 6 # threads-dependent jobs
+mem:
+  normal: 10
+  large: 50
+# runtime (h) only for cluster excution
+runtime:
+  default: 5
+  long: 30
+  simple: 1
 
 # Pooling samples for denoise [true|false]
 pool: true

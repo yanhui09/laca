@@ -31,7 +31,7 @@ r_pattern2 = linked_pattern_umi(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
-localrules: collect_fastq_umi, exclude_shallow_umi, cls_kmerbin_umi, fqs_split_umi, umi_check1, umi_check2, cls_umiCon, split_umibin, fq2fa_umi, collect_umiCon_trimmed
+localrules: collect_fastq_umi, exclude_shallow_umi, cls_kmerbin_umi, fqs_split_umi, fqs_umi, umi_loc, concat_umi, umi_check1, check_umi, umi_check2, umi_loc2, cls_umiCon, split_umibin, fq2fa_umi, collect_umiCon_trimmed
 # avoid re-run caused by temp()
 use rule collect_fastq as collect_fastq_umi with:
     input:  
@@ -180,7 +180,6 @@ rule umi_loc:
     output:
         start = temp("umiCon/umiExtract/{barcode}_{c}/start.fastq"),
         end = temp("umiCon/umiExtract/{barcode}_{c}/end.fastq"),
-    conda: "../envs/seqkit.yaml"
     params:
         umi_loc=config["umi"]["loc"]
     log: "logs/umiCon/umiExtract/umi_loc/{barcode}_{c}.log"
@@ -210,6 +209,9 @@ rule extract_umi:
     log: "logs/umiCon/umiExtract/extract_umi/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/extract_umi/{barcode}_{c}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         "cutadapt "
         "-j {threads} -e {params.max_err} -O {params.min_overlap} "
@@ -226,7 +228,6 @@ rule concat_umi:
         umi1 = rules.extract_umi.output.umi1,
         umi2 = rules.extract_umi.output.umi2,
     output: temp("umiCon/umiExtract/{barcode}_{c}/umi.fasta")
-    conda: "../envs/seqkit.yaml"
     log: "logs/umiCon/umiExtract/concat_umi/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/concat_umi/{barcode}_{c}.txt"
     shell: "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -o {output} 2>> {log}"
@@ -337,6 +338,9 @@ rule cluster_umi:
     log: "logs/umiCon/umiExtract/cluster_umi/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/cluster_umi/{barcode}_{c}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["default"],
     shell:
         """
         vsearch --fastx_uniques {input} --fastaout {output.umi12u} \
@@ -384,6 +388,9 @@ rule extract_umip:
     log: "logs/umiCon/umiExtract/extract_umip/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/extract_umip/{barcode}_{c}.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         "cutadapt "
         "-j {threads} -e {params.max_err} -O {params.min_overlap} "
@@ -420,6 +427,9 @@ rule bwa_umi:
         F = 4,
     log: "logs/umiCon/umiExtract/bwa_umi/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/bwa_umi/{barcode}_{c}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell: 
         """
         bwa index {input.ref} 2> {log}
@@ -436,6 +446,9 @@ rule umi_filter:
     conda: "../envs/umi.yaml"
     log: "logs/umiCon/umiExtract/umi_filter/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/umi_filter/{barcode}_{c}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         awk \
@@ -500,6 +513,9 @@ rule rm_chimera:
         umip_len = config["umi"]["len"],
     log: "logs/umiCon/umiExtract/rm_chimera/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiExtract/rm_chimera/{barcode}_{c}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         paste <(cat {input} | paste - - ) \
@@ -563,7 +579,6 @@ rule umi_loc2:
     output:
         start = temp("umiCon/umiBin/{barcode}_{c}/reads_umi1.fasta"),
         end = temp("umiCon/umiBin/{barcode}_{c}/reads_umi2.fasta"),
-    conda: "../envs/seqkit.yaml"
     params:
         s = config["umi"]["s"],
         e = config["umi"]["e"],
@@ -637,6 +652,9 @@ rule umi_binning:
         S = config["umi"]["S"],
     log: "logs/umiCon/umiBin/{barcode}_{c}.log"
     benchmark: "benchmarks/umiCon/umiBin/{barcode}_{c}.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         awk \
@@ -888,6 +906,9 @@ rule get_seedfa:
     log: "logs/umiCon/polish/{barcode}_{c}_{clust_id}/get_centroids.log"
     benchmark: "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/get_centroids.txt"
     threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         vsearch --cluster_fast {input} -id 0.75 --sizeout --strand both \
@@ -916,6 +937,9 @@ rule trim_primers_umi:
     threads: config["threads"]["normal"]
     log: "logs/umiCon/trim_primers_umi.log"
     benchmark: "benchmarks/umiCon/trim_primers_umi.txt"
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["simple"],
     shell:
         """
         cutadapt \
