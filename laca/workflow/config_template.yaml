@@ -98,11 +98,11 @@ isONclust:
   w: 20
 
 spoa:
-  #0: local (Smith-Waterman); 1: global (Needleman-Wunsch); 2: semi-global
+  # 0: local (Smith-Waterman); 1: global (Needleman-Wunsch); 2: semi-global
   l: 0 
   r: 0
   g: -2
-  # maximal number of reads for consensus, -1, all 
+  # maximal number of reads for consensus [-1, all reads]
   M: -1
 
 minimap2:
