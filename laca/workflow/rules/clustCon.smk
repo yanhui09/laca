@@ -358,6 +358,7 @@ rule spoa:
         l = config["spoa"]["l"],
         r = config["spoa"]["r"],
         g = config["spoa"]["g"],
+        M = config["spoa"]["M"],
     log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}.txt"
     resources:
@@ -368,7 +369,14 @@ rule spoa:
         if [ -s {output} ]; then
             touch {output}
         else
-            spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}
+            # use first 4*M reads if M > 0
+            if [ {params.M} -gt 0 ]; then
+                head -n $((4*{params.M})) {input} > {input}.M.fastq
+                spoa {input}.M.fastq -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}
+                rm {input}.M.fastq
+            else
+                spoa {input} -l {params.l} -r {params.r} -g {params.g} -s > {output} 2> {log}
+            fi    
         fi
         """
 

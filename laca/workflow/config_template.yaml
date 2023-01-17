@@ -94,6 +94,8 @@ spoa:
   l: 0 
   r: 0
   g: -2
+  # maximal number of reads for consensus, -1, all 
+  M: -1
 
 minimap2:
   # choose by reads type; https://github.com/lh3/minimap2
