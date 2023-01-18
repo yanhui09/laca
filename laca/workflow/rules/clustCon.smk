@@ -234,7 +234,7 @@ rule isoCon:
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["large"]
     resources:
-        mem = config["mem"]["large"],
+        mem = config["mem"]["normal"],
         time = config["runtime"]["long"],
     shell: 
         """
