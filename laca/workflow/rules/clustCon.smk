@@ -373,7 +373,7 @@ rule spoa:
     log: "logs/{cls}/spoa/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/{cls}/spoa/{barcode}_{c}_{clust_id}.txt"
     resources:
-        mem = config["mem"]["large"],
+        mem = config["mem"]["normal"],
         time = config["runtime"]["long"],
     shell: 
         """
