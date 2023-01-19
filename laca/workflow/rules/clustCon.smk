@@ -257,6 +257,8 @@ checkpoint cls_isONcorCon:
         lambda wc: expand("isONclustCon/split/{bc_kb_ci}.fastq", bc_kb_ci=glob_wildcards(checkpoints.cls_isONclustCon.get(**wc).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci),
         unpack(get_isONcorCon),
     output: directory("isONcorCon/clusters"),
+    params:
+        min_candidates = config["IsoCon"]["min_candidates"],
     run:
         import pandas as pd
         if not os.path.exists(output[0]):
@@ -271,6 +273,8 @@ checkpoint cls_isONcorCon:
             # only leave candidate id 'transcript_id_support_num'
             df_i['cluster'] = df_i['cluster'].apply(lambda x: x.split('_')[1])
             for clust_id, df_clust in df_i.groupby('cluster'):
+                if len(df_clust) < params.min_candidates:
+                    continue
                 df_clust['seqid'].to_csv(output[0] + "/{bc_kb_ci}cand{clust_id}.csv".format(bc_kb_ci=bc_kb_ci, clust_id=clust_id),
                 header = False, index = False)
 
