@@ -128,9 +128,6 @@ medaka:
 
 # run isONcorrect before IsoCon
 isONcor: True # [isONcorCon]
-
-IsoCon:
-  min_candidates: 2
 ##############################################################
 # create abundance matrix by sequence id or minimap2 mapping 
 # seqid | minimap2, the first is the final

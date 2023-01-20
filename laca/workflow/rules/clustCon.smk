@@ -229,7 +229,7 @@ rule isoCon:
     conda: "../envs/isONcorCon.yaml"
     params:
         prefix = "isONcorCon/{barcode}_{c}_{clust_id}",
-        min_candidates = config["IsoCon"]["min_candidates"],
+        min_candidates = config["min_cluster_size"],
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["large"]
@@ -258,7 +258,7 @@ checkpoint cls_isONcorCon:
         unpack(get_isONcorCon),
     output: directory("isONcorCon/clusters"),
     params:
-        min_candidates = config["IsoCon"]["min_candidates"],
+        min_candidates = config["min_cluster_size"],
     run:
         import pandas as pd
         if not os.path.exists(output[0]):
