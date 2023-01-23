@@ -128,6 +128,12 @@ medaka:
 
 # run isONcorrect before IsoCon
 isONcor: True # [isONcorCon]
+IsoCon:
+  # speed up with small values, e.g. 500, 1000, 
+  # but may affect quality if nearest neighbors not found, default: 2**32
+  # https://github.com/ksahlin/IsoCon/issues/3
+  neighbor_search_depth:
+  p_value_threshold: 0.01
 ##############################################################
 # create abundance matrix by sequence id or minimap2 mapping 
 # seqid | minimap2, the first is the final

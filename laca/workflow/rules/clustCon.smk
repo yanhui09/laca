@@ -230,6 +230,8 @@ rule isoCon:
     params:
         prefix = "isONcorCon/{barcode}_{c}_{clust_id}",
         min_candidates = config["min_cluster_size"],
+        neighbor_search_depth =  int(config["IsoCon"]["neighbor_search_depth"]) if config["IsoCon"]["neighbor_search_depth"] else 2**32,
+        p_value_threshold = config["IsoCon"]["p_value_threshold"],
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["large"]
@@ -239,7 +241,8 @@ rule isoCon:
     shell: 
         """
         IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} \
-        --prefilter_candidates --min_candidate_support {params.min_candidates} > {log} 2>&1
+        --neighbor_search_depth {params.neighbor_search_depth} --p_value_threshold {params.p_value_threshold} \
+        --prefilter_candidates --min_candidate_support {params.min_candidates} --cleanup > {log} 2>&1
         find {params.prefix}/IsoCon -mindepth 1 ! -name 'final_candidates.fa' ! -name 'cluster_info.tsv' | xargs rm -rf 
         """
 
