@@ -257,8 +257,8 @@ rule isoCon:
           mkdir -p {params.prefix}/IsoCon/batches
           # determine the minimum partion size (number of batches)
           min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
-          # determine the number of lines per batch
-          nlines_per_batch=$((nlines / min_part_size)) 
+          # determine the number of lines per batch, 4n
+          nlines_per_batch=$((nlines / (min_part_size * 4) * 4)) 
           split -l $nlines_per_batch -a2 -d --additional-suffix='.fastq' {input} {params.prefix}/IsoCon/batches/b >{log} 2>&1
           for fq in {params.prefix}/IsoCon/batches/b*.fastq; do
             batch_id=$(basename $fq | cut -d'.' -f1)
