@@ -49,7 +49,6 @@ checkpoint shuffle_batch:
     conda: "../envs/coreutils.yaml"
     params:
         batch_size = lambda wc, input: get_batch_size(kmer_file = input[0]),
-    log: "logs/kmerBin/shuffle_batch/{barcode}.log"
     benchmark: "benchmarks/kmerBin/shuffle_batch/{barcode}.txt"
     threads: config["threads"]["normal"]
     shell:

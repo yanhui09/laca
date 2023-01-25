@@ -151,7 +151,7 @@ checkpoint demux_check:
         mkdir {output}/suspected -p >> {log} 2>&1
         for i in {output}/*/
         do
-            if [ "$i" = "{output}/suspected/" ] || [ "$i" = "{output}/unclassified/" ] || [ "$i" = "{output}/mult/" ]
+            if [ "$i" == "{output}/suspected/" ] || [ "$i" == "{output}/unclassified/" ] || [ "$i" == "{output}/mult/" ]
             then
                 continue
             fi

@@ -191,7 +191,7 @@ rule isONcorrect:
     params:
         _dir = "isONcorCon/{barcode}_{c}_{clust_id}",
         clust_id = "{clust_id}",
-        max_seqs = 2000,
+        max_seqs = 2000 * 4,
     log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
@@ -204,8 +204,7 @@ rule isONcorrect:
         cp {input} {params._dir}/isONclust/{params.clust_id}.fastq
         # number of reads in fastqs
         nlines=$(cat {params._dir}/isONclust/{params.clust_id}.fastq | wc -l)
-        nreads=$((nlines / 4))
-        if [ $nreads -gt {params.max_seqs} ]; then
+        if [ $nlines -gt {params.max_seqs} ]; then
             run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
         else
             run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
@@ -221,6 +220,12 @@ def get_isoCon_input(isONcor = config["isONcor"]):
     else:
         return rules.fqs_split3.output
 
+def check_isoCon_batch(batch_size = config["IsoCon"]["max_batch_size"]):
+    check_val("IsoCon batch_size", batch_size, int)
+    if int(batch_size) < -1:
+        raise ValueError("IsoCon batch_size only accepts integer >= -1.")
+check_isoCon_batch()
+
 rule isoCon:
     input: get_isoCon_input()
     output:
@@ -232,6 +237,7 @@ rule isoCon:
         min_candidates = config["min_cluster_size"],
         neighbor_search_depth =  int(config["IsoCon"]["neighbor_search_depth"]) if config["IsoCon"]["neighbor_search_depth"] else 2**32,
         p_value_threshold = config["IsoCon"]["p_value_threshold"],
+        max_batch_size = -1 if int(config["IsoCon"]["max_batch_size"]) == -1 else int(config["IsoCon"]["max_batch_size"]) * 4,
     log: "logs/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isoCon/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["large"]
@@ -240,10 +246,37 @@ rule isoCon:
         time = config["runtime"]["long"],
     shell: 
         """
-        IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} \
-        --neighbor_search_depth {params.neighbor_search_depth} --p_value_threshold {params.p_value_threshold} \
-        --prefilter_candidates --min_candidate_support {params.min_candidates} --cleanup > {log} 2>&1
-        find {params.prefix}/IsoCon -mindepth 1 ! -name 'final_candidates.fa' ! -name 'cluster_info.tsv' | xargs rm -rf 
+        nlines=$(cat {input} | wc -l)
+        if [ {params.max_batch_size} -eq -1 ] || [ $nlines -le {params.max_batch_size} ]; then
+          IsoCon pipeline -fl_reads {input} -outfolder {params.prefix}/IsoCon --nr_cores {threads} \
+          --neighbor_search_depth {params.neighbor_search_depth} --p_value_threshold {params.p_value_threshold} \
+          --prefilter_candidates --min_candidate_support {params.min_candidates} --cleanup >{log} 2>&1
+          find {params.prefix}/IsoCon -mindepth 1 ! -name 'final_candidates.fa' ! -name 'cluster_info.tsv' | xargs rm -rf
+        else
+          # split input fastq into batches
+          mkdir -p {params.prefix}/IsoCon/batches
+          # determine the minimum partion size (number of batches)
+          min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
+          # determine the number of lines per batch
+          nlines_per_batch=$((nlines / min_part_size)) 
+          split -l $nlines_per_batch -a2 -d --additional-suffix='.fastq' {input} {params.prefix}/IsoCon/batches/b >{log} 2>&1
+          for fq in {params.prefix}/IsoCon/batches/b*.fastq; do
+            batch_id=$(basename $fq | cut -d'.' -f1)
+            if [ -f {params.prefix}/IsoCon/batches/$batch_id/final_candidates.fa ] && [ -f {params.prefix}/IsoCon/batches/$batch_id/cluster_info.tsv ]; then
+              continue
+            fi
+            IsoCon pipeline -fl_reads $fq -outfolder {params.prefix}/IsoCon/batches/$batch_id --nr_cores {threads} \
+            --neighbor_search_depth {params.neighbor_search_depth} --p_value_threshold {params.p_value_threshold} \
+            --prefilter_candidates --min_candidate_support {params.min_candidates} --cleanup >> {log} 2>&1
+            find {params.prefix}/IsoCon/batches/$batch_id -mindepth 1 ! -name 'final_candidates.fa' ! -name 'cluster_info.tsv' | xargs rm -rf
+            sed -i "s/_support/${{batch_id}}_support/" {params.prefix}/IsoCon/batches/$batch_id/cluster_info.tsv
+            sed -i "s/_support/${{batch_id}}_support/" {params.prefix}/IsoCon/batches/$batch_id/final_candidates.fa
+          done
+          # merge the results
+          cat {params.prefix}/IsoCon/batches/b*/cluster_info.tsv > {params.prefix}/IsoCon/cluster_info.tsv
+          cat {params.prefix}/IsoCon/batches/b*/final_candidates.fa > {params.prefix}/IsoCon/final_candidates.fa
+          rm -rf {params.prefix}/IsoCon/batches
+        fi
         """
 
 def get_isONcorCon(wildcards):

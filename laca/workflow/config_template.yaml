@@ -134,6 +134,9 @@ IsoCon:
   # https://github.com/ksahlin/IsoCon/issues/3
   neighbor_search_depth:
   p_value_threshold: 0.01
+  # evenly paritioned to run in batch if the number of reads bigger than the set value
+  # default: -1, no batch use
+  max_batch_size: -1
 ##############################################################
 # create abundance matrix by sequence id or minimap2 mapping 
 # seqid | minimap2, the first is the final
