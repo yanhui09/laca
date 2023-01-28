@@ -68,15 +68,24 @@ use rule rename_drep_seqs as rename_drep_seqs_merged with:
        "rep_seqs_merged.fasta"
 
 rule matrix_merged:
-    input: rules.drep_seqs_merged.output.tsv
+    input: 
+        rules.drep_seqs_merged.output.tsv,
+        rules.drep_seqs_merged.output.rep,
     output: "count_matrix_merged.tsv"
     run:
         import pandas as pd
+        # record the representative order from fasta file
+        rep_order = []
+        with open(input[1], "r") as rep:
+            for line in rep:
+                if line.startswith(">"):
+                    rep_order.append(line.strip().split(">")[1])
+        
         # OTU <- derep_cls -> cand_cls
         derep_cls = pd.read_csv(input[0], sep="\t", header=None)
         derep_cls.columns = ["rep_cls","cls"]
-        # OTU with incremental number by rep_cls, 1, 2, ...
-        derep_cls["OTU"] = derep_cls["rep_cls"].factorize()[0] + 1
+        # map to the 'rep_order' list as OTU, starting from 1
+        derep_cls["OTU"] = derep_cls["rep_cls"].map(dict(zip(rep_order, range(1, len(rep_order)+1))))
 
         tables = collect_laca_runs(laca_run = config["merge_runs"])['tables']
         for table in list(tables):
