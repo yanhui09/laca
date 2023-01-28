@@ -91,15 +91,23 @@ rule matrix_seqid:
     input:
         rules.drep_consensus.output.tsv,
         rules.combine_cls.output,
+        rules.drep_consensus.output.rep,
         fqs = lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes(wc)),
     output: "quant/matrix_seqid.tsv"
     run:
         import pandas as pd
+        # record the representative order from fasta file
+        rep_order = []
+        with open(input[2], "r") as rep:
+            for line in rep:
+                if line.startswith(">"):
+                    rep_order.append(line.strip().split(">")[1])
+        
         # OTU <- derep_cls -> cand_cls
         derep_cls = pd.read_csv(input[0], sep="\t", header=None)
         derep_cls.columns = ["rep_cls","cls"]
-        # OTU with incremental number by rep_cls, 1, 2, ...
-        derep_cls["OTU"] = derep_cls["rep_cls"].factorize()[0] + 1
+        # map to the 'rep_order' list as OTU, starting from 1
+        derep_cls["OTU"] = derep_cls["rep_cls"].map(dict(zip(rep_order, range(1, len(rep_order)+1))))
 
         cand_cls = pd.read_csv(input[1], sep="\t", header=None)
         cand_cls.columns = ["seqid", "cls"]
