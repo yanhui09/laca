@@ -191,7 +191,7 @@ rule isONcorrect:
     params:
         _dir = "isONcorCon/{barcode}_{c}_{clust_id}",
         clust_id = "{clust_id}",
-        max_seqs = 2000 * 4,
+        max_seqs = 2000,
     log: "logs/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.log"
     benchmark: "benchmarks/isONcorCon/isONcorrect/{barcode}_{c}_{clust_id}.txt"
     threads: config["threads"]["normal"]
@@ -204,7 +204,7 @@ rule isONcorrect:
         cp {input} {params._dir}/isONclust/{params.clust_id}.fastq
         # number of reads in fastqs
         nlines=$(cat {params._dir}/isONclust/{params.clust_id}.fastq | wc -l)
-        if [ $nlines -gt {params.max_seqs} ]; then
+        if [ $nlines -gt $((4*{params.max_seqs})) ]; then
             run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
         else
             run_isoncorrect --t {threads} --fastq_folder {params._dir}/isONclust --outfolder {params._dir}/isONcor --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
