@@ -127,8 +127,14 @@ rule isONclust:
         time = config["runtime"]["long"],
     shell:
         """
-        isONclust --k {params.k} --w {params.w} --fastq {input} --outfolder {output._dir} --t {threads} > {log} 2>&1
-        mv {output._dir}/final_clusters.tsv {output.tsv}
+        # make dummies if failed
+        isONclust --k {params.k} --w {params.w} --fastq {input} --outfolder {output._dir} --t {threads} > {log} 2>&1 || true
+        if [ -f {output._dir}/final_clusters.tsv ]; then
+            mv {output._dir}/final_clusters.tsv {output.tsv}
+        else
+            mkdir -p {output._dir}
+            touch {output.tsv}
+        fi
         """
 
 def get_isONclust(wildcards, cls, pool = config["pool"], kmerbin = config["kmerbin"]):
@@ -163,6 +169,9 @@ checkpoint cls_isONclustCon:
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
         for i in list(input.cls):
+            # if empty, skip
+            if os.stat(i).st_size == 0:
+                continue
             barcode, c = [ i.split('/')[-1].removesuffix(".tsv").split('_')[index] for index in [-2, -1] ]
             df_i = pd.read_csv(i, sep = '\t', header = None)
             df_i.columns = ['cluster', 'seqid']
