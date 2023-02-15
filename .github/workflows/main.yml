@@ -32,10 +32,11 @@ jobs:
         run: |
           export PATH="/usr/share/miniconda/bin:$PATH"
           conda config --set channel_priority flexible
-          conda install -c conda-forge -q mamba
+          wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
+          bash Miniforge-Linux-x86_64.sh -b
           # ensure that mamba is happy to write into the cache
           sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
-          mamba env create --name laca --file env.yaml
+          mamba env create -q --name laca --file env.yaml
       
       - name: Install Kamp
         run: |
