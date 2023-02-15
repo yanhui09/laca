@@ -35,7 +35,7 @@ jobs:
           conda install -c conda-forge -q mamba
           # ensure that mamba is happy to write into the cache
           sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
-          mamba env create -q --name laca --file env.yaml
+          mamba env create --name laca --file env.yaml
       
       - name: Install Kamp
         run: |
