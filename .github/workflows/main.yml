@@ -30,19 +30,18 @@ jobs:
 
       - name: Setup LACA environment
         run: |
-          export PATH="/usr/share/miniconda/bin:$PATH"
-          conda config --set channel_priority flexible
           wget -O Mambaforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh --quiet
           bash Mambaforge.sh -b -p "${HOME}/conda"
           source "${HOME}/conda/etc/profile.d/conda.sh"
           source "${HOME}/conda/etc/profile.d/mamba.sh"
           # ensure that mamba is happy to write into the cache
-          sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
+          sudo chown -R runner:docker "${HOME}/conda/pkgs/cache"
+          conda config --set channel_priority flexible
           mamba env create -q --name laca --file env.yaml
       
-      - name: Install Kamp
+      - name: Install LACA
         run: |
-          export PATH="/usr/share/miniconda/bin:$PATH"
+          export PATH="${HOME}/conda/bin:$PATH"
           source activate laca
           pip install --editable .
           laca -h
@@ -51,7 +50,7 @@ jobs:
 
       - name: Dry-run LACA
         run: |
-          export PATH="/usr/share/miniconda/bin:$PATH"
+          export PATH="${HOME}/conda/bin:$PATH"
           source activate laca
           laca init -b laca/workflow/resources/data -d test/Database -w test
           laca run all -w test -n 
