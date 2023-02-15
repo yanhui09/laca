@@ -32,8 +32,10 @@ jobs:
         run: |
           export PATH="/usr/share/miniconda/bin:$PATH"
           conda config --set channel_priority flexible
-          wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
-          bash Mambaforge-Linux-x86_64.sh -b
+          wget -O Mambaforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh --quiet
+          bash Mambaforge.sh -b -p "${HOME}/conda"
+          source "${HOME}/conda/etc/profile.d/conda.sh"
+          source "${HOME}/conda/etc/profile.d/mamba.sh"
           # ensure that mamba is happy to write into the cache
           sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
           mamba env create -q --name laca --file env.yaml
