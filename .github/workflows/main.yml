@@ -33,7 +33,7 @@ jobs:
           export PATH="/usr/share/miniconda/bin:$PATH"
           conda config --set channel_priority flexible
           wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh
-          bash Miniforge-Linux-x86_64.sh -b
+          bash Mambaforge-Linux-x86_64.sh -b
           # ensure that mamba is happy to write into the cache
           sudo chown -R runner:docker /usr/share/miniconda/pkgs/cache
           mamba env create -q --name laca --file env.yaml
