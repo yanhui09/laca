@@ -3,8 +3,6 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-=7.19.1-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![Build Status](https://github.com/yanhui09/laca/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/yanhui09/laca/actions?query=branch%3Amaster+workflow%3ACI)
 
-**!!! To be updated.**
-
 `LACA` is a reproducible and scalable workflow for **Long Amplicon Consensus Analysis**, e.g., 16S rRNA gene.
 Using `Snakemake` as the job controller, `LACA` is wrapped into a python package for development and mainteniance.
 `LACA` provides an end-to-end solution from bascecalled reads to the final count matrix.
@@ -147,7 +145,9 @@ Options:
   -c, --configfile FILE  Config file for LACA. Use config.yaml in working
                          directory if not specified.
   -j, --jobs INTEGER     Maximum jobs to run in parallel.  [default: 6]
-  -m, --maxmem FLOAT     Maximum memory to use in GB.  [default: 50]
+  -m, --maxmem FLOAT     Specify maximum memory (GB) to use. Memory is
+                         controlled by profile in cluster execution.
+  --profile TEXT         Snakemake profile for cluster execution.
   -n, --dryrun           Dry run.
   -h, --help             Show this message and exit.
 ```
