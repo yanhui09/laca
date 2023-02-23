@@ -18,7 +18,7 @@ See links to the left for :doc:`getting_started/installation` instructions
 Bugs reports and feature requests can be submitted through `GitHub
 <https://github.com/yanhui09/laca/issues>`_.
 
-InStrain was developed by `Yan Hui <https://github.com/yanhui09>`_ in the 
+InStrain was developed by `Yan Hui <https://github.com/yanhui09>`_ in  
 `Dennis Group <https://food.ku.dk/english/research_at_food/research-groups/microbial-diversity-and-function-in-gut-and-food/>`_ 
 at the University of Copenhagen, Copenhagen.
 
