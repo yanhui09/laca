@@ -1,8 +1,8 @@
 User manual
 ***************
 
-LACA Commands
-=============
+Commands
+========
 
 ``LACA`` is easy to use. You can start a new analysis in two steps using ``laca init`` and ``laca run`` . 
 
@@ -22,7 +22,9 @@ LACA Commands
       init  Prepare the config file.
       run   Run LACA workflow.
 
-LACA Init
+.. _laca_init:
+
+laca init
 =========
 
 ``laca init`` will generate a config file in the working directory, 
@@ -84,7 +86,9 @@ which contains the necessary parameters to run ``LACA``.
       --clean-flags                   Clean flag files.
       -h, --help                      Show this message and exit.
 
-LACA Run
+.. _laca_run:
+
+laca run
 ========
 
 ``laca run`` will trigger the full workflow or a specfic module under defined resource accordingly.

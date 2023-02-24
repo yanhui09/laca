@@ -32,3 +32,13 @@ To avoid inconsistency, we suggest installing ``LACA`` in the ``conda`` environm
 
     conda activate laca
     pip install --editable .
+
+Installation check with demo
+============================
+
+.. code-block:: bash
+
+    cd $HOME
+    conda activate laca 
+    laca init -b laca/workflow/resources/data -d test/Database -w test
+    laca run all -w test -n 
