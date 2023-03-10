@@ -268,7 +268,7 @@ rule isoCon:
           min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
           # determine the number of lines per batch, ceiling division, the nearest multiples of 4
           nlines_per_batch=$(((nlines + min_part_size * 4 - 1) / (min_part_size * 4) * 4)) 
-          split -l $nlines_per_batch -a2 -d --additional-suffix='.fastq' {input} {params.prefix}/IsoCon/batches/b >{log} 2>&1
+          split -l $nlines_per_batch -a3 -d --additional-suffix='.fastq' {input} {params.prefix}/IsoCon/batches/b >{log} 2>&1
           for fq in {params.prefix}/IsoCon/batches/b*.fastq; do
             batch_id=$(basename $fq | cut -d'.' -f1)
             if [ -f {params.prefix}/IsoCon/batches/$batch_id/final_candidates.fa ] && [ -f {params.prefix}/IsoCon/batches/$batch_id/cluster_info.tsv ]; then
