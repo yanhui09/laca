@@ -77,16 +77,50 @@ Execuation
 Command Line interface
 ----------------------
 
+.. code-block:: bash
+
+    laca run all -j 50 -m 100
+
 Cluster execuation
 ------------------
 
-Useful ``run`` arguments
-------------------------
+.. code-block:: bash
 
-Get a dry-run overview with ``-n``. ``snakemake`` arguments can be appened to ``laca run`` as well.
+    laca run all --profile cluster -j 20
+
+Use ``snakemake`` arguments
+---------------------------
+
+``LACA`` wraps ``snakemake`` to excuate the workflow, and accepts ``--snakemake`` arguments 
+in execuation. Except ``--profile``, other useful arguments includes:
+
+- ``-n``, which prints the dry-run overview.
+- ``-k/--keep-going``, which allows laca run to acomplish other independent jobs even if some jobs fail.
+- ``--report``, which generates a report of the workflow by specifying e.g. ``--report report.html``.
+
+More details can be found in the `snakemake documentation <https://snakemake.readthedocs.io/en/stable/>`_.
 
 Merge runs
 ==========
 
-Read simulation
-===============
+``LACA`` allows meta-analysis of multiple accomplished runs, and generates the integrated OTU catalogue, count matrix 
+and annotations. To merge runs, you can use the flag ``-m/--merge`` in ::ref::`laca init` to specify the path to the 
+accomplished runs.
+
+.. code-block:: bash
+
+    laca init -m /path/to/laca_run1 -m /path/to/laca_run2 -d /path/to/database
+    laca run merge
+
+Run with simulated reads
+========================
+
+``LACA`` supports performance benchmark between genetic heterogeneity of target region, sequencing noise and depth. 
+The *in silico* long amplicon reads are generated with `Badread <https://github.com/rrwick/Badread>`_ 
+from `SILVA SSUs <https://www.arb-silva.de/>`_ according the defined parameters in the ``config`` file. To enable this, 
+
+.. code-block:: bash
+
+    laca init -d /path/to/database --simulate
+    laca run simulate
+    laca run all
