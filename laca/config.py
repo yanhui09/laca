@@ -156,8 +156,9 @@ def init_conf(
         merge_runs += list(merge)
     else:
         merge_runs = list(merge)
+    # remove duplicates and sort
     if len(merge_runs) > 0:
-        conf["merge_runs"] = list(set(merge_runs))
+        conf["merge_runs"] = sorted(list(set(merge_runs)))
         
     conf["database_dir"] = dbdir
     conf["demuxer"] = demuxer
