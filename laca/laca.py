@@ -273,6 +273,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
 @click.option(
     "--merge-parent",
     help="Path to the parent of the working directories of completed LACA runs. Runs will be combined if --merge applied.",
+    multiple=True,
     type=click.Path(dir_okay=True,writable=True,resolve_path=True),
     cls = AloMutex,
     required_if_not = [],

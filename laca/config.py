@@ -147,8 +147,12 @@ def init_conf(
     conf["basecalled_dir"] = bascdir
     conf["demultiplexed_dir"] = demuxdir
     # combine LACA runs, append if not empty
+    merge_runs = []
     if merge_parent is not None:
-        merge_runs = [os.path.join(merge_parent, sub) for sub in os.listdir(merge_parent) if os.path.isdir(os.path.join(merge_parent, sub))]
+        for parent in merge_parent:
+            for sub in os.listdir(parent):
+                if os.path.isdir(os.path.join(parent, sub)):
+                    merge_runs.append(os.path.join(parent, sub)) 
         merge_runs += list(merge)
     else:
         merge_runs = list(merge)
