@@ -29,7 +29,7 @@ nreads_m: 1000 # rm barcoded samples in shallow sequencing
 ##############################################################
 # Quality control
 # subsample reads if with inadequate memory
-subsample: True
+subsample: False
 
 # filter reads by quality and length range
 seqkit:
