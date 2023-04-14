@@ -537,6 +537,7 @@ rule medaka_consensus:
     message: "Generate consensus in draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with medaka, round={wildcards.iter2} [{wildcards.cls}]"
     params:
         m = config["medaka"]["m"],
+        cudnn = 'CUDA_VISIBLE_DEVICES=""' if config["medaka"]["cudnn"] is False else 'TF_FORCE_GPU_ALLOW_GROWTH=true',
         _dir = "{cls}/polish/{barcode}_{c}_{clust_id}/medaka_{iter2}",
         inedxs = lambda wc: get_medaka_files(wc, index = True),
     conda: "../envs/medaka.yaml"
@@ -553,7 +554,7 @@ rule medaka_consensus:
             mkdir -p {params._dir} 2> {log}
             touch {output} 2>> {log}
         else
-            export TF_FORCE_GPU_ALLOW_GROWTH=true
+            export {params.cudnn}
             medaka_consensus -i {input.fastq} -d {input.fna} -o {params._dir} -t {threads} -m {params.m} > {log} 2>&1
             rm -f {params.inedxs}
         fi
