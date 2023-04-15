@@ -11,7 +11,7 @@ dependencies:
   - q2-types 
   - q2-longitudinal 
   - q2-feature-classifier 
-  - "pandas>=0.25.3" 
+  - "pandas>=0.25.3,<2.0.0" 
   - xmltodict
   - joblib==1.0.0
   - pip
