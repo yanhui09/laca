@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - pandas
+  - pandas<2.0.0
   - matplotlib-base
   - umap-learn
   - hdbscan
