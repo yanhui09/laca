@@ -16,4 +16,4 @@ dependencies:
   - joblib==1.0.0
   - pip
   - pip:
-    - git+https://github.com/bokulich-lab/RESCRIPt.git@2022.8.0
+    - git+https://github.com/bokulich-lab/RESCRIPt@2022.8.0
