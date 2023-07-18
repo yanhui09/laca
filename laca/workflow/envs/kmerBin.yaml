@@ -4,6 +4,8 @@ channels:
   - defaults
 dependencies:
   - pandas<2.0.0
+  - numpy==1.23.5
+  - numba==0.56.4
   - matplotlib-base
   - umap-learn
   - hdbscan
