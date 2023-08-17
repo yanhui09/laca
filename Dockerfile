@@ -21,3 +21,5 @@ RUN micromamba env create -n laca -f env.yaml \
 
 ENV PATH /opt/conda/envs/laca/bin:${PATH}
 RUN pip install --editable .
+
+WORKDIR /home
