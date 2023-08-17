@@ -14,9 +14,6 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt /var/lib/dpkg /var/lib/cache /var/lib/log
 
-RUN git clone https://github.com/yanhui09/laca.git
-
-WORKDIR /tmp/repo/laca
 RUN micromamba env create -n laca -f env.yaml \
     && eval "$(micromamba shell hook -s bash)" \
     && micromamba activate /opt/conda/envs/laca \
@@ -24,5 +21,3 @@ RUN micromamba env create -n laca -f env.yaml \
 
 ENV PATH /opt/conda/envs/laca/bin:${PATH}
 RUN pip install --editable .
-
-WORKDIR /home
