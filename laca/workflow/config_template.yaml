@@ -116,7 +116,7 @@ minimap2:
   max_de: 0.075 # [quant]
 
 racon:
-  iter: 2
+  iter: 0
   m: 8
   x: -6
   g: -8
@@ -124,7 +124,7 @@ racon:
   
 medaka:
   iter: 1 
-  m: r941_min_hac_g507
+  m: r1041_e82_260bps_hac_v4.1.0
   cudnn: False
 
 # run isONcorrect before IsoCon
