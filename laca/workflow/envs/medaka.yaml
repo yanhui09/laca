@@ -7,5 +7,7 @@ dependencies:
   - python=3.8
   - minimap2
   - samtools
+  - bcftools
+  - pyabpoa
   - pip:
     - medaka>=1.8
