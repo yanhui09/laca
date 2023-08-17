@@ -3,11 +3,14 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - pandas<2.0.0
+  - python=3.10
+  - pandas==1.5.2
   - numpy==1.23.5
   - numba==0.56.4
   - pynndescent==0.5.8
   - matplotlib-base
-  - umap-learn
-  - hdbscan
+  - umap-learn==0.5.3
+  - hdbscan==0.8.29
   - biopython
+  - scikit-learn==1.2.0
+  - wheel==0.38.4
