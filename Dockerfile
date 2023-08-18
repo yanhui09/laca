@@ -7,7 +7,7 @@ ENV LANG C.UTF-8
 ENV SHELL /bin/bash
 USER root 
 
-ENV APT_PKGS bzip2 ca-certificates curl wget gnupg2 squashfs-tools git nano
+ENV APT_PKGS bzip2 ca-certificates curl wget gnupg2 squashfs-tools build-essential git nano
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ${APT_PKGS} \
