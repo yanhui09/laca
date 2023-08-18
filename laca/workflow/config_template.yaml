@@ -61,7 +61,7 @@ bin_mem: 50 # GB
 # zero or negative values to bin all reads together; 
 # postive integer to bin in n batches due to limited rams; 
 # or use "auto" estimation;
-batch_size: -1
+batch_size: auto
 kmer_size: 5
 umap:
   n_neighbors: 15 # Increase this for global structure
