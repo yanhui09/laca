@@ -14,7 +14,18 @@ Using `Snakemake` as the job controller, `LACA` is wrapped into a python package
 As `LACA` integrates multiple bioinformatic tools, it is only tested in Linux systems, i.e., Ubuntu.
 The detailed instruction and manuscript are in preparation.**
 
-# Installation
+# Docker image
+The easiest way to use `LACA` is to pull the `docker` image from [Docker Hub](https://hub.docker.com/r/yanhui09/laca) for cross-platform support.
+```
+docker pull yanhui09/laca
+```
+
+*To use the docker image*, you need to mount your data directory, e.g. `pwd`, to the  `/home` in the container.
+```
+docker run -it -v `pwd`:/home --privileged yanhui09/laca
+```
+
+# Installation from the source code
 [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) is the only required dependency prior to installation.
 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is enough for the whole pipeline. 
 

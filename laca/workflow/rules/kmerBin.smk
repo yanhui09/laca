@@ -56,7 +56,7 @@ checkpoint shuffle_batch:
         mkdir -p {output}
         sed 1d {input} | shuf --random-source=<(yes 123) > {output}/shuffled
         split -l {params.batch_size} -a3 -d --additional-suffix='.tsv' {output}/shuffled {output}/batch         
-        for i in {output}/batch*; do sed -e '1R {input}' -e '1d' -i $i; done
+        for i in {output}/batch*; do sed -e '1R {input}' -e '1d' $i > /tmp/kb_batch && cat /tmp/kb_batch > $i; done
         rm -f {output}/header {output}/shuffled
         """
 
