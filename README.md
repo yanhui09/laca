@@ -25,7 +25,7 @@ docker pull yanhui09/laca
 docker run -it -v `pwd`:/home --privileged yanhui09/laca
 ```
 
-# Installation from the source code
+# Installation from GitHub repository
 [Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) is the only required dependency prior to installation.
 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) is enough for the whole pipeline. 
 
