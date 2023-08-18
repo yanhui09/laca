@@ -20,7 +20,7 @@ The easiest way to use `LACA` is to pull the `docker` image from [Docker Hub](ht
 docker pull yanhui09/laca
 ```
 
-*To use the docker image*, you need to mount your data directory, e.g. `pwd`, to the  `/home` in the container.
+**To use the docker image**, you need to mount your data directory, e.g., `pwd`, to the  `/home` in the container.
 ```
 docker run -it -v `pwd`:/home --privileged yanhui09/laca
 ```
