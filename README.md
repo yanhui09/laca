@@ -1,6 +1,6 @@
 # LACA: Long Amplicon Consensus Analysis
 
-[![snakemake](https://img.shields.io/badge/snakemake-=7.22.0-brightgreen.svg)](https://snakemake.bitbucket.io)
+[![snakemake](https://img.shields.io/badge/snakemake-7.22.0-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![linux/amd64](https://img.shields.io/badge/linux-amd64-blue.svg)](https://en.wikipedia.org/wiki/X86-64)
 [![CI](https://github.com/yanhui09/laca/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/yanhui09/laca/actions?query=branch%3Amaster+workflow%3ACI)
 [![Docker](https://github.com/yanhui09/laca/actions/workflows/docker.yml/badge.svg?branch=master)](https://github.com/yanhui09/laca/actions?query=branch%3Amaster+workflow%3ADocker)
