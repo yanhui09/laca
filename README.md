@@ -6,7 +6,7 @@
 [![Docker](https://github.com/yanhui09/laca/actions/workflows/docker.yml/badge.svg?branch=master)](https://github.com/yanhui09/laca/actions?query=branch%3Amaster+workflow%3ADocker)
 
 `LACA` is a reproducible and scalable workflow for **Long Amplicon Consensus Analysis**, e.g., 16S rRNA gene.
-Using `Snakemake` as the job controller, `LACA` is wrapped into a python package for development and mainteniance.
+Using `snakemake` as the job controller, `LACA` is wrapped into a python package for development and mainteniance.
 `LACA` provides an end-to-end solution from bascecalled reads to the final count matrix.
 
 **Important: `LACA` is under development, and here released as a preview for early access. 
@@ -51,7 +51,6 @@ At this moment, `LACA` uses a compiled but tailored `guppy` for barcode demultip
 
 # Example
 ```
-conda activate laca                                  # activate required environment 
 laca init -b /path/to/basecalled_fastqs -d /path/to/database    # init config file and check
 laca run all                                         # start analysis
 ```
@@ -76,7 +75,7 @@ Commands:
 
 `LACA` is easy to use. You can start a new analysis in two steps using `laca init` and `laca run` . 
 
-Remember to activate the conda environment.
+Remember to activate the `conda` environment if `LACA` is installed in a `conda` environment.
 ```
 conda activate laca
 ```
