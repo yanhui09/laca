@@ -82,11 +82,11 @@ rule yacrd:
     resources:
         mem = config["mem"]["large"],
         time = config["runtime"]["simple"],
-    shell: "yacrd -i {input.ava} -o {log} -c {params.c} -n {params.n} -t {threads} scrubb -i {input.fq} -o {output} 2>> {log}"
+    shell: "yacrd -i {input.ava} -o {log} -c {params.c} -n {params.n} -t {threads} filter -i {input.fq} -o {output} 2>> {log}"
 
-def get_chimera_free(read_scrubb= config["read_scrubb"]):
-    check_val("read_scrubb", read_scrubb, bool)
-    if read_scrubb is True:
+def get_chimera_free(chimera_filter= config["chimera_filter"]):
+    check_val("chimera_filter", chimera_filter, bool)
+    if chimera_filter is True:
         return rules.yacrd.output
     else:
         return get_raw()

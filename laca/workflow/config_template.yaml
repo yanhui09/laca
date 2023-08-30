@@ -38,8 +38,8 @@ seqkit:
   min_len: 800
   max_len: 1500
 
-# read scrubbing
-read_scrubb: True
+# filter chimeric reads with yacrd
+chimera_filter: True
 yacrd:
   minimap2:
     # ont: -g 500; pacbio: -g 5000
