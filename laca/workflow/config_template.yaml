@@ -41,6 +41,10 @@ seqkit:
 # read scrubbing
 read_scrubb: True
 yacrd:
+  minimap2:
+    # ont: -g 500; pacbio: -g 5000
+    g: 500
+    f: 1000
   c: 4
   n: 0.4
 
@@ -114,7 +118,7 @@ spoa:
 minimap2:
   # choose by reads type; https://github.com/lh3/minimap2
   # ont: ava-ont; pb: ava-pb
-  x_ava: ava-ont # [clustCon]
+  x_ava: ava-ont # [clustCon & yacrd]
   # ont: map-ont; pb-clr: map-pb, pb-css: asm20 (< v2.18), map-hifi (> v2.19)
   x_map: map-ont # [polish & quant]
   # maximally allowed gap-compressed per-base sequence divergence as valid mapping, 

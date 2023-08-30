@@ -63,6 +63,10 @@ def init_conf(
         conf = yaml.load(template_conf)
         
     if nanopore == True:
+        # yacrd
+        conf["yacrd"]["minimap2"]["g"] = 500
+        conf["yacrd"]["c"] = 4
+        conf["yacrd"]["n"] = 0.4
         # isONclustCon
         conf["isONclust"]["k"] = 13
         conf["isONclust"]["w"] = 20
@@ -84,6 +88,10 @@ def init_conf(
         conf["simulate"]["badread"]["qscore_model"] = "nanopore2020"
     
     if isoseq == True:
+        # yacrd
+        conf["yacrd"]["minimap2"]["g"] = 5000
+        conf["yacrd"]["c"] = 3
+        conf["yacrd"]["n"] = 0.4
         # isONclustCon
         conf["isONclust"]["k"] = 15
         conf["isONclust"]["w"] = 50

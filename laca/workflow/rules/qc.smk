@@ -56,9 +56,9 @@ rule minimap2ava_yacrd:
     output: temp("qc/yacrd/{barcode}.paf")
     conda: "../envs/yacrd.yaml"
     params:
-        x = "ava-ont",
-        g = 500,
-        f = 1000,
+        x = config["minimap2"]["x_ava"],
+        g = config["yacrd"]["minimap2"]["g"],
+        f = config["yacrd"]["minimap2"]["f"],
     log: "logs/qc/yacrd/{barcode}_ava.log"
     benchmark: "benchmarks/qc/yacrd/{barcode}_ava.txt"
     threads: config["threads"]["large"]
