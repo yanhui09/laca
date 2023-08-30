@@ -38,6 +38,12 @@ seqkit:
   min_len: 800
   max_len: 1500
 
+# read scrubbing
+read_scrubb: True
+yacrd:
+  c: 4
+  n: 0.4
+
 # trim primers
 trim: True
 # order matters

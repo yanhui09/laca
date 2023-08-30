@@ -50,9 +50,50 @@ def get_raw(subsample = config["subsample"], n = config["seqkit"]["n"]):
     else:
         return rules.collect_fastq.output
 
+# read scrubbing
+rule minimap2ava_yacrd:
+    input: get_raw()
+    output: temp("qc/yacrd/{barcode}.paf")
+    conda: "../envs/yacrd.yaml"
+    params:
+        x = "ava-ont",
+        g = 500,
+        f = 1000,
+    log: "logs/qc/yacrd/{barcode}_ava.log"
+    benchmark: "benchmarks/qc/yacrd/{barcode}_ava.txt"
+    threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["simple"],
+    shell: "minimap2 -x {params.x} -g {params.g} -f {params.f} -t {threads} {input} {input} > {output} 2> {log}"
+
+rule yacrd:
+    input: 
+        fq = get_raw(),
+        ava = rules.minimap2ava_yacrd.output
+    output: temp("qc/yacrd/{barcode}.fastq")
+    conda: "../envs/yacrd.yaml"
+    params:
+        c = config["yacrd"]["c"],
+        n = config["yacrd"]["n"],
+    log: "logs/qc/yacrd/{barcode}_scrubb.log"
+    benchmark: "benchmarks/qc/yacrd/{barcode}_scrubb.txt"
+    threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["simple"],
+    shell: "yacrd -i {input.ava} -o {log} -c {params.c} -n {params.n} -t {threads} scrubb -i {input.fq} -o {output} 2>> {log}"
+
+def get_chimera_free(read_scrubb= config["read_scrubb"]):
+    check_val("read_scrubb", read_scrubb, bool)
+    if read_scrubb is True:
+        return rules.yacrd.output
+    else:
+        return get_raw()
+
 # trim primers, process two strands differently
 rule trim_primers:
-    input: get_raw()
+    input: get_chimera_free()
     output: 
         trimmed = temp("qc/primers_trimmed/{barcode}F.fastq"),
         untrimmed = temp("qc/primers_untrimmed/{barcode}F.fastq"),
