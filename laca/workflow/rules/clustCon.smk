@@ -554,9 +554,16 @@ rule medaka_consensus:
             mkdir -p {params._dir} 2> {log}
             touch {output} 2>> {log}
         else
+            export OLD_LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}
+            export LD_LIBRARY_PATH="$CONDA_PREFIX/lib":${{LD_LIBRARY_PATH}}
+            export TF_CPP_MIN_LOG_LEVEL='2'
+
             export {params.cudnn}
             medaka_consensus -i {input.fastq} -d {input.fna} -o {params._dir} -t {threads} -m {params.m} > {log} 2>&1
             rm -f {params.inedxs}
+
+            export LD_LIBRARY_PATH=${{OLD_LD_LIBRARY_PATH}}
+            unset OLD_LD_LIBRARY_PATH
         fi
         """
 

@@ -9,5 +9,7 @@ dependencies:
   - samtools
   - bcftools
   - pyabpoa
+  - cudatoolkit=11.2
+  - cudnn=8.1
   - pip:
     - medaka>=1.8
