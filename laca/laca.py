@@ -77,7 +77,7 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, snake_
         "--snakefile '{snakefile}' "
         "--configfile '{configfile}' "
         "--use-conda {conda_prefix} "
-        "{singularity_prefix} "
+        "--use-singularity {singularity_prefix} "
         "{singularity_args} "
         "{dryrun} "
         "--rerun-triggers mtime --rerun-incomplete --scheduler greedy "
@@ -91,8 +91,7 @@ def run_smk(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, snake_
         snakefile=snakefile,
         configfile=configfile,
         conda_prefix="--conda-prefix '" + os.path.join(db_dir, "conda_envs") + "'",
-        singularity_prefix="--use-singularity --singularity-prefix '" + os.path.join(db_dir, "singularity_envs") + "'"
-        if basecalled_dir is not None else "",
+        singularity_prefix="--singularity-prefix '" + os.path.join(db_dir, "singularity_envs") + "'",
         singularity_args="--singularity-args '--bind " +
         os.path.dirname(snakefile) + "/resources/guppy_barcoding/:/opt/ont/guppy/data/barcoding/," + basecalled_dir + "'"
         if basecalled_dir is not None else "",

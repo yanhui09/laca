@@ -54,9 +54,9 @@ rule rename_drep_seqs:
 
 def get_cand_cls(cls=config["cluster"][0]):
     if cls == "kmerCon":
-        return "kmerBin/clusters"
+        return "kmerCon/clusters2"
     else:
-        return "{cls}/clusters".format(cls=cls)
+        return "{cls}/clusters2".format(cls=cls)
 
 rule combine_cls:
     input: get_cand_cls()

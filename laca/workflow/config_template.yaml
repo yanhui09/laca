@@ -115,6 +115,10 @@ spoa:
   # maximal number of reads for consensus [-1, all reads]
   M: -1
 
+use_meshclust: True # use meshclust to pick centroids and members
+meshclust:
+  t: 0.9 #keep it empty for auto-estimation
+
 minimap2:
   # choose by reads type; https://github.com/lh3/minimap2
   # ont: ava-ont; pb: ava-pb

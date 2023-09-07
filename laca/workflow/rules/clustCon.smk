@@ -444,12 +444,99 @@ rule spoa:
 ruleorder: fqs_split2 > spoa
 ruleorder: get_IsoCon_cand > spoa
 
+rule fq2fa4meshclust:
+    input: "{cls}/split/{barcode}_{c}_{clust_id}.fastq"
+    output: temp("{cls}/meshclust/{barcode}_{c}_{clust_id}.fasta")
+    log: "logs/{cls}/meshclust/fq2fa/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/{cls}/meshclust/fq2fa/{barcode}_{c}_{clust_id}.txt"
+    shell: "seqkit fq2fa {input} -w0 -o {output} 2> {log}"
+
+rule meshclust:
+    input: "{cls}/meshclust/{barcode}_{c}_{clust_id}.fasta"
+    output: "{cls}/meshclust/{barcode}_{c}_{clust_id}.tsv"
+    params:
+        t = "" if is.na(config["meshclust"]["t"]) else "-t " + str(config["meshclust"]["t"]),
+    singularity: "docker://yanhui09/identity:latest"
+    log: "logs/{cls}/meshclust/{barcode}_{c}_{clust_id}.log"
+    benchmark: "benchmarks/{cls}/meshclust/{barcode}_{c}_{clust_id}.txt"
+    threads: config["threads"]["large"]
+    resources:
+        mem = config["bin_mem"],
+        time = config["runtime"]["long"],
+    shell: 
+        "meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1"
+
+def get_meshclust(wildcards, fastq = False):
+    if wildcards.cls == "kmerCon":
+        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
+        candidates = [i + "_0" for i in bc_kbs]
+    elif wildcards.cls == "clustCon":
+        candidates = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "isONclustCon":
+        candidates = glob_wildcards(checkpoints.cls_isONclustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    elif wildcards.cls == "isONclustCon2":
+        candidates = glob_wildcards(checkpoints.cls_isONclustCon2.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
+    elif wildcards.cls == "isONcorCon":
+        candidates = glob_wildcards(checkpoints.cls_isONcorCon.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
+    elif wildcards.cls == "umiCon":
+        candidates = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
+    else:
+        raise ValueError("Unknown consensus method: " + wildcards.cls)
+    if fastq == True:
+        return expand("{{cls}}/split/{cand}.fastq", cls=wildcards.cls, cand=candidates)
+    else: 
+        return expand("{{cls}}/meshclust/{cand}.tsv", cls=wildcards.cls, cand=candidates)
+
+checkpoint cls_meshclust:
+    input:  
+        ["kmerBin/clusters", ".qc_DONE"] if config["kmerbin"] else ".qc_DONE",
+        lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
+        lambda wc: get_kmerBin(wc),
+        lambda wc: get_meshclust(wc, fastq = True),
+        cluster = lambda wc: get_meshclust(wc, fastq = False),
+    output: directory("{cls}/clusters2")
+    params:
+        min_size = 10,
+    run:
+        import pandas as pd
+        if not os.path.exists(output[0]):
+            os.makedirs(output[0])
+        for i in list(input.cluster):
+            # if empty, skip
+            if os.stat(i).st_size == 0:
+                continue
+            barcode, c1, c2 = [ i.split('/')[-1].removesuffix(".tsv").split('_')[index] for index in [-3, -2, -1] ]
+            df_i = pd.read_csv(i, sep = '\t', header = None)
+            df_i.columns = ['cluster', 'seqid', 'identity', 'status']
+            # trim '>' in seqid
+            df_i['seqid'] = df_i['seqid'].str[1:] 
+            for clust_id, df_clust in df_i.groupby('cluster'):
+                if len(df_clust) >= params.min_size:
+                    df_clust['seqid'].to_csv(output[0] + "/{barcode}_{c1}_{c2}cid{clust_id}.csv".format(barcode=barcode, c1=c1, c2=c2, clust_id=clust_id),
+                     header = False, index = False)
+                    # extract ref "status = C" to csv file
+                    df_clust[df_clust['status'] == 'C']['seqid'].to_csv(output[0] + "/{barcode}_{c1}_{c2}cid{clust_id}.ref".format(barcode=barcode, c1=c1, c2=c2, clust_id=clust_id),
+                     header = False, index = False)
+
+use rule fqs_split2 as fqs_split_meshclust with:
+    input:
+        pool = "{cls}/clusters2/{barcode}_{c}_{clust_id}cid{cid}.csv",
+        ref = "{cls}/clusters2/{barcode}_{c}_{clust_id}cid{cid}.ref",
+        binned = "{cls}/split/{barcode}_{c}_{clust_id}.fastq"
+    output:
+        pool = temp("{cls}/split2/{barcode}_{c}_{clust_id}cid{cid}.fastq"),
+        ref = temp("{cls}/polish/{barcode}_{c}_{clust_id}cid{cid}/minimap2/raw.fna"),
+    log:
+        "logs/meshclust/{cls}/fqs_split2/{barcode}_{c}_{clust_id}cid{cid}.log"
+    benchmark:
+        "benchmarks/meshclust/{cls}/fqs_split2/{barcode}_{c}_{clust_id}cid{cid}.txt"
+
 # polish with racon and medaka
 # reused in racon iterations
 rule minimap2polish:
     input: 
       ref = "{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/{assembly}.fna",
-      fastq = "{cls}/split/{barcode}_{c}_{clust_id}.fastq",
+      fastq = "{cls}/split2/{barcode}_{c}_{clust_id}.fastq",
     output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/{assembly}.paf"),
     message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}]: alignments against {wildcards.assembly} assembly [{wildcards.cls}]"
     params:
@@ -482,7 +569,7 @@ def get_racon_input(wildcards):
 
 rule racon:
     input:
-        "{cls}/split/{barcode}_{c}_{clust_id}.fastq",
+        "{cls}/split2/{barcode}_{c}_{clust_id}.fastq",
         lambda wc: get_racon_input(wc),
     output: temp("{cls}/polish/{barcode}_{c}_{clust_id}/minimap2/racon_{iter}.fna")
     message: "Polish draft [barcode={wildcards.barcode}, bin={wildcards.c}, id={wildcards.clust_id}] with racon, round={wildcards.iter} [{wildcards.cls}]"
@@ -528,7 +615,7 @@ def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = Fa
 rule medaka_consensus:
     input:
         fna = lambda wc: get_medaka_files(wc),
-        fastq = "{cls}/split/{barcode}_{c}_{clust_id}.fastq",
+        fastq = "{cls}/split2/{barcode}_{c}_{clust_id}.fastq",
     output: 
         temp(expand("{{cls}}/polish/{{barcode}}_{{c}}_{{clust_id}}/medaka_{{iter2}}/consensus{ext}",
         ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
@@ -588,7 +675,7 @@ def get_clusters(wildcards):
     if wildcards.cls == "kmerCon":
         return "kmerBin/clusters"
     else:
-        return "{cls}/clusters"
+        return "{cls}/clusters2"
 
 def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter = config["racon"]["iter"]):
     # iter >= 0, integer
@@ -597,22 +684,8 @@ def get_consensus(wildcards, medaka_iter = config["medaka"]["iter"], racon_iter 
     if racon_iter < 0 or medaka_iter < 0:
         raise ValueError("racon and medaka iter shall be >= 0")
 
-    if wildcards.cls == "kmerCon":
-        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
-        candidates = [i + "_0" for i in bc_kbs]
-    elif wildcards.cls == "clustCon":
-        candidates = glob_wildcards(checkpoints.cls_clustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    elif wildcards.cls == "isONclustCon":
-        candidates = glob_wildcards(checkpoints.cls_isONclustCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    elif wildcards.cls == "isONclustCon2":
-        candidates = glob_wildcards(checkpoints.cls_isONclustCon2.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
-    elif wildcards.cls == "isONcorCon":
-        candidates = glob_wildcards(checkpoints.cls_isONcorCon.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
-    elif wildcards.cls == "umiCon":
-        candidates = glob_wildcards(checkpoints.cls_umiCon.get(**wildcards).output[0] + "/{bc_kb_ci}.csv").bc_kb_ci
-    else:
-        raise ValueError("Unknown consensus method: " + wildcards.cls)
-    
+    candidates = glob_wildcards(checkpoints.cls_meshclust.get(**wildcards).output[0] + "/{bc_kb_ci_cand}.csv").bc_kb_ci_cand
+
     if medaka_iter == 0:
         if racon_iter == 0:
             return expand("{{cls}}/polish/{cand}/minimap2/raw.fna", cls = wildcards.cls, cand = candidates)
