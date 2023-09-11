@@ -14,3 +14,4 @@ dependencies:
   - biopython
   - scikit-learn==1.2.0
   - wheel==0.38.4
+  - coreutils

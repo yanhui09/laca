@@ -16,29 +16,17 @@ rule trim_repseqs:
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5al_patterns,
+        action = "retain",
     log: "logs/tree/trim_repseqs.log"
     benchmark: "benchmarks/tree/trim_repseqs.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
-    shell: "cutadapt -j {threads} {params.f} -o {output} {input} > {log} 2>&1"
-
-def trim_check2(
-    trim = config["trim"], 
-    bascdir = config["basecalled_dir"], 
-    demuxdir = config["demultiplexed_dir"], 
-    merge_runs = config["merge_runs"],
-    uchime = config["uchime"]
-    ):
-    check_val("trim", trim, bool)
-    out = rules.trim_repseqs.output
-    if trim ==  False:
-        out = get_repseqs(bascdir, demuxdir, merge_runs, uchime)
-    return out
+    shell: "cutadapt --action={params.action} -j {threads} {params.f} -o {output} {input} > {log} 2>&1"
 
 rule q2_repseqs:
-    input: trim_check2()
+    input: rules.trim_repseqs.output
     output: temp("tree/rep_seqs.qza")
     conda: "../envs/q2plugs.yaml"
     log: "logs/tree/q2_repseqs.log"

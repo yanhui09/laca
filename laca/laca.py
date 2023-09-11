@@ -216,8 +216,8 @@ def cli(self):
 @click.argument(
     "workflow",
     type=click.Choice(
-        ["demux", "qc", "kmerBin",
-         "kmerCon", "clustCon", "isONclustCon", "isONclustCon2","isONcorCon", "umiCon",
+        ["demux", "qc", "clust",
+         "kmerCon", "miniCon", "isoCon", "umiCon",
          "quant", "taxa", "tree", "all", "merge",
          "initDB", "simulate"]
     ),
@@ -336,11 +336,11 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
     help="Do pre-read binning.",
 )
 @click.option(
-    "--cluster",
+    "--consensus",
     type=click.Choice(
-        ["kmerCon", "clustCon", "isONclustCon", "isONclustCon2", "isONcorCon", "umiCon"]
+        ["kmerCon", "miniCon", "isoCon", "umiCon"]
         ),
-    default=["isONclustCon"],
+    default=["kmerCon"],
     show_default=True,
     multiple=True,
     help="Consensus methods.  [Mutiple]",

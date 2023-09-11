@@ -1,18 +1,18 @@
 # check classifier choice
-check_list_ele("cluster", config["cluster"], ["kmerCon", "clustCon", "isONclustCon", "isONclustCon2", "isONcorCon", "umiCon"])
+check_list_ele("consensus", config["consensus"], ["kmerCon", "miniCon", "isoCon", "umiCon"])
 # check quantification method
 check_list_ele("quant", config["quant"], ["seqid", "minimap2"])
 
-def get_consensus2derep(cls):
-   #{cls}/{cls}.fna except umiCon ({cls}/{cls}_trimmed.fna)
-    if cls == "umiCon":
-        return "{cls}/{cls}_trimmed.fna".format(cls=cls)
+def get_consensus2derep(consensus):
+   #{consensus}/{consensus}.fna except umiCon ({consensus}/{consensus}_trimmed.fna)
+    if consensus == "umiCon":
+        return "{consensus}/{consensus}_trimmed.fna".format(consensus=consensus)
     else:
-        return "{cls}/{cls}.fna".format(cls=cls)
+        return "{consensus}/{consensus}.fna".format(consensus=consensus)
 
 # dereplicate sequences with MMseqs2
 rule drep_consensus:
-    input: [get_consensus2derep(cls=i) for i in config["cluster"]]
+    input: [get_consensus2derep(consensus=i) for i in config["consensus"]]
     output: 
         rep = temp("quant/mmseqs2_rep_seq.fasta"),
         all_by_cluster = temp("quant/mmseqs2_all_seqs.fasta"),
@@ -52,25 +52,11 @@ rule rename_drep_seqs:
                         i += 1 
                     out.write(line)
 
-def get_cand_cls(cls=config["cluster"][0]):
-    if cls == "kmerCon":
-        return "kmerCon/clusters2"
-    else:
-        return "{cls}/clusters2".format(cls=cls)
-
 rule combine_cls:
-    input: get_cand_cls()
+    input: "{consensus}/clusters".format(consensus=config["consensus"][0])
     output: temp("quant/cls_combined.tsv")
     run:
         import pandas as pd
-        # append cand suffix by cls
-        cls = input[0].split("/")[-2]
-        if cls == "kmerBin":
-            cand = "_0cand1"
-        elif cls == "isONclustCon" or cls == "clustCon" or cls == "umiCon":
-            cand = "cand1"
-        else:
-            cand = ""
 
         # combine csv files under input
         files = os.listdir(input[0])
@@ -78,7 +64,7 @@ rule combine_cls:
         # concatanate all csv files, with file name (without suffix) as column
         for i in cls_csvs:
             df = pd.read_csv(i, sep="\t", header=None)
-            df["cls"] = os.path.basename(i).split(".")[0] + cand
+            df["cls"] = os.path.basename(i).split(".")[0]
             if i == cls_csvs[0]:
                 df_all = df
             else:
@@ -111,7 +97,7 @@ rule matrix_seqid:
 
         cand_cls = pd.read_csv(input[1], sep="\t", header=None)
         cand_cls.columns = ["seqid", "cls"]
-        # merge on cls, left join, dummy files not included in {cls}/{cls}.fna 
+        # merge on cls, left join, dummy files not included in {consensus}/{consensus}.fna 
         cls = derep_cls.merge(cand_cls, on="cls", how="left")
         # take header from fastq files, ^@, as a list
         for fq in input.fqs:

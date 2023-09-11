@@ -1,5 +1,9 @@
 #--------------
 configfile: "config.yaml"
+#wildcard_constraints:
+#    barcode="[a-zA-Z]+[0-9]+",
+#    c1="[0-9]+",
+#    cand="[0-9]+"
 #--------------
 DATABASE_DIR = config["database_dir"].rstrip("/")
 
@@ -26,7 +30,7 @@ def chimera_filt(uchime = config["uchime"]):
     else:
         return ["count_matrix_filt.tsv", "rep_seqs_filt.fasta"]
 
-localrules: all, demux, qc, kmerBin, kmerCon, clustCon, isONclustCon, isONclustCon2, isONcorCon, umiCon, quant, taxa, tree, merge
+localrules: all, demux, qc, clust, kmerCon, miniCon, isoCon, umiCon, quant, taxa, tree, merge
 rule all:
     input:
         chimera_filt(),
@@ -39,8 +43,8 @@ include: "rules/init.smk"
 #include: "rules/simulate.smk"
 include: "rules/demux.smk"
 include: "rules/qc.smk"
-include: "rules/kmerBin.smk"
-include: "rules/clustCon.smk"
+include: "rules/clust.smk"
+include: "rules/consensus.smk"
 include: "rules/umiCon.smk"
 include: "rules/quant.smk"
 include: "rules/merge.smk"
@@ -53,23 +57,17 @@ rule demux:
 rule qc:
     input: lambda wc: get_filt(wc),
 
-rule kmerBin:
-    input: lambda wc: get_kmerBin(wc),
+rule clust:
+    input: lambda wc: get_kmerclust(wc, export_centroids=True)
 
 rule kmerCon:
     input: "kmerCon/kmerCon.fna"
 
-rule clustCon:
-    input: "clustCon/clustCon.fna"
+rule miniCon:
+    input: "miniCon/miniCon.fna"
 
-rule isONclustCon:
-    input: "isONclustCon/isONclustCon.fna"
-
-rule isONclustCon2:
-    input: "isONclustCon2/isONclustCon2.fna"
-
-rule isONcorCon:
-    input: "isONcorCon/isONcorCon.fna"
+rule isoCon:
+    input: "isoCon/isoCon.fna"
 
 rule umiCon:
     input: "umiCon/umiCon_trimmed.fna"

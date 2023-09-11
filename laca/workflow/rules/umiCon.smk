@@ -31,57 +31,39 @@ r_pattern2 = linked_pattern_umi(rlinkerR, rprimersR, reverse=True)
 r_pattern = r_pattern1 + ' ' + r_pattern2
 #---------
 
-localrules: collect_fastq_umi, exclude_shallow_umi, cls_kmerbin_umi, fqs_split_umi, fqs_umi, umi_loc, concat_umi, umi_check1, check_umi, umi_check2, umi_loc2, cls_umiCon, split_umibin, fq2fa_umi, collect_umiCon_trimmed
-# avoid re-run caused by temp()
-use rule collect_fastq as collect_fastq_umi with:
-    input:  
-        "demultiplexed/{barcode}"
+localrules: exclude_shallow_umi, umi_loc, concat_umi, umi_check1, check_umi, umi_check2, umi_loc2, cls_umiCon, split_umibin, fq2fa_umi, collect_umiCon_trimmed
+use rule prepare_umap_fqs as prepare_umiCon_fqs with:
+    input: 
+        "qc/qfilt/{barcode}.fastq"
     output: 
-        temp("umiCon/qc/{barcode}.fastq")
+        temp("umiCon/fqs/{barcode}_0_0_0.fastq")
 
-use rule subsample as subsample_umi with:
+use rule prepare_umap_fqs as prepare_umiCon_fqs_globalclust with:
     input: 
-        rules.collect_fastq_umi.output
-    output:
-        p = temp("umiCon/qc/subsampled/{barcode}_p.fastq"),
-        n = temp("umiCon/qc/subsampled/{barcode}.fastq"),
-    log: 
-        "logs/umiCon/qc/subsample/{barcode}.log"
-    benchmark: 
-        "benchmarks/umiCon/qc/subsample/{barcode}.txt"
+        rules.fqs_split_meshclust.output.members,
+    output: 
+        temp("umiCon/fqs/{barcode}_{c1}_{c2}_{c3}.fastq")
 
-def get_raw_umi(subsample = config["subsample"], n = config["seqkit"]["n"]):
-    check_val("subsample", subsample, bool)
-    check_val("n[seqkit]", n, int)
-    if subsample is True:
-        return rules.subsample_umi.output.n
+def get_fqs4umiCon(wildcards, global_clust = config["global_clust_umi_reads"], expanded = False, ids = False):
+    if expanded == False:
+        if global_clust == True:
+            return rules.prepare_umiCon_fqs.output
+        else:
+            return rules.prepare_umiCon_fqs_globalclust.output
     else:
-        return rules.collect_fastq_umi.output
+        if global_clust == True:
+            bc_clss = glob_wildcards(checkpoints.cls_meshclust.get(**wildcards).output[0] + "/{bc_clss}.csv").bc_clss
+        else:
+            barcodes = get_qced_barcodes(wildcards)
+            bc_clss = [bc +"_0_0_0" for bc in barcodes]
+        if ids == True:
+            return bc_clss
+        else: 
+            return expand("umiCon/fqs/{bc_clss}.fastq", bc_clss=bc_clss)
 
-# indepent qfilt (qc.smk trims the primer together with linker and umi)
-# Retain primer and linker for following umi finding steps
-use rule q_filter as qfilter_umi with:
-    input: 
-        get_raw_umi()
-    output:
-        temp("umiCon/qc/qfilt/{barcode}.fastq")
-    params:
-        Q = config["umi"]["seqkit"]["min_qual"],
-        m = config["umi"]["seqkit"]["min_len"],
-        M = config["umi"]["seqkit"]["max_len"],
-    log:
-        "logs/umiCon/qc/qfilter/{barcode}.log"
-    benchmark: 
-        "benchmarks/umiCon/qc/qfilter/{barcode}.txt"
-    threads:
-        config["threads"]["large"]
-
-# UMI-barcoded molecules have different barcodes as well as UMIs
-# Sample pooling destroy the UMI-barcoding defination
-
-# Remove samples in shallow sequencing
+# Remove UMI-tagged samples in shallow sequencing
 checkpoint exclude_shallow_umi:
-    input: lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc))
+    input: lambda wc: get_fqs4umiCon(wc, expanded=True)
     output: temp(directory("umiCon/shallow"))
     params:
         min_reads = 50,
@@ -96,94 +78,23 @@ checkpoint exclude_shallow_umi:
                 shutil.move(dir_i, output[0])
 
 def get_qced_barcodes_umi(wildcards):
-    barcodes = get_demux_barcodes(wildcards)
-    barcodes_shallow = glob_wildcards(checkpoints.exclude_shallow_umi.get(**wildcards).output[0]
-     + "/qfilt/{barcode, [a-zA-Z]+[0-9]+}.fastq").barcode
-    barcodes_shallow = sorted(set(barcodes_shallow))
-    barcodes = [b for b in barcodes if b not in barcodes_shallow]
-    return barcodes
-
-use rule kmer_freqs as kmer_freqs_umi with:
-    input:
-        rules.qfilter_umi.output 
-    output: 
-        temp("umiCon/kmerBin/{barcode}/kmer_freqs.txt")
-    log: 
-        "logs/umiCon/kmerBin/kmer_freqs/{barcode}.log"
-    benchmark: 
-        "benchmarks/umiCon/kmerBin/kmer_freqs/{barcode}.txt"
-
-# kmer binning
-use rule umap as umap_umi with:
-    input: 
-        rules.kmer_freqs_umi.output
-    output: 
-        cluster="umiCon/kmerBin/{barcode}/hdbscan.tsv",
-	    plot="umiCon/kmerBin/{barcode}/hdbscan.png",
-    log: 
-        "logs/umiCon/kmerBin/umap/{barcode}.log"
-    benchmark: 
-        "benchmarks/umiCon/kmerBin/umap/{barcode}.txt"
-    
-# split reads by cluster
-checkpoint cls_kmerbin_umi:
-    input: 
-        "umiCon/shallow",
-        lambda wc: expand("umiCon/qc/qfilt/{barcode}.fastq", barcode=get_qced_barcodes_umi(wc)),
-        bin = lambda wc: expand("umiCon/kmerBin/{barcode}/hdbscan.tsv", barcode=get_qced_barcodes_umi(wc)),
-    output: directory("umiCon/kmerBin/clusters")
-    run:
-        import pandas as pd
-        if not os.path.exists(output[0]):
-            os.makedirs(output[0])
-        for i in list(input.bin):
-            barcode = i.split("/")[-2]
-            df_i = pd.read_csv(i, sep="\t")
-            # unclustered reads are assigned to bin -1, drop
-            df_i = df_i[df_i.bin_id != -1]
-
-            if 'batch_id' in df_i.columns:
-                 # concatanate the batch_id bin_id column
-                 df_i['bin_id'] = df_i['bin_id'].astype(str) + df_i['batch_id'].astype(str)
-            df_i = df_i[["read", "bin_id"]]
-            for clust_id, df_clust in df_i.groupby('bin_id'):
-                df_clust['read'].to_csv(output[0] + "/{barcode}_{c}.csv".format(
-                    barcode=barcode, c=clust_id), header = False, index = False)
-        
-use rule fqs_split as fqs_split_umi with:
-    input: 
-        cluster = "umiCon/kmerBin/clusters/{barcode}_{c}.csv",
-        fqs = rules.qfilter_umi.output,
-    output: 
-        temp("umiCon/kmerBin/split/{barcode}_{c}.fastq")
-    log: 
-        "logs/umiCon/kmerBin/fqs_split/{barcode}_{c}.log"
-    benchmark: 
-        "benchmarks/umiCon/kmerBin/fqs_split/{barcode}_{c}.txt"
-
-rule fqs_umi:
-    input: rules.qfilter_umi.output
-    output: temp("umiCon/kmerBin/{barcode}_all.fastq")
-    shell: "cp -p {input} {output}"
-
-def get_fq4Con_umi(kmerbin = config["kmerbin"]):
-    check_val("kmerbin", kmerbin, bool)
-    if kmerbin == True:
-        out = rules.fqs_split_umi.output
-    else:
-        out = rules.fqs_umi.output
-    return out
+    bc_clss = get_fqs4umiCon(wildcards, expanded=True, ids=True)
+    bc_clss_shallow = glob_wildcards(checkpoints.exclude_shallow_umi.get(**wildcards).output[0]
+     + "/{bc_clss}.fastq").bc_clss
+    bc_clss_shallow = sorted(set(barcodes_shallow))
+    bc_clss_pass = [b for b in bc_clss if b not in barcodes_shallow]
+    return bc_clss_pass
 
 # trim umi region
 rule umi_loc:
-    input: get_fq4Con_umi()
+    input: lambda wc: get_fqs4umiCon(wc)
     output:
-        start = temp("umiCon/umiExtract/{barcode}_{c}/start.fastq"),
-        end = temp("umiCon/umiExtract/{barcode}_{c}/end.fastq"),
+        start = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/start.fastq"),
+        end = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/end.fastq"),
     params:
         umi_loc=config["umi"]["loc"]
-    log: "logs/umiCon/umiExtract/umi_loc/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/umi_loc/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/umi_loc/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/umi_loc/{barcode}_{c1}_{c2}_{3}.txt"
     shell:
         """
         seqkit subseq -r 1:{params.umi_loc} {input} 2> {log} 1> {output.start}
@@ -196,8 +107,8 @@ rule extract_umi:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        umi1 = temp("umiCon/umiExtract/{barcode}_{c}/umi1.fastq"),
-        umi2 = temp("umiCon/umiExtract/{barcode}_{c}/umi2.fastq"),
+        umi1 = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi1.fastq"),
+        umi2 = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi2.fastq"),
     conda: "../envs/cutadapt.yaml"
     params:
         f = f_pattern,
@@ -206,8 +117,8 @@ rule extract_umi:
         min_overlap = config["umi"]["cutadapt"]["min_overlap"],
         min_len = config["umi"]["len"],
         max_len = config["umi"]["len"],
-    log: "logs/umiCon/umiExtract/extract_umi/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/extract_umi/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/extract_umi/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/extract_umi/{barcode}_{c1}_{c2}_{3}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
@@ -227,28 +138,16 @@ rule concat_umi:
     input:
         umi1 = rules.extract_umi.output.umi1,
         umi2 = rules.extract_umi.output.umi2,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umi.fasta")
-    log: "logs/umiCon/umiExtract/concat_umi/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/concat_umi/{barcode}_{c}.txt"
-    shell: "seqkit concat {input.umi1} {input.umi2} 2> {log} | seqkit fq2fa -o {output} 2>> {log}"
+    output: temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi.fasta")
+    shell: "seqkit concat {input.umi1} {input.umi2} --quiet | seqkit fq2fa -o {output} --quiet"
 
 # extend list with umi_loc fqs
-def get_umifile1(wildcards, kmerbin = config["kmerbin"], extend=False):
-    check_val("kmerbin", kmerbin, bool)
-    
-    if kmerbin == True:
-        bc_kbs = glob_wildcards(checkpoints.cls_kmerbin_umi.get(**wildcards).output[0] + "/{bc_kb}.csv").bc_kb
-    else:
-        bcs = get_qced_barcodes_umi(wildcards)
-        bc_kbs = [bc + "_all" for bc in bcs]
-    fs = expand("umiCon/umiExtract/{bc_kb}/umi.fasta", bc_kb=bc_kbs)
+def get_umifile1(wildcards, extend=False):
+    bc_clss = get_qced_barcodes_umi(wildcards)
+    fs = expand("umiCon/umiExtract/{bc_clss}/umi.fasta", bc_clss=bc_clss)
     if extend == True:
-        fs.extend(expand("umiCon/umiExtract/{bc_kb}/{loc}.fastq", bc_kb=bc_kbs, loc=["start", "end"]))
-        if kmerbin == True:
-            fs.append("umiCon/kmerBin/clusters")
-            fs.extend(expand("umiCon/kmerBin/split/{bc_kb}.fastq", bc_kb=bc_kbs))
-        else:
-            fs.extend(expand("umiCon/kmerBin/{bc_kb}.fastq", bc_kb=bc_kbs))
+        fs.extend(expand("umiCon/umiExtract/{bc_clss}/{loc}.fastq", bc_clss=bc_clss, loc=["start", "end"]))
+        fs.extend(expand("umiCon/fqs/{bc_clss}.fastq", bc_clss=bc_clss))
     return fs     
 
 checkpoint umi_check1:
@@ -265,8 +164,8 @@ checkpoint umi_check1:
         fs = get_umifile1(wildcards)
         for i in list(fs):
             if os.stat(i).st_size > 0:
-                barcode, c = [ i.split("/")[-2].split("_")[index] for index in [-2, -1] ]
-                shutil.move(i, output[0] + "/{barcode}_{c}.fasta".format(barcode=barcode, c=c))
+                bc_clss = i.split("/")[-2]
+                shutil.move(i, output[0] + "/{bc_clss}.fasta".format(bc_clss=bc_clss))
 
 # check UMI pattern
 # generate grep pattern for UMI regions
@@ -316,27 +215,27 @@ def get_umi_pattern(umi_pattern, length):
     return grep_pattern
 
 rule check_umi:
-    input: "umiCon/umiExtract/check1/{barcode}_{c}.fasta"
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12f.fasta")
+    input: "umiCon/umiExtract/check1/{barcode}_{c1}_{c2}_{3}.fasta"
+    output: temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12f.fasta")
     params:
         pattern = lambda wc: get_umi_pattern(config["umi"]["pattern"], config["umi"]["len"])
-    log: "logs/umiCon/umiExtract/check_umi/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/check_umi/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/check_umi/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/check_umi/{barcode}_{c1}_{c2}_{3}.txt"
     shell: "grep -B1 -E '{params.pattern}' {input} | sed '/^--$/d' > {output} 2> {log}"
 
 # cluster UMIs
 rule cluster_umi:
     input: rules.check_umi.output
     output:
-        umi12u = temp("umiCon/umiExtract/{barcode}_{c}/umi12u.fasta"),
-        umi12cs = temp("umiCon/umiExtract/{barcode}_{c}/umi12cs.fasta"),
-        umi12uc = temp("umiCon/umiExtract/{barcode}_{c}/umi12uc.txt"),
-        umi12c = temp("umiCon/umiExtract/{barcode}_{c}/umi12c.fasta"),
+        umi12u = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12u.fasta"),
+        umi12cs = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12cs.fasta"),
+        umi12uc = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12uc.txt"),
+        umi12c = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12c.fasta"),
     conda: "../envs/vsearch.yaml"
     params:
         cl_identity = config["umi"]["cl_identity"],
-    log: "logs/umiCon/umiExtract/cluster_umi/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/cluster_umi/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/cluster_umi/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/cluster_umi/{barcode}_{c1}_{c2}_{3}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["large"],
@@ -375,8 +274,8 @@ rule extract_umip:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        umi1 = temp("umiCon/umiExtract/{barcode}_{c}/umi1p.fastq"),
-        umi2 = temp("umiCon/umiExtract/{barcode}_{c}/umi2p.fastq"),
+        umi1 = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi1p.fastq"),
+        umi2 = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi2p.fastq"),
     conda: "../envs/cutadapt.yaml"
     params:
         f = fprimers_trim,
@@ -385,8 +284,8 @@ rule extract_umip:
         min_overlap = config["umi"]["cutadapt"]["min_overlap"],
         min_len = config["umi"]["len"],
         max_len = config["umi"]["len"],
-    log: "logs/umiCon/umiExtract/extract_umip/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/extract_umip/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/extract_umip/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/extract_umip/{barcode}_{c1}_{c2}_{3}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
@@ -406,11 +305,11 @@ use rule concat_umi as concat_umip with:
         umi1=rules.extract_umip.output.umi1,
         umi2=rules.extract_umip.output.umi2,
     output: 
-        temp("umiCon/umiExtract/{barcode}_{c}/umi12p.fasta")
+        temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12p.fasta")
     log: 
-        "logs/umiCon/umiExtract/concat_umip/{barcode}_{c}.log"
+        "logs/umiCon/umiExtract/concat_umip/{barcode}_{c1}_{c2}_{3}.log"
     benchmark:
-        "benchmarks/umiCon/umiExtract/concat_umip/{barcode}_{c}.txt"
+        "benchmarks/umiCon/umiExtract/concat_umip/{barcode}_{c1}_{c2}_{3}.txt"
 
 # use bwa to map the potential UMI reads to the UMI ref
 rule bwa_umi:
@@ -418,15 +317,15 @@ rule bwa_umi:
         ref = rules.cluster_umi.output.umi12c,
         umip = rules.concat_umip.output,
     output:
-        temp(multiext("umiCon/umiExtract/{barcode}_{c}/umi12c.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")),
-        sai = temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sai"),
-        sam = temp("umiCon/umiExtract/{barcode}_{c}/umi12p.sam"),
+        temp(multiext("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12c.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")),
+        sai = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12p.sai"),
+        sam = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12p.sam"),
     conda: "../envs/bwa.yaml"
     params:
         n = 6,
         F = 4,
-    log: "logs/umiCon/umiExtract/bwa_umi/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/bwa_umi/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/bwa_umi/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/bwa_umi/{barcode}_{c1}_{c2}_{3}.txt"
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
@@ -442,10 +341,10 @@ rule umi_filter:
     input:
         sam = rules.bwa_umi.output.sam,
         ref = rules.cluster_umi.output.umi12c,
-    output: temp("umiCon/umiExtract/{barcode}_{c}/umi12cf.fasta")
+    output: temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi12cf.fasta")
     conda: "../envs/umi.yaml"
-    log: "logs/umiCon/umiExtract/umi_filter/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/umi_filter/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/umi_filter/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/umi_filter/{barcode}_{c1}_{c2}_{3}.txt"
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
@@ -476,15 +375,12 @@ rule umi_filter:
         """
 
 # extend list with umi_loc fqs
-def get_umifile2(wildcards, kmerbin = config["kmerbin"], extend = False):
-    bc_kbs = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{bc_kb}.fasta").bc_kb
-    fs = expand("umiCon/umiExtract/{bc_kb}/umi12cf.fasta", bc_kb=bc_kbs)
+def get_umifile2(wildcards, extend = False):
+    bc_clss = glob_wildcards(checkpoints.umi_check1.get(**wildcards).output[0] + "/{bc_clss}.fasta").bc_clss
+    fs = expand("umiCon/umiExtract/{bc_clss}/umi12cf.fasta", bc_clss=bc_clss)
     if extend == True:
-        fs.extend(expand("umiCon/umiExtract/{bc_kb}/{loc}.fastq", bc_kb=bc_kbs, loc=["start", "end"]))
-        if kmerbin == True:
-            fs.extend(expand("umiCon/kmerBin/split/{bc_kb}.fastq", bc_kb=bc_kbs))
-        else:
-            fs.extend(expand("umiCon/kmerBin/{bc_kb}.fastq", bc_kb=bc_kbs))
+        fs.extend(expand("umiCon/umiExtract/{bc_clss}/{loc}.fastq", bc_clss=bc_clss, loc=["start", "end"]))
+        fs.extend(expand("umiCon/fqs/{bc_clss}.fastq", bc_clss=bc_clss))
     return fs
 
 checkpoint umi_check2:
@@ -500,19 +396,19 @@ checkpoint umi_check2:
         for i in list(fs):
             if os.stat(i).st_size > 0:
                 barcode, c = [ i.split("/")[-2].split("_")[index] for index in [-2, -1] ]
-                shutil.move(i, output[0] + "/{barcode}_{c}.fasta".format(barcode=barcode, c=c))
+                shutil.move(i, output[0] + "/{barcode}_{c1}_{c2}_{3}.fasta".format(barcode=barcode, c=c))
 
 # rm potential chimera
 rule rm_chimera:
-    input: "umiCon/umiExtract/check2/{barcode}_{c}.fasta",
+    input: "umiCon/umiExtract/check2/{barcode}_{c1}_{c2}_{3}.fasta",
     output:
-        ref = temp("umiCon/umiExtract/{barcode}_{c}/umi_ref.txt"),
-        fasta = temp("umiCon/umiExtract/{barcode}_{c}/umi_ref.fasta"),
+        ref = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi_ref.txt"),
+        fasta = temp("umiCon/umiExtract/{barcode}_{c1}_{c2}_{3}/umi_ref.fasta"),
     conda: "../envs/umi.yaml"
     params:
         umip_len = config["umi"]["len"],
-    log: "logs/umiCon/umiExtract/rm_chimera/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiExtract/rm_chimera/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiExtract/rm_chimera/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiExtract/rm_chimera/{barcode}_{c1}_{c2}_{3}.txt"
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
@@ -577,13 +473,13 @@ rule umi_loc2:
         start = rules.umi_loc.output.start,
         end = rules.umi_loc.output.end,
     output:
-        start = temp("umiCon/umiBin/{barcode}_{c}/reads_umi1.fasta"),
-        end = temp("umiCon/umiBin/{barcode}_{c}/reads_umi2.fasta"),
+        start = temp("umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/reads_umi1.fasta"),
+        end = temp("umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/reads_umi2.fasta"),
     params:
         s = config["umi"]["s"],
         e = config["umi"]["e"],
-    log: "logs/umiCon/umiBin/umi_loc2/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiBin/umi_loc2/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiBin/umi_loc2/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiBin/umi_loc2/{barcode}_{c1}_{c2}_{3}.txt"
     shell:
         """
         seqkit subseq -r 1:{params.s} {input.start} 2> {log} | seqkit fq2fa -w0 -o {output.start} 2>> {log}
@@ -594,13 +490,13 @@ rule umi_loc2:
 rule split_umi_ref:
     input: rules.rm_chimera.output.fasta
     output:
-        umi1 = temp("umiCon/umiBin/{barcode}_{c}/barcodes_umi1.fasta"),
-        umi2 = temp("umiCon/umiBin/{barcode}_{c}/barcodes_umi2.fasta"),
+        umi1 = temp("umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/barcodes_umi1.fasta"),
+        umi2 = temp("umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/barcodes_umi2.fasta"),
     conda: "../envs/umi.yaml"
     params:
         umi_len = config["umi"]["len"],
-    log: "logs/umiCon/umiBin/split_umi_ref/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiBin/split_umi_ref/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiBin/split_umi_ref/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiBin/split_umi_ref/{barcode}_{c1}_{c2}_{3}.txt"
     shell:
         """
         cat {input} <(seqtk seq -r {input} |\
@@ -622,27 +518,27 @@ rule split_umi_ref:
 ##         in correct orientations.
 use rule bwa_umi as bwa_umi2 with:
     input: 
-        ref = "umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta",
-        umip = "umiCon/umiBin/{barcode}_{c}/barcodes_{umi}.fasta",
+        ref = "umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/reads_{umi}.fasta",
+        umip = "umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/barcodes_{umi}.fasta",
     output:
-        temp(multiext("umiCon/umiBin/{barcode}_{c}/reads_{umi}.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")),
-        sai = temp("umiCon/umiBin/{barcode}_{c}/{umi}.sai"),
-        sam = temp("umiCon/umiBin/{barcode}_{c}/{umi}.sam"),
+        temp(multiext("umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/reads_{umi}.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa")),
+        sai = temp("umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/{umi}.sai"),
+        sam = temp("umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/{umi}.sam"),
     params:
         n = 3,
         F = 20,
     log:
-        "logs/umiCon/umiBin/bwa_umi2/{barcode}_{c}_{umi}.log"
+        "logs/umiCon/umiBin/bwa_umi2/{barcode}_{c1}_{c2}_{3}_{umi}.log"
     benchmark:
-        "benchmarks/umiCon/umiBin/bwa_umi2/{barcode}_{c}_{umi}.txt"
+        "benchmarks/umiCon/umiBin/bwa_umi2/{barcode}_{c1}_{c2}_{3}_{umi}.txt"
  
 rule umi_binning:
     input:
-        umi1 = "umiCon/umiBin/{barcode}_{c}/umi1.sam",
-        umi2 = "umiCon/umiBin/{barcode}_{c}/umi2.sam",
+        umi1 = "umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/umi1.sam",
+        umi2 = "umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/umi2.sam",
     output:
-        bins = "umiCon/umiBin/{barcode}_{c}/umi_bins.txt",
-        stats = "umiCon/umiBin/{barcode}_{c}/umi_stats.txt",
+        bins = "umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/umi_bins.txt",
+        stats = "umiCon/umiBin/{barcode}_{c1}_{c2}_{3}/umi_stats.txt",
     conda: "../envs/umi.yaml"
     params:
         u = config["umi"]["u"],
@@ -650,8 +546,8 @@ rule umi_binning:
         O = config["umi"]["O"],
         N = config["umi"]["N"],
         S = config["umi"]["S"],
-    log: "logs/umiCon/umiBin/{barcode}_{c}.log"
-    benchmark: "benchmarks/umiCon/umiBin/{barcode}_{c}.txt"
+    log: "logs/umiCon/umiBin/{barcode}_{c1}_{c2}_{3}.log"
+    benchmark: "benchmarks/umiCon/umiBin/{barcode}_{c1}_{c2}_{3}.txt"
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
@@ -852,59 +748,51 @@ rule umi_binning:
         ' {input.umi1} {input.umi2} > {output.bins} 2> {log}
         """
 
-def get_filt_umi(wildcards, kmerbin = config["kmerbin"]):
-    bc_kbs = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{bc_kb}.fasta").bc_kb
-    if kmerbin == True:
-        fqs = expand("umiCon/kmerBin/split/{bc_kb}.fastq", bc_kb=bc_kbs)
-    else:
-        fqs = expand("umiCon/kmerBin/{bc_kb}.fastq", bc_kb=bc_kbs)
-    return fqs 
+def get_filt_umi(wildcards):
+    bc_clss = glob_wildcards(checkpoints.umi_check2.get(**wildcards).output[0] + "/{bc_clss}.fasta").bc_clss
+    return expand("umiCon/fqs/{bc_clss}.fastq", bc_clss=bc_clss)
 
 # split reads by umi bins
 checkpoint cls_umiCon:
     input: 
         "umiCon/umiExtract/check2",
         lambda wc: get_filt_umi(wc),
-        cls = lambda wc: expand("umiCon/umiBin/{b_c}/umi_bins.txt", b_c=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_kb}.fasta").bc_kb),
+        clss = lambda wc: expand("umiCon/umiBin/{bc_clss}/umi_bins.txt", bc_clss=glob_wildcards(checkpoints.umi_check2.get(**wc).output[0] + "/{bc_clss}.fasta").bc_clss),
     output: directory("umiCon/clusters")
     run:
         import pandas as pd
         if not os.path.exists(output[0]):
             os.makedirs(output[0])
-        for i in list(input.cls):
-            b_c = i.split("/")[-2]
+        for i in list(input.clss):
+            bc_cls = i.split("/")[-2]
             df = pd.read_csv(i, sep=" ", header=None, usecols=[0,1], names=["umi","read"])
             df.umi = [x.split(";")[0] for x in df.umi]
             for umi in set(df.umi):
-                df.loc[df.umi == umi, "read"].to_csv(output[0] + "/" + b_c + "_" + str(umi) + ".csv", header=False, index=False)
+                df.loc[df.umi == umi, "read"].to_csv(output[0] + "/" + bc_clss + str(umi).replace("umi","cand") + ".csv", header=False, index=False)
         
-use rule fqs_split as split_umibin with:
+use rule fqs_split_isONclust as split_umibin with:
     input: 
-        cluster = "umiCon/clusters/{barcode}_{c}_{clust_id}.csv",
-        fqs = get_fq4Con_umi(),
+        cluster = "umiCon/clusters/{barcode}_{c1}_{c2}_{c3}cand{cand}.csv",
+        fqs = lambda wc: get_fqs4umiCon(wc),
     output:
-        temp("umiCon/split/{barcode}_{c}_{clust_id}.fastq")
-    log:
-        "logs/umiCon/polish/{barcode}_{c}_{clust_id}/get_fqs_split.log"
-    benchmark:
-        "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/get_fqs_split.txt"
+        temp("umiCon/split/{barcode}_{c1}_{c2}_{c3}cand{cand}.fastq"),
 
 # find the seed read
 rule fq2fa_umi:
     input: rules.split_umibin.output
-    output: temp("umiCon/polish/{barcode}_{c}_{clust_id}/split.fna")
-    log: "logs/umiCon/polish/{barcode}_{c}_{clust_id}/fq2fa.log"
-    benchmark: "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/fq2fa.txt"
+    output: temp("umiCon/polish/{barcode}_{c1}_{c2}_{3}cand{cand}/split.fna")
+    log: "logs/umiCon/polish/{barcode}_{c1}_{c2}_{3}cand{cand}/fq2fa.log"
+    benchmark: "benchmarks/umiCon/polish/{barcode}_{c1}_{c2}_{3}cand{cand}/fq2fa.txt"
     shell: "seqkit fq2fa {input} -o {output} 2> {log}"
 
 rule get_seedfa:
     input: rules.fq2fa_umi.output
     output: 
-        centroids = temp("umiCon/polish/{barcode}_{c}_{clust_id}/centroids.fna"),
-        seed = temp("umiCon/polish/{barcode}_{c}_{clust_id}/minimap2/raw.fna")
+        centroids = temp("umiCon/polish/{barcode}_{c1}_{c2}_{3}cand{cand}/centroids.fna"),
+        seed = temp("umiCon/polish/{barcode}_{c1}_{c2}_{3}cand{cand}/minimap2/raw.fna")
     conda: "../envs/vsearch.yaml"
-    log: "logs/umiCon/polish/{barcode}_{c}_{clust_id}/get_centroids.log"
-    benchmark: "benchmarks/umiCon/polish/{barcode}_{c}_{clust_id}/get_centroids.txt"
+    log: "logs/umiCon/polish/{barcode}_{c1}_{c2}_{3}cand{cand}/get_centroids.log"
+    benchmark: "benchmarks/umiCon/polish/{barcode}_{c1}_{c2}_{3}cand{cand}/get_centroids.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
@@ -918,11 +806,10 @@ rule get_seedfa:
         --output {output.seed} --threads {threads} >> {log} 2>&1
         """
 
-ruleorder: get_seedfa > spoa
-# polish follows rules in clustCon.smk
+# polish follows rules in consensus.smk
 
-# trim primers 
-rule trim_primers_umi:
+# trim umi adaptors 
+rule trim_adaptors_umi:
     input: "umiCon/umiCon.fna"
     output: 
         trimmed = temp("umiCon/umiCon_trimmedF.fna"),
@@ -934,6 +821,7 @@ rule trim_primers_umi:
         O = 3,
         m = config["umi"]["seqkit"]["min_len"],
         M = config["umi"]["seqkit"]["max_len"],
+        action = "retain",
     threads: config["threads"]["normal"]
     log: "logs/umiCon/trim_primers_umi.log"
     benchmark: "benchmarks/umiCon/trim_primers_umi.txt"
@@ -943,6 +831,7 @@ rule trim_primers_umi:
     shell:
         """
         cutadapt \
+        --action={params.action} \
         -j {threads} \
         -e {params.e} -O {params.O} -m {params.m} -M {params.M} \
         {params.f} \
@@ -952,9 +841,9 @@ rule trim_primers_umi:
         > {log} 2>&1
         """
 
-use rule trim_primers_umi as trim_primers_umiR with:
+use rule trim_adaptors_umi as trim_adaptors_umiR with:
     input: 
-        rules.trim_primers_umi.output.untrimmed
+        rules.trim_adaptors_umi.output.untrimmed
     output: 
         trimmed = temp("umiCon/umiCon_trimmedR.fna"),
         untrimmed = "umiCon/umiCon_untrimmed.fna"
@@ -964,6 +853,7 @@ use rule trim_primers_umi as trim_primers_umiR with:
         O = 3,
         m = config["umi"]["seqkit"]["min_len"],
         M = config["umi"]["seqkit"]["max_len"],
+        action = "retain",
     log: 
         "logs/umiCon/trim_primers_umiR.log"
     benchmark: 
@@ -972,7 +862,7 @@ use rule trim_primers_umi as trim_primers_umiR with:
 # reverse complement for reverse strand
 use rule revcomp_fq as revcomp_fq_umi with:
     input: 
-        rules.trim_primers_umiR.output.trimmed
+        rules.trim_adaptors_umiR.output.trimmed
     output: 
         temp("umiCon/umiCon_trimmedR_revcomp.fna")
     log: 
@@ -982,7 +872,7 @@ use rule revcomp_fq as revcomp_fq_umi with:
 
 rule collect_umiCon_trimmed:
     input: 
-        rules.trim_primers_umi.output.trimmed,
+        rules.trim_adaptors_umi.output.trimmed,
         rules.revcomp_fq_umi.output
     output: "umiCon/umiCon_trimmed.fna"
     run: 

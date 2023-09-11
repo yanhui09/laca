@@ -91,20 +91,21 @@ def get_chimera_free(chimera_filter= config["chimera_filter"]):
     else:
         return get_raw()
 
-# trim primers, process two strands differently
-rule trim_primers:
+# check primer-pattern, process two strands differently
+rule check_primers:
     input: get_chimera_free()
     output: 
-        trimmed = temp("qc/primers_trimmed/{barcode}F.fastq"),
-        untrimmed = temp("qc/primers_untrimmed/{barcode}F.fastq"),
+        passed = temp("qc/primers_passed/{barcode}F.fastq"),
+        unpassed = temp("qc/primers_unpassed/{barcode}F.fastq"),
     conda: "../envs/cutadapt.yaml"
     params:
         f = f5_pattern1,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
         m = 1,
-    log: "logs/qc/trim_primersF/{barcode}.log"
-    benchmark: "benchmarks/qc/trim_primersF/{barcode}.txt"
+        action = config["cutadapt"]["action"],
+    log: "logs/qc/check_primersF/{barcode}.log"
+    benchmark: "benchmarks/qc/check_primersF/{barcode}.txt"
     threads: config["threads"]["large"]
     resources:
         mem = config["mem"]["normal"],
@@ -112,35 +113,37 @@ rule trim_primers:
     shell:
         """
         cutadapt \
+        --action={params.action} \
         -j {threads} \
         -e {params.e} -O {params.O} -m {params.m} \
         {params.f} \
-        --untrimmed-output {output.untrimmed} \
-        -o {output.trimmed} \
+        --untrimmed-output {output.unpassed} \
+        -o {output.passed} \
         {input} \
         > {log} 2>&1
         """
 
-use rule trim_primers as trim_primersR with:
+use rule check_primers as check_primersR with:
     input: 
-        rules.trim_primers.output.untrimmed
+        rules.check_primers.output.unpassed
     output:
-        trimmed = temp("qc/primers_trimmed/{barcode}R.fastq"),
-        untrimmed = temp("qc/primers_untrimmed/{barcode}.fastq"),
+        passed = temp("qc/primers_passed/{barcode}R.fastq"),
+        unpassed = temp("qc/primers_unpassed/{barcode}.fastq"),
     params:
         f = f5_pattern2,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
         m = 1,
+        action = config["cutadapt"]["action"],
     log: 
-        "logs/qc/trim_primersR/{barcode}.log"
+        "logs/qc/check_primersR/{barcode}.log"
     benchmark: 
-        "benchmarks/qc/trim_primersR/{barcode}.txt"
+        "benchmarks/qc/check_primersR/{barcode}.txt"
 
 # reverse complement for reverse strand
 rule revcomp_fq:
-    input: rules.trim_primersR.output.trimmed
-    output: temp("qc/primers_trimmed/{barcode}R_revcomp.fastq")
+    input: rules.check_primersR.output.passed
+    output: temp("qc/primers_passed/{barcode}R_revcomp.fastq")
     conda: "../envs/seqkit.yaml"
     log: "logs/qc/revcomp_fq/{barcode}.log"
     benchmark: "benchmarks/qc/revcomp_fq/{barcode}.txt"
@@ -151,15 +154,15 @@ rule revcomp_fq:
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
 
 # option to trim or not
-def trim_check(trim = config["trim"], subsample = config["subsample"], n = config["seqkit"]["n"]):
-    check_val("trim", trim, bool)
-    out = [rules.trim_primers.output.trimmed, rules.revcomp_fq.output]
-    if trim is False:
+def primer_check(primer_check = config["primer_check"], subsample = config["subsample"], n = config["seqkit"]["n"]):
+    check_val("primer_check", primer_check, bool)
+    out = [rules.check_primers.output.passed, rules.revcomp_fq.output]
+    if primer_check is False:
         out = get_raw(subsample, n)
     return out
 
 rule q_filter:
-    input: trim_check()
+    input: primer_check()
     output: "qc/qfilt/{barcode}.fastq"
     conda: "../envs/seqkit.yaml"
     params:
