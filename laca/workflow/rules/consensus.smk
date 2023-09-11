@@ -239,14 +239,14 @@ use rule fqs_split_isONclust as fqs_split_isoCon with:
 # reused in racon iterations
 rule minimap2polish:
     input: 
-      ref = "{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/{assembly}.fna",
-      fastq = "{consensus}/split/{barcode}_{c2}_{c2}_{c3}cand{cand}.fastq",
-    output: temp("{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/{assembly}.paf"),
+      ref = "{consensus}/polish/{bc_cls_cand}/minimap2/{assembly}.fna",
+      fastq = "{consensus}/split/{bc_cls_cand}.fastq",
+    output: temp("{consensus}/polish/{bc_cls_cand}/minimap2/{assembly}.paf"),
     params:
         x = config["minimap2"]["x_map"]
     conda: "../envs/minimap2.yaml"
-    log: "logs/{consensus}/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2_{assembly}.log"
-    benchmark: "benchmarks/{consensus}/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2_{assembly}.txt"
+    log: "logs/{consensus}/{bc_cls_cand}/minimap2_{assembly}.log"
+    benchmark: "benchmarks/{consensus}/{bc_cls_cand}/minimap2_{assembly}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
@@ -264,25 +264,25 @@ rule minimap2polish:
 def get_racon_input(wildcards):
     # adjust input based on racon iteritions
     if int(wildcards.iter) == 1:
-        prefix = "{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/raw"
+        prefix = "{consensus}/polish/{bc_cls_cand}/minimap2/raw"
     else:
-        prefix = "{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/racon_{iter}".format(consensus=wildcards.consensus,
-            barcode=wildcards.barcode, c1=wildcards.c1, c2=wildcards.c2, c3=wildcards.c3, cand=wildcards.cand, iter=str(int(wildcards.iter) - 1))
+        prefix = "{consensus}/polish/{bc_cls_cand}/minimap2/racon_{iter}".format(consensus=wildcards.consensus,
+            bc_cls_cand=wildcards.bc_cls_cand, iter=str(int(wildcards.iter) - 1))
     return(prefix + ".paf", prefix + ".fna")
 
 rule racon:
     input:
-        "{consensus}/split/{barcode}_{c1}_{c2}_{c3}cand{cand}.fastq",
+        "{consensus}/split/{bc_cls_cand}.fastq",
         lambda wc: get_racon_input(wc),
-    output: temp("{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/racon_{iter}.fna")
+    output: temp("{consensus}/polish/{bc_cls_cand}/minimap2/racon_{iter}.fna")
     params:
         m = config["racon"]["m"],
         x = config["racon"]["x"],
         g = config["racon"]["g"],
         w = config["racon"]["w"],
     conda: "../envs/racon.yaml"
-    log: "logs/{consensus}/{barcode}_{c1}_{c2}_{c3}cand{cand}/racon_{iter}.log"
-    benchmark: "benchmarks/{consensus}/{barcode}_{c1}_{c2}_{c3}cand{cand}/racon_{iter}.txt"
+    log: "logs/{consensus}/{bc_cls_cand}/racon_{iter}.log"
+    benchmark: "benchmarks/{consensus}/{bc_cls_cand}/racon_{iter}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
@@ -301,14 +301,14 @@ rule racon:
 def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = False):
     if int(wildcards.iter2) == 1:
         if int(racon_iter) == 0:
-            fna = "{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/raw.fna".format(
-                consensus=wildcards.consensus, barcode=wildcards.barcode, c1=wildcards.c1, c2=wildcards.c2, c3=wildcards.c3, cand=wildcards.cand)
+            fna = "{consensus}/polish/{bc_cls_cand}/minimap2/raw.fna".format(
+                consensus=wildcards.consensus, bc_cls_cand=wildcards.bc_cls_cand)
         else:
-            fna = "{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/racon_{iter}.fna".format(
-                consensus=wildcards.consensus, barcode=wildcards.barcode, c1=wildcards.c1, c2=wildcards.c2, c3=wildcards.c3,  cand=wildcards.cand, iter=str(int(racon_iter)))
+            fna = "{consensus}/polish/{bc_cls_cand}/minimap2/racon_{iter}.fna".format(
+                consensus=wildcards.consensus, bc_cls_cand=wildcards.bc_cls_cand, iter=str(int(racon_iter)))
     else:
-        fna = "{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/medaka_{iter}/consensus.fasta".format(
-            consensus=wildcards.consensus, barcode=wildcards.barcode, c1=wildcards.c1, c2=wildcards.c2, c3=wildcards.c3, cand=wildcards.cand, iter=str(int(wildcards.iter2) - 1))
+        fna = "{consensus}/polish/{bc_cls_cand}/medaka_{iter}/consensus.fasta".format(
+            consensus=wildcards.consensus, bc_cls_cand=wildcards.bc_cls_cand, iter=str(int(wildcards.iter2) - 1))
     if index == True:
         return(fna + ".fai", fna + ".map-ont.mmi")
     else:
@@ -317,20 +317,20 @@ def get_medaka_files(wildcards, racon_iter = config["racon"]["iter"], index = Fa
 rule medaka_consensus:
     input:
         fna = lambda wc: get_medaka_files(wc),
-        fastq = "{consensus}/split/{barcode}_{c1}_{c2}_{c3}cand{cand}.fastq",
+        fastq = "{consensus}/split/{bc_cls_cand}.fastq",
     output: 
-        temp(expand("{{consensus}}/polish/{{barcode}}_{{c1}}_{{c2}}_{{c3}}cand{{cand}}/medaka_{{iter2}}/consensus{ext}",
+        temp(expand("{{consensus}}/polish/{{bc_cls_cand}}/medaka_{{iter2}}/consensus{ext}",
         ext = [".fasta", ".fasta.gaps_in_draft_coords.bed", "_probs.hdf"])),
-        temp(expand("{{consensus}}/polish/{{barcode}}_{{c1}}_{{c2}}_{{c3}}cand{{cand}}/medaka_{{iter2}}/calls{ext}",
+        temp(expand("{{consensus}}/polish/{{bc_cls_cand}}/medaka_{{iter2}}/calls{ext}",
         ext = ["_to_draft.bam", "_to_draft.bam.bai"])),
     params:
         m = config["medaka"]["m"],
         cudnn = 'CUDA_VISIBLE_DEVICES=""' if config["medaka"]["cudnn"] is False else 'TF_FORCE_GPU_ALLOW_GROWTH=true',
-        _dir = "{consensus}/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/medaka_{iter2}",
+        _dir = "{consensus}/polish/{bc_cls_cand}/medaka_{iter2}",
         inedxs = lambda wc: get_medaka_files(wc, index = True),
     conda: "../envs/medaka.yaml"
-    log: "logs/{consensus}/{barcode}_{c1}_{c2}_{c3}cand{cand}/medaka_{iter2}.log"
-    benchmark: "benchmarks/{consensus}/{barcode}_{c1}_{c2}_{c3}cand{cand}/medaka_{iter2}.txt"
+    log: "logs/{consensus}/{bc_cls_cand}/medaka_{iter2}.log"
+    benchmark: "benchmarks/{consensus}/{bc_cls_cand}/medaka_{iter2}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
