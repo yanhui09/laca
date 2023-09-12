@@ -68,7 +68,7 @@ cutadapt:
   action: retain 
 ##############################################################
 #  global read clustering
-min_cluster_size: 20
+min_cluster_size: 10
 cluster:
 #  - isONclust
 #  - umapclust

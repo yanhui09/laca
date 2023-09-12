@@ -156,6 +156,7 @@ rule minimap2repseqs:
         m = "3G",
         # https://lh3.github.io/minimap2/minimap2.html#10
         max_de = config["minimap2"]["max_de"],
+        f = 1000,
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/minimap2/{barcode}.log"
     benchmark: "benchmarks/quant/minimap2/{barcode}.txt"
@@ -167,7 +168,7 @@ rule minimap2repseqs:
         # de:f: divergence < max_de
         # no supplementary alignments, primary alignments only, exclude unmapped reads
         """
-        minimap2 -t {threads} -ax {params.x} {input.mmi} {input.fq} 2> {log} | \
+        minimap2 -t {threads} -f {params.f} -ax {params.x} {input.mmi} {input.fq} 2> {log} | \
         grep -v "^@" | awk -F '\t|de:f:' '$(NF-1) < {params.max_de}' | \
         cat {input.dict} - | samtools view -F0x900 -b - > {output.bam} 2>> {log}
 
