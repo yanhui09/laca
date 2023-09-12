@@ -15,14 +15,16 @@ def init_conf(
     nreads_m = 1000,
     no_pool=False,
     subsample=False,
-    no_trim=False,
-    kmerbin=False,
-    cluster=["isONclustCon"],
+    no_chimera_filt=False,
+    no_primer_check=False,
+    cluster=["isONclust", "meshclust"],
+    consensus=["kmerCon"],
+    globalclust_umi=False,
     quant=["seqid"],
     uchime=False,
     jobs_m=2,
     jobs_M=6,
-    nanopore=False,
+    ont=False,
     isoseq=False,
     longumi=False,
     simulate=False,
@@ -42,15 +44,17 @@ def init_conf(
         nreads_m (int): minimum number of reads for the demultiplexed fastqs
         no_pool (bool): if True, do not pool the reads [default: False]
         subsample (bool): if True, subsample the reads [default: False]
-        no_trim (bool): if True, do not trim the primers [default: False]
-        kmerbin (bool): if True, conduct kmer binning  [default: False]
-        cluster (list): list of methods to generate consensus (kmerCon, clustCon, isONclustCon, isONclustCon2, isONcorCon, umiCon) [default: ["isONclustCon"]]
+        no_chimera_filt (bool): if True, do not filter possible chimeric reads [default: False]
+        no_primer_check (bool): if True, do not check primer pattern [default: False]
+        cluster (list): list of methods to cluster reads (isONclust, umapclust, isONcorrect, meshclust) [default: ["isONclust", "meshclust"]]
+        consensus (list): list of methods to generate consensus (kmerCon, miniCon, isoCon, umiCon) [default: ["kmerCon"]]
+        globalclust_umi (bool): if True, use global clustering for UMI consensus [default: False]
         quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
-        uchime (bool): if True, filter possible chimeras by vsearch [default: False]
+        uchime (bool): if True, filter possible chimeric OTUs by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
         jobs_M (int): number of jobs for threads-dependent tasks [default: 6]
-        nanopore (bool): if True, use template for nanopore reads [default: False]
-        isoseq (bool): if True, use template for isoseq reads [default: False]
+        ont (bool): if True, use template for ONT reads [default: False]
+        isoseq (bool): if True, use template for PacBio isoseq reads [default: False]
         longumi (bool): if True, use primer design from longumi paper (https://doi.org/10.1038/s41592-020-01041-y) [default: False]       
     """
     os.makedirs(dbdir, exist_ok=True)
@@ -61,8 +65,13 @@ def init_conf(
     
     with open(template_conf_file) as template_conf:
         conf = yaml.load(template_conf)
-        
-    if nanopore == True:
+    
+    # no-flags can be overwritten    
+    conf["pool"] = not no_pool
+    conf["chimera_filt"] = not no_chimera_filt
+    conf["primer_check"] = not no_primer_check
+    
+    if ont == True:
         # yacrd
         conf["yacrd"]["minimap2"]["g"] = 500
         conf["yacrd"]["c"] = 4
@@ -76,8 +85,6 @@ def init_conf(
         # racon medaka
         conf["racon"]["iter"] = 2
         conf["medaka"]["iter"] = 1
-        # isONcor
-        conf["isONcor"] = True
         # UMI
         conf["umi"]["s"] = 90
         conf["umi"]["e"] = 90
@@ -95,14 +102,15 @@ def init_conf(
         # isONclustCon
         conf["isONclust"]["k"] = 15
         conf["isONclust"]["w"] = 50
+        # isONcorrect
+        if "isONcorrect" in cluster:
+            cluster.remove("isONcorrect")
         # minimap2
         conf["minimap2"]["x_ava"] = "ava-pb"
         conf["minimap2"]["x_map"] = "asm20"
         # racon medaka
         conf["racon"]["iter"] = 2
         conf["medaka"]["iter"] = 0
-        # isONcor
-        conf["isONcor"] = False
         # UMI
         conf["umi"]["s"] = 60
         conf["umi"]["e"] = 60
@@ -113,6 +121,8 @@ def init_conf(
         conf["simulate"]["badread"]["qscore_model"] = "pacbio2016"
         
     if longumi == True:
+        conf["pool"] = False
+        conf["primer_check"] = False
         conf["seqkit"]["min_qual"] = -1
         conf["seqkit"]["min_len"] = 3500
         conf["seqkit"]["max_len"] = 6000
@@ -120,6 +130,7 @@ def init_conf(
         conf["fprimer"]["F"] = "AGRGTTYGATYMTGGCTCAG"
         conf["rprimer"].clear()
         conf["rprimer"]["R"] = "CGACATCGAGGTGCCAAAC"
+        conf["globalclust_umi_reads"] = False
         conf["fprimer_max"].clear()
         conf["fprimer_max"]["F"] = "AGRGTTYGATYMTGGCTCAG"
         conf["rprimer_min"].clear()
@@ -132,6 +143,7 @@ def init_conf(
         conf["umi"]["cutadapt"]["min_overlap"] = 11
         conf["flinker"] = "CAAGCAGAAGACGGCATACGAGAT"
         conf["rlinker"] = "AATGATACGGCGACCACCGAGATC"
+        conf["min_support_reads"] = 3
         
     if simulate == True:
         conf["fprimer"].clear()
@@ -148,8 +160,8 @@ def init_conf(
         # medaka 
         conf["medaka"]["iter"] = 0
         # cluster
-        conf["hdbscan"]["min_bin_size"] = 10
-        conf["hdbscan"]["min_samples"] = 10
+        conf["umapclust"]["hdbscan"]["min_bin_size"] = 10
+        conf["umapclust"]["hdbscan"]["min_samples"] = 10
         conf["min_cluster_size"] = 10
             
     conf["basecalled_dir"] = bascdir
@@ -171,11 +183,10 @@ def init_conf(
     conf["database_dir"] = dbdir
     conf["demuxer"] = demuxer
     conf["nreads_m"] = nreads_m
-    conf["pool"] = not no_pool
     conf["subsample"] = subsample
-    conf["trim"] = not no_trim
-    conf["kmerbin"] = kmerbin
     conf["cluster"] = list(cluster)
+    conf["consensus"] = list(consensus)
+    conf["globalclust_umi_reads"] = globalclust_umi
     conf["quant"] = list(quant)
     conf["uchime"] = uchime
     conf["threads"]["normal"] = jobs_m

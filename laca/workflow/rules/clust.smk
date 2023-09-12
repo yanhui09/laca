@@ -1,5 +1,5 @@
-check_list_ele("cluster", config["cluster"], ["isONclust", "umap", "isONcorrect", "meshclust"])
-localrules: cls_isONclust, cls_umap, cls_meshclust, fqs_split_isONclust, fqs_split_isONclust2, fqs_split_umap, fqs_split_meshclust, prepare_umap_fqs, prepare_meshclust_fqs, fq2fa4meshclust
+check_list_ele("cluster", config["cluster"], ["isONclust", "umapclust", "isONcorrect", "meshclust"])
+localrules: cls_isONclust, cls_umapclust, cls_meshclust, fqs_split_isONclust, fqs_split_isONclust2, fqs_split_umapclust, fqs_split_meshclust, prepare_umapclust_fqs, prepare_meshclust_fqs, fq2fa4meshclust
 # "meshclust" is required
 if "meshclust" not in config["cluster"]:
     raise ValueError("meshclust is required for cluster")
@@ -78,12 +78,12 @@ rule fqs_split_isONclust2:
     shell: "cp {input} {output}"
 
 # pseduo fastq if isONclust not used
-rule prepare_umap_fqs:
+rule prepare_umapclust_fqs:
     input: "qc/qfilt/{barcode}.fastq"
     output: temp("clust/umapclust/fqs/{barcode}_0.fastq")
     shell: "cp {input} {output}"
 
-def get_fqs4umap(cluster = config["cluster"]):
+def get_fqs4umapclust(cluster = config["cluster"]):
     if "isONclust" in cluster:
         fqs_dir = "clust/isONclust/split0"
     else:
@@ -91,11 +91,11 @@ def get_fqs4umap(cluster = config["cluster"]):
     return fqs_dir + "/{barcode}_{c1}.fastq"
 
 rule kmer_freqs:
-    input: get_fqs4umap()
+    input: get_fqs4umapclust()
     output: temp("clust/umapclust/kmer_freqs/{barcode}_{c1}.tsv")
-    conda: "../envs/kmerBin.yaml"
+    conda: "../envs/umapclust.yaml"
     params: 
-        kmer_size = config["kmer_size"],
+        kmer_size = 5,
     log: "logs/clust/umapclust/kmer_freqs/{barcode}_{c1}.log"
     benchmark: "benchmarks/clust/umapclust/kmer_freqs/{barcode}_{c1}.txt"
     threads: config["threads"]["large"]
@@ -108,7 +108,7 @@ rule kmer_freqs:
         " -r {input} -t {threads}"
         " 2> {log} > {output}"
 
-def get_batch_size(kmer_freq, batch_size = config["batch_size"], mem = config["mem"]["large"]):
+def get_batch_size(kmer_freq, batch_size = config["umapclust"]["batch_size"], mem = config["mem"]["large"]):
     if not os.path.exists(kmer_freq):
         return -1
     # total input read size
@@ -140,17 +140,17 @@ rule umapclust:
     output: 
         batch = temp(directory("clust/umapclust/{barcode}_{c1}")),
         read2cluster = "clust/umapclust/{barcode}_{c1}.tsv",
-    conda: "../envs/kmerBin.yaml"
+    conda: "../envs/umapclust.yaml"
     params:
         bc_clss= "{barcode}_{c1}",
         batch = lambda wc, input: get_batch_size(kmer_freq = input[0]),
-        n_neighbors = config["umap"]["n_neighbors"],
-        min_dist = config["umap"]["min_dist"],
-        metric = config["umap"]["metric"],
-        n_components = config["umap"]["n_components"],
-	    min_bin_size = config["hdbscan"]["min_bin_size"],
-        min_samples = config["hdbscan"]["min_samples"],
-	    epsilon = config["hdbscan"]["epsilon"],
+        n_neighbors = config["umapclust"]["umap"]["n_neighbors"],
+        min_dist = config["umapclust"]["umap"]["min_dist"],
+        metric = "cosine",
+        n_components = 2,
+	    min_bin_size = config["umapclust"]["hdbscan"]["min_bin_size"],
+        min_samples = config["umapclust"]["hdbscan"]["min_samples"],
+	    epsilon = config["umapclust"]["hdbscan"]["epsilon"],
     log: "logs/clust/umapclust/{barcode}_{c1}/umapclust.log",
     benchmark: "benchmarks/clust/umapclust/{barcode}_{c1}/umapclust.txt",
     threads: config["threads"]["large"]
@@ -206,7 +206,7 @@ def get_umapclust(wildcards, pool = config["pool"], cluster = config["cluster"],
         return clusters
 
 # split reads by umap cluster
-checkpoint cls_umap:
+checkpoint cls_umapclust:
     input:
         ".qc_DONE",
         lambda wc: sorted(set(get_filt(wc) + expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)))),
@@ -236,7 +236,7 @@ checkpoint cls_umap:
                 if len(df_clust) >= params.min_size:
                     df_clust['read'].to_csv(output[0] + "/{bc_cls1}_{cls2}.csv".format(bc_cls1=bc_cls1, cls2=cluster_id), header = False, index = False)
 
-use rule fqs_split_isONclust as fqs_split_umap with:
+use rule fqs_split_isONclust as fqs_split_umapclust with:
     input:
         cluster = "clust/umapclust/read2cluster/{barcode}_{c1}_{c2}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
@@ -244,14 +244,14 @@ use rule fqs_split_isONclust as fqs_split_umap with:
         temp("clust/umapclust/split/{barcode}_{c1}_{c2}.fastq")
 
 # meshclust
-use rule prepare_umap_fqs as prepare_meshclust_fqs with:
+use rule prepare_umapclust_fqs as prepare_meshclust_fqs with:
     input: 
         "qc/qfilt/{barcode}.fastq"
     output: 
         temp("clust/meshclust/fqs/{barcode}_0_0.fastq")
 
 def get_fqs4isONcorrect(cluster = config["cluster"]):
-    if "umap" in cluster:
+    if "umapclust" in cluster:
         fqs_dir = "clust/umapclust/split"
     elif "isONclust" in cluster:
         fqs_dir = "clust/isONclust/split"
@@ -315,8 +315,8 @@ rule meshclust:
         "meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1"
 
 def get_meshclust(wildcards, cluster = config["cluster"], fastq = False):
-    if "umap" in cluster: 
-        bc_clss = glob_wildcards(checkpoints.cls_umap.get(**wildcards).output[0] + "/{bc_clss}.csv").bc_clss
+    if "umapclust" in cluster: 
+        bc_clss = glob_wildcards(checkpoints.cls_umapclust.get(**wildcards).output[0] + "/{bc_clss}.csv").bc_clss
         fqs_dir = "clust/umapclust/split"
     elif "isONclust" in cluster:
         bc_cls1 = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_cls1}.csv").bc_cls1
@@ -343,7 +343,7 @@ checkpoint cls_meshclust:
         cluster = lambda wc: get_meshclust(wc, fastq = False),
     output: directory("clust/clusters")
     params:
-        min_size = 4,
+        min_size = config["min_cluster_size"],
     run:
         import pandas as pd
         if not os.path.exists(output[0]):

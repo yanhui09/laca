@@ -1,7 +1,0 @@
-name: nanosim
-channels:
-  - bioconda
-  - anaconda
-dependencies:
-  - nanosim
-  - scikit-learn==0.22.1 # compatible with pretrained models

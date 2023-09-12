@@ -1,3 +1,5 @@
+# check consensus mode
+check_list_ele("consensus", config["consensus"], ["kmerCon", "miniCon", "isoCon", "umiCon"])
 localrules: fqs_split_kmerCon, cls_miniCon, fqs_split_miniCon, cls_isoCon, cls_isoCon, get_IsoCon_cand, fqs_split_isoCon, collect_consensus 
 # kmerCon
 rule fqs_split_kmerCon:
@@ -33,7 +35,7 @@ checkpoint cls_kmerCon:
             os.makedirs(output[0])
         for i in list(input.clss):
             num_lines = sum(1 for line in open(i))
-            if num_lines > params.min_size:
+            if num_lines >= params.min_size:
                 bc_clss = i.split("/")[-1].removesuffix(".csv")
                 bc_clss_cand = "/{bc_clss}cand1".format(bc_clss=bc_clss)
                 shutil.copyfile(i, output[0] + bc_clss_cand + ".csv")
@@ -63,9 +65,9 @@ rule ava2clust:
     conda: "../envs/miniCon.yaml"
     params:
         prefix = "miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}",
-        min_score_frac = config["ava2clust"]["min_score_frac"],
+        min_score_frac = config["miniCon"]["miniclust"]["min_score_frac"],
         min_reads = config["min_support_reads"],
-        max_recurs = config["ava2clust"]["max_recursion"],
+        max_recurs = config["miniCon"]["miniclust"]["max_recursion"],
     log: "logs/miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}.log"
     benchmark: "benchmarks/miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}.txt"
     resources:
@@ -91,7 +93,7 @@ checkpoint cls_miniCon:
             os.makedirs(output[0])
         for i in list(input.clss):
             num_lines = sum(1 for line in open(i))
-            if num_lines > params.min_size:
+            if num_lines >= params.min_size:
                 bc_clss = i.split("/")[-1].removesuffix(".csv")
                 df = pd.read_csv(i)
                 # cluster starts from 0
@@ -114,8 +116,8 @@ use rule fqs_split_meshclust as fqs_split_miniCon with:
         centroid = temp("miniCon/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/raw.fna"),
 
 # isoCon
-def check_isoCon_batch(batch_size = config["IsoCon"]["max_batch_size"]):
-    check_val("IsoCon batch_size", batch_size, int)
+def check_isoCon_batch(batch_size = config["isoCon"]["max_batch_size"]):
+    check_val("isoCon max_batch_size", batch_size, int)
     if int(batch_size) < -1:
         raise ValueError("IsoCon batch_size only accepts integer >= -1.")
 check_isoCon_batch()
@@ -129,9 +131,9 @@ rule run_isoCon:
     params:
         prefix = "isoCon/{barcode}_{c1}_{c2}_{c3}",
         min_candidates = config["min_support_reads"],
-        neighbor_search_depth =  int(config["IsoCon"]["neighbor_search_depth"]) if config["IsoCon"]["neighbor_search_depth"] else 2**32,
-        p_value_threshold = config["IsoCon"]["p_value_threshold"],
-        max_batch_size = -1 if int(config["IsoCon"]["max_batch_size"]) == -1 else int(config["IsoCon"]["max_batch_size"]) * 4,
+        neighbor_search_depth =  int(config["isoCon"]["neighbor_search_depth"]) if config["isoCon"]["neighbor_search_depth"] else 2**32,
+        p_value_threshold = config["isoCon"]["p_value_threshold"],
+        max_batch_size = -1 if int(config["isoCon"]["max_batch_size"]) == -1 else int(config["isoCon"]["max_batch_size"]) * 4,
     log: "logs/isoCon/{barcode}_{c1}_{c2}_{c3}.log"
     benchmark: "benchmarks/isoCon/{barcode}_{c1}_{c2}_{c3}.txt"
     threads: config["threads"]["large"]

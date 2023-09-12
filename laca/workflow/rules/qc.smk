@@ -84,9 +84,9 @@ rule yacrd:
         time = config["runtime"]["simple"],
     shell: "yacrd -i {input.ava} -o {log} -c {params.c} -n {params.n} -t {threads} filter -i {input.fq} -o {output} 2>> {log}"
 
-def get_chimera_free(chimera_filter= config["chimera_filter"]):
-    check_val("chimera_filter", chimera_filter, bool)
-    if chimera_filter is True:
+def get_chimera_free(chimera_filt= config["chimera_filt"]):
+    check_val("chimera_filt", chimera_filt, bool)
+    if chimera_filt is True:
         return rules.yacrd.output
     else:
         return get_raw()
@@ -145,13 +145,11 @@ rule revcomp_fq:
     input: rules.check_primersR.output.passed
     output: temp("qc/primers_passed/{barcode}R_revcomp.fastq")
     conda: "../envs/seqkit.yaml"
-    log: "logs/qc/revcomp_fq/{barcode}.log"
-    benchmark: "benchmarks/qc/revcomp_fq/{barcode}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
-    shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} 2> {log}"
+    shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} --quiet"
 
 # option to trim or not
 def primer_check(primer_check = config["primer_check"], subsample = config["subsample"], n = config["seqkit"]["n"]):

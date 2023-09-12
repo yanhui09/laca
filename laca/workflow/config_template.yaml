@@ -29,8 +29,7 @@ nreads_m: 1000 # rm barcoded samples in shallow sequencing
 ##############################################################
 # Quality control
 # subsample reads if with inadequate memory
-subsample: False
-
+subsample: false
 # filter reads by quality and length range
 seqkit:
   n: 5000 # subsampling number [int]
@@ -39,17 +38,18 @@ seqkit:
   max_len: 1600
 
 # filter chimeric reads with yacrd
-chimera_filter: True
+chimera_filt: true
 yacrd:
   minimap2:
     # ont: -g 500; pacbio: -g 5000
     g: 500
     f: 1000
+  # ont|pacbio P6-C4: -c 4; pacbio Sequal: -c 3
   c: 4
   n: 0.4
 
 # primer-pattern check
-primer_check: True
+primer_check: true
 # order matters
 fprimer:
   27Fa: "AGAGTTTGATYMTGGCTYAG"
@@ -68,35 +68,31 @@ cutadapt:
   action: retain 
 ##############################################################
 #  global read clustering
-run_isONcorrect: True # correct ONT reads before meshclust
 min_cluster_size: 20
 cluster:
-  - isONclust
-  - umap
-  - isONcorrect
-  - meshclust
+#  - isONclust
+#  - umapclust
+#  - isONcorrect
+#  - meshclust
 
 isONclust:
   # --ont: --k13 --w20; --isoseq: --k15 --w50
   k: 13
   w: 20
 
-# umap
-# To mitagate the memory bottleneck of umap in pooling mode, batch mode is induced. 
-# zero or negative values to bin all reads together; 
-# postive integer to bin in n batches due to limited rams; 
-# or use "auto" estimation;
-batch_size: auto
-kmer_size: 5
-umap:
-  n_neighbors: 15 # Increase this for global structure
-  min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
-  metric: cosine
-  n_components: 2 # n reduced dimensions passed to hdbscan clustering
-hdbscan:
-  min_bin_size: 50 # Define the smallest size to bin
-  min_samples: 50 # Increase this for more conservative clustering - more points as noise
-  epsilon: 0.5 # Lower this for more micro-clusters
+umapclust:
+  # To mitagate the memory bottleneck of umap in pooling mode, batch mode is induced. 
+  # zero or negative values to bin all reads together; 
+  # postive integer to bin in n batches due to limited rams; 
+  # or use "auto" estimation;
+  batch_size: auto
+  umap:
+    n_neighbors: 15 # Increase this for global structure
+    min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
+  hdbscan:
+    min_bin_size: 50 # Define the smallest size to bin
+    min_samples: 50 # Increase this for more conservative clustering - more points as noise
+    epsilon: 0.5 # Lower this for more micro-clusters
 
 meshclust:
   t: 0.9 #keep it empty for auto-estimation
@@ -108,18 +104,19 @@ min_support_reads: 10
 # miniCon: refined kmer consensus based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
 # isoCon: IsoCon (close similarity)
 # umiCon: use action=none in cutadapt to preseve UMIs in QC
-global_clust_umi_reads: False
+globalclust_umi_reads: false
 consensus:
   #- kmerCon # the first is the final kOTUs 
   #- isoCon
   #- miniCon 
   #- umiCon
 
-ava2clust: # [miniCon]
-  min_score_frac: 0.8
-  max_recursion: -1 # non-zero value to override python's max recursion depth
+miniCon:
+  miniclust:
+    min_score_frac: 0.8
+    max_recursion: -1 # non-zero value to override python's max recursion depth
 
-IsoCon:
+isoCon:
   # speed up with small values, e.g. 500, 1000, 
   # but may affect quality if nearest neighbors not found, default: 2**32
   # https://github.com/ksahlin/IsoCon/issues/3
@@ -132,11 +129,11 @@ IsoCon:
 minimap2:
   # choose by reads type; https://github.com/lh3/minimap2
   # ont: ava-ont; pb: ava-pb
-  x_ava: ava-ont # [clustCon & yacrd]
+  x_ava: ava-ont # [miniCon & yacrd]
   # ont: map-ont; pb-clr: map-pb, pb-css: asm20 (< v2.18), map-hifi (> v2.19)
   x_map: map-ont # [polish & quant]
   # maximally allowed gap-compressed per-base sequence divergence as valid mapping, 
-  # filter mismappings due to partial sequence similarity when creating abundance matrix
+  # filter mismappings due to partial sequence similarity when creating abundance matrix with minimap2
   max_de: 0.075 # [quant]
 
 racon:

@@ -322,28 +322,41 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
     help="Subsample the reads.",
 )
 @click.option(
-    "--no-trim",
+    "--no-chimera-filt",
     is_flag=True,
     default=False,
     show_default=True,
-    help="Do not trim the primers.",
+    help="Do not filter chimeric reads.",
 )
 @click.option(
-    "--kmerbin",
+    "--no-primer-check",
     is_flag=True,
     default=False,
     show_default=True,
-    help="Do pre-read binning.",
+    help="Do not check primer pattern.",
+)
+@click.option(
+    "--cluster",
+    type=click.Choice(["isONclust", "umapclust", "isONcorrect", "meshclust"]),
+    default=["isONclust", "meshclust"],
+    show_default=True,
+    multiple=True,
+    help="Cluster approaches.  [Mutiple]",
 )
 @click.option(
     "--consensus",
-    type=click.Choice(
-        ["kmerCon", "miniCon", "isoCon", "umiCon"]
-        ),
+    type=click.Choice(["kmerCon", "miniCon", "isoCon", "umiCon"]),
     default=["kmerCon"],
     show_default=True,
     multiple=True,
     help="Consensus methods.  [Mutiple]",
+)
+@click.option(
+    "--globalclust-umi",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Global read clutering before UMI binning.",
 )
 @click.option(
     "--quant",
@@ -375,11 +388,11 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
     help="Number of jobs for threads-dependent tasks.",
 )
 @click.option(
-    "--nanopore",
+    "--ont",
     is_flag=True,
     default=False,
     show_default=True,
-    help="Use config template for nanopore reads.",
+    help="Use config template for ONT reads.",
     cls = AloMutex,
     required_if_not = [],
     not_required_if = ["isoseq"],
@@ -389,10 +402,10 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
     is_flag=True,
     default=False,
     show_default=True,
-    help="Use config template for pacbio CCS reads.",
+    help="Use config template for PacBio CCS reads.",
     cls = AloMutex,
     required_if_not = [],
-    not_required_if = ["nanopore"],
+    not_required_if = ["ont"],
 )
 @click.option(
     "--longumi",
@@ -422,15 +435,15 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
     help="Clean flag files.",
 )
 def run_init(
-    bascdir, demuxdir, merge, merge_parent, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_trim, 
-    kmerbin, cluster, quant, uchime, jobs_min, jobs_max, nanopore, isoseq, longumi, simulate, clean_flags):
+    bascdir, demuxdir, merge, merge_parent, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_chimera_filt, no_primer_check, 
+    cluster, consensus, globalclust_umi, quant, uchime, jobs_min, jobs_max, ont, isoseq, longumi, simulate, clean_flags):
     """
     Prepare config file for LACA.
     """ 
     logger.info(f"LACA version: {__version__}")
     init_conf(
-        bascdir, demuxdir, merge, merge_parent, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample,
-        no_trim, kmerbin, cluster, quant, uchime, jobs_min, jobs_max, nanopore, isoseq, longumi, simulate)
+        bascdir, demuxdir, merge, merge_parent, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample, no_chimera_filt,
+        no_primer_check, cluster, consensus, globalclust_umi, quant, uchime, jobs_min, jobs_max, ont, isoseq, longumi, simulate)
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir

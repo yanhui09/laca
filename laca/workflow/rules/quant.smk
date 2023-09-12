@@ -1,5 +1,3 @@
-# check classifier choice
-check_list_ele("consensus", config["consensus"], ["kmerCon", "miniCon", "isoCon", "umiCon"])
 # check quantification method
 check_list_ele("quant", config["quant"], ["seqid", "minimap2"])
 
