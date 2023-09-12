@@ -292,7 +292,7 @@ def get_fqs4meshclust(cluster = config["cluster"]):
     if "isONcorrect" in cluster:
         return rules.isONcorrect.output.fastq
     else:
-        get_fqs4isONcorrect(cluster = cluster)
+        return get_fqs4isONcorrect(cluster)
 
 rule fq2fa4meshclust:
     input: get_fqs4meshclust()

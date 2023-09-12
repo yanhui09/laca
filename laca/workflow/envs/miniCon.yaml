@@ -3,7 +3,7 @@ channels:
  - conda-forge
  - bioconda 
 dependencies:
- - pandas
+ - pandas==1.5.2
  - scipy
  - numpy
  - fastcluster

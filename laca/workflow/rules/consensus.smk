@@ -72,7 +72,7 @@ rule ava2clust:
         mem = config["mem"]["large"],
         time = config["runtime"]["long"],
     shell:
-        "python {workflow.basedir}/scripts/binClust.py -p {params.prefix}"
+        "python {workflow.basedir}/scripts/miniclust.py -p {params.prefix}"
         " -R {params.max_recurs}"
         " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
 
@@ -216,13 +216,13 @@ rule get_IsoCon_cand:
             outdir = os.path.dirname(output[0])
             if not os.path.exists(outdir):
                 os.makedirs(outdir)
-            bc_clss, cand = input.cls.removesuffix('.csv').split('/')[-1].split('cand')
+            bc_cls, cand = input.cls.removesuffix('.csv').split('/')[-1].split('cand')
             with open (input.cands, 'r') as fi:
                 lines = fi.readlines()
 
             for i, line in enumerate(lines):
                 if line.startswith('>transcript_' + cand + '_support'):
-                    header = '>' + bc_kb_ci + 'cand' + cand + '\n'
+                    header = '>' + bc_cls + 'cand' + cand + '\n'
                     with open (output[0], 'w') as fo:
                         fo.write(header)
                         fo.write(lines[i+1])

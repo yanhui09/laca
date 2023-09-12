@@ -68,7 +68,7 @@ def main(args):
     cluster_df = run_clustering(df_pivot, args, nan_value)
     
     # rls dict
-    rls = dict(zip(df['qname'].append(df['tname']), df['qlen'].append(df['tlen'])))
+    rls = dict(zip(df[['qname', 'tname']], df[['qlen', 'tlen']]))
     cluster_df['qlen'] = cluster_df['qname'].map(rls)
     
     cluster_df['mean_qlen'] = cluster_df.groupby('cluster')['qlen'].transform('mean')
