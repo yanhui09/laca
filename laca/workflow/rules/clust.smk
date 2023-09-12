@@ -264,7 +264,7 @@ rule isONcorrect:
     input: get_fqs4isONcorrect()
     output:
         rundir = temp(directory("clust/isONcorrect/{barcode}_{c1}/{c2}")), 
-        fastq = temp("clust/isONcorrect/{barcode}_{c1}_{c2}.fastq")
+        fastq = "clust/isONcorrect/{barcode}_{c1}_{c2}.fastq"
     conda: "../envs/isONcorCon.yaml"
     params:
         max_seqs = 2000,
@@ -369,7 +369,7 @@ rule fqs_split_meshclust:
     input:
         members = "clust/clusters/{barcode}_{c1}_{c2}_{c3}.csv",
         centroid = "clust/clusters/{barcode}_{c1}_{c2}_{c3}.centroid",
-        split = get_fqs4meshclust(),
+        split = rules.isONcorrect.output.fastq if "isONcorrect" in config["cluster"] else "qc/qfilt/{barcode}.fastq",
     output:
         members = temp("clust/members/{barcode}_{c1}_{c2}_{c3}.fastq"),
         centroid = temp("clust/centroids/{barcode}_{c1}_{c2}_{c3}.fasta"),

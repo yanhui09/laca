@@ -115,9 +115,19 @@ consensus:
   #- miniCon 
   #- umiCon
 
-ava2clust: # [clustCon]
+ava2clust: # [miniCon]
   min_score_frac: 0.8
   max_recursion: -1 # non-zero value to override python's max recursion depth
+
+IsoCon:
+  # speed up with small values, e.g. 500, 1000, 
+  # but may affect quality if nearest neighbors not found, default: 2**32
+  # https://github.com/ksahlin/IsoCon/issues/3
+  neighbor_search_depth:
+  p_value_threshold: 0.01
+  # evenly paritioned to run in batch if the number of reads bigger than the set value
+  # default: -1, no batch use
+  max_batch_size: -1
 
 minimap2:
   # choose by reads type; https://github.com/lh3/minimap2
@@ -141,16 +151,6 @@ medaka:
   m:  r941_min_hac_g507
   cudnn: False
 
-# run isONcorrect before IsoCon
-IsoCon:
-  # speed up with small values, e.g. 500, 1000, 
-  # but may affect quality if nearest neighbors not found, default: 2**32
-  # https://github.com/ksahlin/IsoCon/issues/3
-  neighbor_search_depth:
-  p_value_threshold: 0.01
-  # evenly paritioned to run in batch if the number of reads bigger than the set value
-  # default: -1, no batch use
-  max_batch_size: -1
 ##############################################################
 # create abundance matrix by sequence id or minimap2 mapping 
 # seqid | minimap2, the first is the final
