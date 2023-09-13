@@ -69,7 +69,7 @@ rule fqs_split_isONclust:
     input: 
         cluster = "clust/isONclust/read2cluster/{barcode}_{c1}.csv",
         fqs = "qc/qfilt/{barcode}.fastq",
-    output: temp("clust/isONclust/split0/{barcode}_{c1}.fastq")
+    output: temp("clust/isONclust/{barcode}_{c1}.split.fastq")
     shell: "seqkit grep -f {input.cluster} {input.fqs} -w0 -o {output} --quiet"
 
 rule fqs_split_isONclust2: 
@@ -85,14 +85,14 @@ rule prepare_umapclust_fqs:
 
 def get_fqs4umapclust(cluster = config["cluster"]):
     if "isONclust" in cluster:
-        fqs_dir = "clust/isONclust/split0"
+        fastq = "clust/isONclust/{barcode}_{c1}.split.fastq"
     else:
-        fqs_dir = "clust/umapclust/fqs" 
-    return fqs_dir + "/{barcode}_{c1}.fastq"
+        fastq = "clust/umapclust/fqs/{barcode}_{c1}.fastq" 
+    return fastq
 
 rule kmer_freqs:
     input: get_fqs4umapclust()
-    output: temp("clust/umapclust/kmer_freqs/{barcode}_{c1}.tsv")
+    output: temp("clust/umapclust/{barcode}_{c1}.kmerfreq")
     conda: "../envs/umapclust.yaml"
     params: 
         kmer_size = 5,
@@ -190,9 +190,9 @@ def get_umapclust(wildcards, pool = config["pool"], cluster = config["cluster"],
     if "isONclust" in cluster:
         bc_clss = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_cls}.csv").bc_cls
         for i in bc_clss:
-            bc, clss = i.split("_")
-            clusters.append("clust/umapclust/{bc}_{clss}.tsv".format(bc=bc, clss=clss))
-            fqs.append("clust/isONclust/split/{bc}_{clss}.fastq".format(bc=bc, clss=clss))
+            clusters.append("clust/umapclust/{bc_cls}.tsv".format(bc_cls=i))
+            # if isONclust + umapclust
+            fqs.append("clust/isONclust/{bc_cls}.split.fastq".format(bc_cls=i))
     else:
         if pool == True:
            bcs = ["pooled"]
