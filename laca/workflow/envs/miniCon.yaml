@@ -6,4 +6,4 @@ dependencies:
  - pandas==1.5.2
  - scipy
  - numpy
- - fastcluster
+ #- fastcluster

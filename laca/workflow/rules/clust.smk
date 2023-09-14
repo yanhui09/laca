@@ -279,30 +279,22 @@ rule meshclust:
     shell: 
         "meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1"
 
-def get_meshclust(wildcards, cluster = config["cluster"], fastq = False):
+def get_meshclust(wildcards, cluster = config["cluster"]):
     if "umapclust" in cluster: 
         bc_clss = glob_wildcards(checkpoints.cls_umapclust.get(**wildcards).output[0] + "/{bc_clss}.csv").bc_clss
-        fqs_dir = "clust/umapclust/split"
     elif "isONclust" in cluster:
         bc_cls1 = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_cls1}.csv").bc_cls1
         bc_clss = [i + "_0" for i in bc_cls1]
-        fqs_dir = "clust/isONclust/split"
     else:
         bcs = get_qced_barcodes(wildcards)
         bc_clss = [i + "_0_0" for i in bcs]
-        fqs_dir = "clust/meshclust/fqs"
-    
-    if fastq == True:
-        return expand(fqs_dir + "/{bc_cls}.fastq", bc_cls=bc_clss)
-    else: 
-        return expand("clust/meshclust/{bc_cls}.tsv", bc_cls=bc_clss)
+    return expand("clust/meshclust/{bc_cls}.tsv", bc_cls=bc_clss)
 
 checkpoint cls_meshclust:
     input:  
         ".qc_DONE",
         lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc)),
-        lambda wc: get_meshclust(wc, fastq = True),
-        cluster = lambda wc: get_meshclust(wc, fastq = False),
+        cluster = lambda wc: get_meshclust(wc),
     output: directory("clust/clusters")
     params:
         min_size = config["min_cluster_size"],
