@@ -279,14 +279,17 @@ rule meshclust:
     shell: 
         "meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1"
 
-def get_meshclust(wildcards, cluster = config["cluster"]):
+def get_meshclust(wildcards, cluster = config["cluster"], pool = config["pool"]):
     if "umapclust" in cluster: 
         bc_clss = glob_wildcards(checkpoints.cls_umapclust.get(**wildcards).output[0] + "/{bc_clss}.csv").bc_clss
     elif "isONclust" in cluster:
         bc_cls1 = glob_wildcards(checkpoints.cls_isONclust.get(**wildcards).output[0] + "/{bc_cls1}.csv").bc_cls1
         bc_clss = [i + "_0" for i in bc_cls1]
     else:
-        bcs = get_qced_barcodes(wildcards)
+        if pool == True:
+            bcs = ["pooled"]
+        else:
+            bcs = get_qced_barcodes(wildcards)
         bc_clss = [i + "_0_0" for i in bcs]
     return expand("clust/meshclust/{bc_cls}.tsv", bc_cls=bc_clss)
 
