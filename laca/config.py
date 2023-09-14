@@ -46,7 +46,7 @@ def init_conf(
         subsample (bool): if True, subsample the reads [default: False]
         no_chimera_filt (bool): if True, do not filter possible chimeric reads [default: False]
         no_primer_check (bool): if True, do not check primer pattern [default: False]
-        cluster (list): list of methods to cluster reads (isONclust, umapclust, isONcorrect, meshclust) [default: ["isONclust", "meshclust"]]
+        cluster (list): list of methods to cluster reads (isONclust, umapclust, meshclust) [default: ["isONclust", "meshclust"]]
         consensus (list): list of methods to generate consensus (kmerCon, miniCon, isoCon, umiCon) [default: ["kmerCon"]]
         globalclust_umi (bool): if True, use global clustering for UMI consensus [default: False]
         quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
@@ -79,6 +79,8 @@ def init_conf(
         # isONclustCon
         conf["isONclust"]["k"] = 13
         conf["isONclust"]["w"] = 20
+        # isoCon with isONcorrect
+        conf["isoCon"]["run_isONcorrect"] = True
         # minimap2
         conf["minimap2"]["x_ava"] = "ava-ont"
         conf["minimap2"]["x_map"] = "map-ont"
@@ -102,9 +104,8 @@ def init_conf(
         # isONclustCon
         conf["isONclust"]["k"] = 15
         conf["isONclust"]["w"] = 50
-        # isONcorrect
-        if "isONcorrect" in cluster:
-            cluster.remove("isONcorrect")
+        # isoCon without isONcorrect
+        conf["isoCon"]["run_isONcorrect"] = False
         # minimap2
         conf["minimap2"]["x_ava"] = "ava-pb"
         conf["minimap2"]["x_map"] = "asm20"

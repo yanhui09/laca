@@ -1,4 +1,4 @@
-check_list_ele("cluster", config["cluster"], ["isONclust", "umapclust", "isONcorrect", "meshclust"])
+check_list_ele("cluster", config["cluster"], ["isONclust", "umapclust", "meshclust"])
 localrules: cls_isONclust, cls_umapclust, cls_meshclust, fqs_split_isONclust, fqs_split_isONclust2, fqs_split_umapclust, fqs_split_meshclust, prepare_umapclust_fqs, prepare_meshclust_fqs, fq2fa4meshclust
 # "meshclust" is required
 if "meshclust" not in config["cluster"]:
@@ -250,7 +250,7 @@ use rule prepare_umapclust_fqs as prepare_meshclust_fqs with:
     output: 
         temp("clust/meshclust/fqs/{barcode}_0_0.fastq")
 
-def get_fqs4isONcorrect(cluster = config["cluster"]):
+def get_fqs4meshclust(cluster = config["cluster"]):
     if "umapclust" in cluster:
         fqs_dir = "clust/umapclust/split"
     elif "isONclust" in cluster:
@@ -258,41 +258,6 @@ def get_fqs4isONcorrect(cluster = config["cluster"]):
     else:
         fqs_dir = "clust/meshclust/fqs"
     return fqs_dir + "/{barcode}_{c1}_{c2}.fastq"
-
-# run_isoncorrect provide multithread processing for isONcorrect in batches
-rule isONcorrect:
-    input: get_fqs4isONcorrect()
-    output:
-        rundir = temp(directory("clust/isONcorrect/{barcode}_{c1}/{c2}")), 
-        fastq = "clust/isONcorrect/{barcode}_{c1}_{c2}.fastq"
-    conda: "../envs/isONcorCon.yaml"
-    params:
-        max_seqs = 2000,
-    log: "logs/clust/isONcorrect/{barcode}_{c1}_{c2}.log"
-    benchmark: "benchmarks/clust/isONcorrect/{barcode}_{c1}_{c2}.txt"
-    threads: config["threads"]["normal"]
-    resources:
-        mem = config["mem"]["normal"],
-        time = config["runtime"]["default"],
-    shell:
-        """
-        mkdir -p {output.rundir}
-        cp {input} {output.rundir}/0.fastq
-        # number of reads in fastqs
-        nlines=$(cat {output.rundir}/0.fastq | wc -l)
-        if [ $nlines -gt $((4*{params.max_seqs})) ]; then
-            run_isoncorrect --t {threads} --fastq_folder {output.rundir} --outfolder {output.rundir} --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
-        else
-            run_isoncorrect --t {threads} --fastq_folder {output.rundir} --outfolder {output.rundir} --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
-        fi
-        mv {output.rundir}/0/corrected_reads.fastq {output.fastq}
-        """
-
-def get_fqs4meshclust(cluster = config["cluster"]):
-    if "isONcorrect" in cluster:
-        return rules.isONcorrect.output.fastq
-    else:
-        return get_fqs4isONcorrect(cluster)
 
 rule fq2fa4meshclust:
     input: get_fqs4meshclust()
@@ -326,9 +291,6 @@ def get_meshclust(wildcards, cluster = config["cluster"], fastq = False):
         bcs = get_qced_barcodes(wildcards)
         bc_clss = [i + "_0_0" for i in bcs]
         fqs_dir = "clust/meshclust/fqs"
-    
-    if "isONcorrect" in cluster:
-        fqs_dir = "clust/isONcorrect"
     
     if fastq == True:
         return expand(fqs_dir + "/{bc_cls}.fastq", bc_cls=bc_clss)
@@ -369,7 +331,7 @@ rule fqs_split_meshclust:
     input:
         members = "clust/clusters/{barcode}_{c1}_{c2}_{c3}.csv",
         centroid = "clust/clusters/{barcode}_{c1}_{c2}_{c3}.centroid",
-        split = rules.isONcorrect.output.fastq if "isONcorrect" in config["cluster"] else "qc/qfilt/{barcode}.fastq",
+        split = "qc/qfilt/{barcode}.fastq",
     output:
         members = temp("clust/members/{barcode}_{c1}_{c2}_{c3}.fastq"),
         centroid = temp("clust/centroids/{barcode}_{c1}_{c2}_{c3}.fasta"),

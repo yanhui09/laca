@@ -72,7 +72,6 @@ min_cluster_size: 10
 cluster:
 #  - isONclust
 #  - umapclust
-#  - isONcorrect
 #  - meshclust
 
 isONclust:
@@ -117,10 +116,11 @@ miniCon:
     max_recursion: -1 # non-zero value to override python's max recursion depth
 
 isoCon:
+  run_isONcorrect: true
   # speed up with small values, e.g. 500, 1000, 
   # but may affect quality if nearest neighbors not found, default: 2**32
   # https://github.com/ksahlin/IsoCon/issues/3
-  neighbor_search_depth:
+  neighbor_search_depth: default
   p_value_threshold: 0.01
   # evenly paritioned to run in batch if the number of reads bigger than the set value
   # default: -1, no batch use

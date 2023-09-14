@@ -91,7 +91,7 @@ def get_chimera_free(chimera_filt= config["chimera_filt"]):
     else:
         return get_raw()
 
-# check primer-pattern, process two strands differently
+# check primer-pattern, process two strands independently
 rule check_primers:
     input: get_chimera_free()
     output: 

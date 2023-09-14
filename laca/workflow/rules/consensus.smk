@@ -116,6 +116,41 @@ use rule fqs_split_meshclust as fqs_split_miniCon with:
         centroid = temp("miniCon/polish/{barcode}_{c1}_{c2}_{c3}cand{cand}/minimap2/raw.fna"),
 
 # isoCon
+# run_isoncorrect provide multi-thread support for isONcorrect
+rule isONcorrect:
+    input: rules.fqs_split_meshclust.output.members
+    output:
+        rundir = temp(directory("isoCon/isONcorrect/{barcode}_{c1}_{c2}/{c3}")), 
+        fastq = temp("isoCon/{barcode}_{c1}_{c2}_{c3}.corr.fastq"),
+    conda: "../envs/isONcorCon.yaml"
+    params:
+        max_seqs = 2000,
+    log: "logs/isoCon/isONcorrect/{barcode}_{c1}_{c2}_{c3}.log"
+    benchmark: "benchmarks/isoCon/isONcorrect/{barcode}_{c1}_{c2}_{c3}.txt"
+    threads: config["threads"]["normal"]
+    resources:
+        mem = config["mem"]["normal"],
+        time = config["runtime"]["default"],
+    shell:
+        """
+        mkdir -p {output.rundir}
+        cp {input} {output.rundir}/0.fastq
+        # number of reads in fastqs
+        nlines=$(cat {output.rundir}/0.fastq | wc -l)
+        if [ $nlines -gt $((4*{params.max_seqs})) ]; then
+            run_isoncorrect --t {threads} --fastq_folder {output.rundir} --outfolder {output.rundir} --set_w_dynamically --split_wrt_batches --max_seqs {params.max_seqs} > {log} 2>&1
+        else
+            run_isoncorrect --t {threads} --fastq_folder {output.rundir} --outfolder {output.rundir} --set_w_dynamically --max_seqs {params.max_seqs} > {log} 2>&1
+        fi
+        mv {output.rundir}/0/corrected_reads.fastq {output.fastq}
+        """
+
+def get_fqs4isoCon(run_isONcorrect=config["isoCon"]["run_isONcorrect"]):
+    if run_isONcorrect is True:
+        return rules.isONcorrect.output.fastq
+    else:
+        return rules.fqs_split_meshclust.output.members
+
 def check_isoCon_batch(batch_size = config["isoCon"]["max_batch_size"]):
     check_val("isoCon max_batch_size", batch_size, int)
     if int(batch_size) < -1:
@@ -123,7 +158,7 @@ def check_isoCon_batch(batch_size = config["isoCon"]["max_batch_size"]):
 check_isoCon_batch()
 
 rule run_isoCon:
-    input: rules.fqs_split_meshclust.output.members
+    input: get_fqs4isoCon()
     output:
         cls = temp("isoCon/{barcode}_{c1}_{c2}_{c3}/IsoCon/cluster_info.tsv"),
         fna = temp("isoCon/{barcode}_{c1}_{c2}_{c3}/IsoCon/final_candidates.fa"),
@@ -131,7 +166,7 @@ rule run_isoCon:
     params:
         prefix = "isoCon/{barcode}_{c1}_{c2}_{c3}",
         min_candidates = config["min_support_reads"],
-        neighbor_search_depth =  int(config["isoCon"]["neighbor_search_depth"]) if config["isoCon"]["neighbor_search_depth"] else 2**32,
+        neighbor_search_depth = 2**32 if config["isoCon"]["neighbor_search_depth"] == "default" else int(config["isoCon"]["neighbor_search_depth"]),
         p_value_threshold = config["isoCon"]["p_value_threshold"],
         max_batch_size = -1 if int(config["isoCon"]["max_batch_size"]) == -1 else int(config["isoCon"]["max_batch_size"]) * 4,
     log: "logs/isoCon/{barcode}_{c1}_{c2}_{c3}.log"

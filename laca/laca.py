@@ -337,7 +337,7 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
 )
 @click.option(
     "--cluster",
-    type=click.Choice(["isONclust", "umapclust", "isONcorrect", "meshclust"]),
+    type=click.Choice(["isONclust", "umapclust", "meshclust"]),
     default=["isONclust", "meshclust"],
     show_default=True,
     multiple=True,
