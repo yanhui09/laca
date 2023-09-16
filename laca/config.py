@@ -120,6 +120,7 @@ def init_conf(
         # simulate
         conf["simulate"]["badread"]["error_model"] = "pacbio2016"
         conf["simulate"]["badread"]["qscore_model"] = "pacbio2016"
+        conf["simulate"]["badread"]["identity"] = "20,4"
         
     if longumi == True:
         conf["pool"] = False
