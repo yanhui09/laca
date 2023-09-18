@@ -201,10 +201,6 @@ q2phylo:
 ##############################################################
 # UMI extraction with seqkit and cutadapt
 umi:
-  seqkit:
-    min_qual: 7
-    min_len: 1000
-    max_len: 1600
   # keep it loose for putative UMIs in tolerated error
   loc: 200 # robust location containing the adaptor-UMI-primer pattern, leaving only the start/end regions to find UMIs
   len: 15 # base length of UMI on 5' and 3' side. Their length shall be the same.

@@ -137,9 +137,6 @@ def init_conf(
         conf["fprimer_max"]["F"] = "AGRGTTYGATYMTGGCTCAG"
         conf["rprimer_min"].clear()
         conf["rprimer_min"]["R"] = "CGACATCGAGGTGCCAAAC"
-        conf["umi"]["seqkit"]["min_qual"] = -1
-        conf["umi"]["seqkit"]["min_len"] = 3500
-        conf["umi"]["seqkit"]["max_len"] = 6000
         conf["umi"]["len"] = 18
         conf["umi"]["pattern"] = "NNNYRNNNYRNNNYRNNN NNNYRNNNYRNNNYRNNN"
         conf["umi"]["cutadapt"]["min_overlap"] = 11

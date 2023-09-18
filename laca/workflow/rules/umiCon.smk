@@ -807,8 +807,8 @@ rule trim_adaptors_umi:
         f = f5_pattern1,
         e = 0.1,
         O = 3,
-        m = config["umi"]["seqkit"]["min_len"],
-        M = config["umi"]["seqkit"]["max_len"],
+        m = config["seqkit"]["min_len"],
+        M = config["seqkit"]["max_len"],
         action = "retain",
     threads: config["threads"]["normal"]
     log: "logs/umiCon/trim_adaptors_umi.log"
@@ -839,8 +839,8 @@ use rule trim_adaptors_umi as trim_adaptors_umiR with:
         f = f5_pattern2,
         e = 0.1,
         O = 3,
-        m = config["umi"]["seqkit"]["min_len"],
-        M = config["umi"]["seqkit"]["max_len"],
+        m = config["seqkit"]["min_len"],
+        M = config["seqkit"]["max_len"],
         action = "retain",
     log: 
         "logs/umiCon/trim_primers_umiR.log"
