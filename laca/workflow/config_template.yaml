@@ -84,7 +84,7 @@ umapclust:
   # zero or negative values to bin all reads together; 
   # postive integer to bin in n batches due to limited rams; 
   # or use "auto" estimation;
-  batch_size: auto
+  batch_size: -1
   umap:
     n_neighbors: 15 # Increase this for global structure
     min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
