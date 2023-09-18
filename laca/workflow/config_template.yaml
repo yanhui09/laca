@@ -102,7 +102,7 @@ min_support_reads: 10
 # kmerCon: consensus from direct kmer bins
 # miniCon: refined kmer consensus based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
 # isoCon: IsoCon (close similarity)
-# umiCon: use action=none in cutadapt to preseve UMIs in QC
+# umiCon: suspend primer-check with cutadapt to preseve UMIs in QC
 globalclust_umi_reads: false
 consensus:
   #- kmerCon # the first is the final kOTUs 
