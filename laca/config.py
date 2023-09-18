@@ -142,6 +142,7 @@ def init_conf(
         conf["umi"]["cutadapt"]["min_overlap"] = 11
         conf["flinker"] = "CAAGCAGAAGACGGCATACGAGAT"
         conf["rlinker"] = "AATGATACGGCGACCACCGAGATC"
+        conf["min_cluster_size"] = 3
         conf["min_support_reads"] = 3
         
     if simulate == True:
