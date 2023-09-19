@@ -84,12 +84,12 @@ rule yacrd:
         time = config["runtime"]["simple"],
     shell: "yacrd -i {input.ava} -o {log} -c {params.c} -n {params.n} -t {threads} filter -i {input.fq} -o {output} 2>> {log}"
 
-def get_chimera_free(chimera_filt= config["chimera_filt"]):
+def get_chimera_free(chimera_filt= config["chimera_filt"], subsample = config["subsample"], n = config["seqkit"]["n"]):
     check_val("chimera_filt", chimera_filt, bool)
     if chimera_filt is True:
         return rules.yacrd.output
     else:
-        return get_raw()
+        return get_raw(subsample, n)
 
 # check primer-pattern, process two strands independently
 rule check_primers:
@@ -152,11 +152,11 @@ rule revcomp_fq:
     shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} --quiet"
 
 # option to trim or not
-def primer_check(primer_check = config["primer_check"], subsample = config["subsample"], n = config["seqkit"]["n"]):
+def primer_check(chimera_filt= config["chimera_filt"], primer_check = config["primer_check"], subsample = config["subsample"], n = config["seqkit"]["n"]):
     check_val("primer_check", primer_check, bool)
     out = [rules.check_primers.output.passed, rules.revcomp_fq.output]
     if primer_check is False:
-        out = get_raw(subsample, n)
+        out = get_chimera_free(chimera_filt, subsample, n)
     return out
 
 rule q_filter:
