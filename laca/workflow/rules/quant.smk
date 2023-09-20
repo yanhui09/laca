@@ -156,7 +156,7 @@ rule minimap2repseqs:
         m = "3G",
         # https://lh3.github.io/minimap2/minimap2.html#10
         max_de = config["minimap2"]["max_de"],
-        f = 1000,
+        f = config["minimap2"]["f"],
     conda: "../envs/minimap2.yaml"
     log: "logs/quant/minimap2/{barcode}.log"
     benchmark: "benchmarks/quant/minimap2/{barcode}.txt"

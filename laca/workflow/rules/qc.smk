@@ -58,7 +58,7 @@ rule minimap2ava_yacrd:
     params:
         x = config["minimap2"]["x_ava"],
         g = config["yacrd"]["minimap2"]["g"],
-        f = config["yacrd"]["minimap2"]["f"],
+        f = config["minimap2"]["f"],
     log: "logs/qc/yacrd/{barcode}_ava.log"
     benchmark: "benchmarks/qc/yacrd/{barcode}_ava.txt"
     threads: config["threads"]["large"]

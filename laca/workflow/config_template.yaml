@@ -43,7 +43,6 @@ yacrd:
   minimap2:
     # ont: -g 500; pacbio: -g 5000
     g: 500
-    f: 1000
   # ont|pacbio P6-C4: -c 4; pacbio Sequal: -c 3
   c: 4
   n: 0.4
@@ -129,9 +128,12 @@ isoCon:
 minimap2:
   # choose by reads type; https://github.com/lh3/minimap2
   # ont: ava-ont; pb: ava-pb
-  x_ava: ava-ont # [miniCon & yacrd]
+  x_ava: ava-ont # [yacrd & miniCon]
   # ont: map-ont; pb-clr: map-pb, pb-css: asm20 (< v2.18), map-hifi (> v2.19)
   x_map: map-ont # [polish & quant]
+  # a high threshold when mapping against redunadnt 16S sequences.
+  # https://github.com/lh3/minimap2/issues/897
+  f: 10000 # [yacrd & miniCon & polish & quant]
   # maximally allowed gap-compressed per-base sequence divergence as valid mapping, 
   # filter mismappings due to partial sequence similarity when creating abundance matrix with minimap2
   max_de: 0.075 # [quant]

@@ -48,7 +48,7 @@ rule minimap2ava:
     conda: "../envs/minimap2.yaml"
     params:
         x = config["minimap2"]["x_ava"],
-        f = config["yacrd"]["minimap2"]["f"],
+        f = config["minimap2"]["f"],
     log: "logs/miniCon/minimap2ava/{barcode}_{c1}_{c2}_{c3}.log"
     benchmark: "benchmarks/miniCon/minimap2ava/{barcode}_{c1}_{c2}_{c3}.txt"
     threads: config["threads"]["large"]
@@ -280,7 +280,8 @@ rule minimap2polish:
       fastq = "{consensus}/split/{bc_cls_cand}.fastq",
     output: temp("{consensus}/polish/{bc_cls_cand}/minimap2/{assembly}.paf"),
     params:
-        x = config["minimap2"]["x_map"]
+        x = config["minimap2"]["x_map"],
+        f = config["minimap2"]["f"],
     conda: "../envs/minimap2.yaml"
     log: "logs/{consensus}/{bc_cls_cand}/minimap2_{assembly}.log"
     benchmark: "benchmarks/{consensus}/{bc_cls_cand}/minimap2_{assembly}.txt"
@@ -294,7 +295,7 @@ rule minimap2polish:
         if [ ! -s {input.ref} ]; then
             touch {output} 2> {log}
         else
-            minimap2 -t {threads} -x {params.x} {input.ref} {input.fastq} > {output} 2> {log}
+            minimap2 -t {threads} -x {params.x} -f {params.f} {input.ref} {input.fastq} > {output} 2> {log}
         fi
         """
 
