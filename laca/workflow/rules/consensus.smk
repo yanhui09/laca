@@ -96,8 +96,7 @@ checkpoint cls_miniCon:
             if num_lines >= params.min_size:
                 bc_clss = i.split("/")[-1].removesuffix(".csv")
                 df = pd.read_csv(i)
-                # cluster starts from 0
-                #df["cluster"] = df["cluster"] - 1
+                # cluster starts from 1
                 for cand, df_cand in df.groupby('cluster'):
                     if len(df_cand) >= params.min_size:
                         bc_clss_cand = "/{bc_clss}cand{cand}".format(bc_clss=bc_clss, cand=cand)

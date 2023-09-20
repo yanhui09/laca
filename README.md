@@ -113,11 +113,15 @@ Options:
                                   demultiplexed fastqs.  [default: 1000]
   --no-pool                       Do not pool the reads for denoising.
   --subsample                     Subsample the reads.
-  --no-trim                       Do not trim the primers.
-  --kmerbin                       Do pre-read binning.
-  --cluster [kmerCon|clustCon|isONclustCon|isONclustCon2|isONcorCon|umiCon]
+  --no-chimera-filt               Do not filter chimeric reads.
+  --no-primer-check               Do not check primer pattern.
+  --cluster [isONclust|umapclust|meshclust]
+                                  Cluster approaches.  [Mutiple]  [default:
+                                  isONclust, meshclust]
+  --consensus [kmerCon|miniCon|isoCon|umiCon]
                                   Consensus methods.  [Mutiple]  [default:
-                                  isONclustCon]
+                                  kmerCon]
+  --globalclust-umi               Global read clutering before UMI binning.
   --quant [seqid|minimap2]        Create abundance matrix by sequence id or
                                   minimap2.  [Mutiple]  [default: seqid]
   --uchime                        Filter chimeras by uchime-denovo in vsearch.
@@ -125,11 +129,10 @@ Options:
                                   2]
   --jobs-max INTEGER              Number of jobs for threads-dependent tasks.
                                   [default: 6]
-  --nanopore                      Use config template for nanopore reads.
-                                  Option is mutually exclusive with 'isoseq'.
-  --isoseq                        Use config template for pacbio CCS reads.
-                                  Option is mutually exclusive with
-                                  'nanopore'.
+  --ont                           Use config template for ONT reads. Option is
+                                  mutually exclusive with 'isoseq'.
+  --isoseq                        Use config template for PacBio CCS reads.
+                                  Option is mutually exclusive with 'ont'.
   --longumi                       Use primer design from longumi paper (https:
                                   //doi.org/10.1038/s41592-020-01041-y).
                                   Option is mutually exclusive with
@@ -146,9 +149,8 @@ Options:
 Get a dry-run overview with `-n`. `Snakemake` arguments can be appened to `laca run` as well.
 
 ```
-Usage: laca run [OPTIONS] {demux|qc|kmerBin|kmerCon|clustCon|isONclustCon|isON
-                clustCon2|isONcorCon|umiCon|quant|taxa|tree|all|merge|initDB|s
-                imulate} [SNAKE_ARGS]...
+Usage: laca run [OPTIONS] {demux|qc|clust|kmerCon|miniCon|isoCon|umiCon|quant|
+                taxa|tree|all|merge|initDB|simulate} [SNAKE_ARGS]...
 
   Run LACA workflow.
 
