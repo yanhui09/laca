@@ -38,27 +38,15 @@ use rule prepare_umapclust_fqs as prepare_umiCon_fqs with:
     output: 
         temp("umiCon/fqs/{barcode}_0_0_0.fastq")
 
-use rule prepare_umapclust_fqs as prepare_umiCon_fqs_globalclust with:
-    input: 
-        rules.fqs_split_meshclust.output.members,
-    output: 
-        temp("umiCon/fqs/{barcode}_{c1}_{c2}_{c3}.fastq")
-
-def get_fqs4umiCon(wildcards, global_clust = config["globalclust_umi_reads"], expanded = False, ids = False, pool = config["pool"]):
+def get_fqs4umiCon(wildcards, expanded = False, ids = False, pool = config["pool"]):
     if expanded == False:
-        if global_clust == True:
-            return rules.prepare_umiCon_fqs_globalclust.output
-        else:
-            return rules.prepare_umiCon_fqs.output
+        return rules.prepare_umiCon_fqs.output
     else:
-        if global_clust == True:
-            bc_clss = glob_wildcards(checkpoints.cls_meshclust.get(**wildcards).output[0] + "/{bc_clss}.csv").bc_clss
+        if pool == True:
+           bcs = ["pooled"]
         else:
-            if pool == True:
-               bcs = ["pooled"]
-            else:
-               bcs = get_qced_barcodes(wildcards)
-            bc_clss = [bc +"_0_0_0" for bc in bcs]
+           bcs = get_qced_barcodes(wildcards)
+        bc_clss = [bc +"_0_0_0" for bc in bcs]
         if ids == True:
             return bc_clss
         else: 
