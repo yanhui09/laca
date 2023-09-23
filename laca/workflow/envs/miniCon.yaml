@@ -1,4 +1,4 @@
-name: clustCon
+name: miniCon
 channels:
  - conda-forge
  - bioconda 
@@ -6,4 +6,5 @@ dependencies:
  - pandas==1.5.2
  - scipy
  - numpy
+ - minimap2
  #- fastcluster

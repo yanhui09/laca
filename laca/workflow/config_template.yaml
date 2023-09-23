@@ -109,6 +109,7 @@ consensus:
   #- umiCon
 
 miniCon:
+  max_batch_size: -1 # default: -1, no batch use
   miniclust:
     min_score_frac: 0.8
     max_recursion: -1 # non-zero value to override python's max recursion depth

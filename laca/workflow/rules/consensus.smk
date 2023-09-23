@@ -42,41 +42,63 @@ checkpoint cls_kmerCon:
 
 # miniCon
 # refine cluster with max average score from base-level alignments
-rule minimap2ava:
-    input: rules.fqs_split_meshclust.output.members
-    output: temp("miniCon/minimap2ava/{barcode}_{c1}_{c2}_{c3}.paf")
-    conda: "../envs/minimap2.yaml"
-    params:
-        x = config["minimap2"]["x_ava"],
-        f = config["minimap2"]["f"],
-    log: "logs/miniCon/minimap2ava/{barcode}_{c1}_{c2}_{c3}.log"
-    benchmark: "benchmarks/miniCon/minimap2ava/{barcode}_{c1}_{c2}_{c3}.txt"
-    threads: config["threads"]["large"]
-    resources:
-        mem = config["mem"]["large"],
-        time = config["runtime"]["long"],
-    shell:
-        "minimap2 -t {threads} -x {params.x} -f {params.f} --no-long-join -r100"
-        " {input} {input} > {output} 2> {log}"
-
+# support batch
 rule ava2clust:
-    input: rules.minimap2ava.output
+    input: rules.fqs_split_meshclust.output.members
     output: temp("miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}.csv")
     conda: "../envs/miniCon.yaml"
     params:
+        x = config["minimap2"]["x_ava"],
+        f = config["minimap2"]["f"],
+        max_batch_size = -1 if int(config["miniCon"]["max_batch_size"]) == -1 else int(config["miniCon"]["max_batch_size"]) * 4,
         prefix = "miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}",
         min_score_frac = config["miniCon"]["miniclust"]["min_score_frac"],
         min_reads = config["min_support_reads"],
         max_recurs = config["miniCon"]["miniclust"]["max_recursion"],
     log: "logs/miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}.log"
     benchmark: "benchmarks/miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}.txt"
+    threads: config["threads"]["large"]
     resources:
         mem = config["mem"]["large"],
         time = config["runtime"]["long"],
     shell:
-        "python {workflow.basedir}/scripts/miniclust.py -p {params.prefix}"
-        " -R {params.max_recurs}"
-        " -s {params.min_score_frac} -n {params.min_reads} {input} > {log} 2>& 1"
+        """
+        if [ {params.max_batch_size} -eq -1 ]; then
+          minimap2 -t {threads} -x {params.x} -f {params.f} --no-long-join -r100 {input} {input} > {params.prefix}.paf 2> {log}
+          python {workflow.basedir}/scripts/miniclust.py -p {params.prefix} -R {params.max_recurs} -s {params.min_score_frac} -n {params.min_reads} {params.prefix}.paf >> {log} 2>& 1        
+          rm -f {params.prefix}.paf
+        else
+          # number of reads in fastqs
+          nlines=$(cat {input} | wc -l)
+          if [ $nlines -le {params.max_batch_size} ]; then
+            minimap2 -t {threads} -x {params.x} -f {params.f} --no-long-join -r100 {input} {input} > {params.prefix}.paf 2> {log}
+            python {workflow.basedir}/scripts/miniclust.py -p {params.prefix} -R {params.max_recurs} -s {params.min_score_frac} -n {params.min_reads} {params.prefix}.paf >> {log} 2>& 1        
+            rm -f {params.prefix}.paf
+          else
+            mkdir -p {params.prefix}
+            # determine the minimum partion size (number of batches), ceiling division
+            min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
+            # determine the number of lines per batch, ceiling division, the nearest multiples of 4
+            nlines_per_batch=$(((nlines + min_part_size * 4 - 1) / (min_part_size * 4) * 4))
+            split -l $nlines_per_batch -a3 -d --additional-suffix='.fastq' {input} {params.prefix}/b >{log} 2>&1
+            for fq in {params.prefix}/b*.fastq; do
+              batch_id=$(basename $fq | cut -d'.' -f1)
+              if [ -f {params.prefix}/$batch_id.csv ]; then
+                continue
+              fi
+              if [ -f {params.prefix}/$batch_id.paf ]; then
+                rm -f {params.prefix}/$batch_id.paf
+              fi
+              minimap2 -t {threads} -x {params.x} -f {params.f} --no-long-join -r100 $fq $fq > {params.prefix}/$batch_id.paf 2>> {log}
+              python {workflow.basedir}/scripts/miniclust.py -p {params.prefix}/$batch_id -R {params.max_recurs} -s {params.min_score_frac} -n {params.min_reads} {params.prefix}/$batch_id.paf >>{log} 2>& 1        
+              rm -f {params.prefix}/$batch_id.paf
+            done
+            # combine all batch and add batchid after cluster
+            python {workflow.basedir}/scripts/combine_miniclust.py {output} {params.prefix}
+            rm -rf {params.prefix} 
+          fi 
+        fi
+        """
 
 checkpoint cls_miniCon:
     input:
@@ -96,7 +118,6 @@ checkpoint cls_miniCon:
             if num_lines >= params.min_size:
                 bc_clss = i.split("/")[-1].removesuffix(".csv")
                 df = pd.read_csv(i)
-                # cluster starts from 1
                 for cand, df_cand in df.groupby('cluster'):
                     if len(df_cand) >= params.min_size:
                         bc_clss_cand = "/{bc_clss}cand{cand}".format(bc_clss=bc_clss, cand=cand)
