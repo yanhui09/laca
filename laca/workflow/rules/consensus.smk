@@ -91,7 +91,7 @@ rule ava2clust:
               fi
               minimap2 -t {threads} -x {params.x} -f {params.f} --no-long-join -r100 $fq $fq > {params.prefix}/$batch_id.paf 2>> {log}
               python {workflow.basedir}/scripts/miniclust.py -p {params.prefix}/$batch_id -R {params.max_recurs} -s {params.min_score_frac} -n {params.min_reads} {params.prefix}/$batch_id.paf >>{log} 2>& 1        
-              rm -f {params.prefix}/$batch_id.paf
+              rm -f {params.prefix}/$batch_id.paf $fq
             done
             # combine all batch and add batchid after cluster
             python {workflow.basedir}/scripts/combine_miniclust.py {output} {params.prefix}
