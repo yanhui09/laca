@@ -268,7 +268,9 @@ rule meshclust:
     input: "clust/meshclust/{barcode}_{c1}_{c2}.fasta"
     output: "clust/meshclust/{barcode}_{c1}_{c2}.tsv"
     params:
+        prefix = "clust/meshclust/{barcode}_{c1}_{c2}",
         t = "-t " + str(config["meshclust"]["t"]) if config["meshclust"]["t"] else "",
+        max_batch_size = -1 if int(config["meshclust"]["max_batch_size"]) == -1 else int(config["meshclust"]["max_batch_size"]) * 2,
     singularity: "docker://yanhui09/identity:latest"
     log: "logs/clust/meshclust/{barcode}_{c1}_{c2}.log"
     benchmark: "benchmarks/mechclust/{barcode}_{c1}_{c2}.txt"
@@ -277,7 +279,36 @@ rule meshclust:
         mem = config["mem"]["large"],
         time = config["runtime"]["long"],
     shell: 
-        "meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1"
+        """
+        if [ {params.max_batch_size} -eq -1 ]; then
+          meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1
+        else
+          # number of reads in fastqs
+          nlines=$(cat {input} | wc -l)
+          if [ $nlines -le {params.max_batch_size} ]; then
+            meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1
+          else
+            mkdir -p {params.prefix}
+            # determine the minimum partion size (number of batches), ceiling division
+            min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
+            # determine the number of lines per batch, ceiling division, the nearest multiples of 2
+            nlines_per_batch=$(((nlines + min_part_size * 2 - 1) / (min_part_size * 2) * 2))
+            split -l $nlines_per_batch -a3 -d --additional-suffix='.fasta' {input} {params.prefix}/b >{log} 2>&1
+            for fa in {params.prefix}/b*.fasta; do
+              batch_id=$(basename $fa | cut -d'.' -f1)
+              if [ -f {params.prefix}/$batch_id.tsv ]; then
+                continue
+              fi
+              meshclust -d $fa -o {params.prefix}/$batch_id.tsv -c {threads} {params.t} >> {log} 2>&1
+              # add batchid after cluster (the first column)
+              sed -i "s/\t/$batch_id\t/" {params.prefix}/$batch_id.tsv
+              rm -f $fa
+            done
+            cat {params.prefix}/b*.tsv > {output}
+            rm -rf {params.prefix} 
+          fi 
+        fi
+        """
 
 def get_meshclust(wildcards, cluster = config["cluster"], pool = config["pool"]):
     if "umapclust" in cluster: 
