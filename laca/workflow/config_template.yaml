@@ -93,7 +93,7 @@ umapclust:
     epsilon: 0.5 # Lower this for more micro-clusters
 
 meshclust:
-  max_batch_size: -1 # default: -1, no batch use
+  max_batch_size: 25000 # default: -1, no batch use
   t: 0.9 #keep it empty for auto-estimation
 
 ##############################################################
@@ -110,7 +110,7 @@ consensus:
   #- umiCon
 
 miniCon:
-  max_batch_size: -1 # default: -1, no batch use
+  max_batch_size: 5000 # -1, no batch use, may have low yeild for large clusters
   miniclust:
     min_score_frac: 0.8
     max_recursion: -1 # non-zero value to override python's max recursion depth
