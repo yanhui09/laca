@@ -7,7 +7,7 @@ fprimers_max = config["fprimer_max"]
 rprimers_min = config["rprimer_min"]
 f5_pattern = ['-g ' + f5primer for f5primer in list(fprimers_max.values())]
 f3_pattern = ['-a' + revcomp(r5primer) for r5primer in list(rprimers_min.values())]
-f53_patterns = f5_pattern + f3_pattern
+f53_patterns = ' '.join(f5_pattern + f3_pattern)
 
 rule check_primers_repseqs:
     input: get_repseqs()
