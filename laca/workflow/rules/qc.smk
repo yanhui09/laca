@@ -22,7 +22,6 @@ rule subsample:
     output:
         p = temp("qc/subsampled/{barcode}_p.fastq"),
         n = temp("qc/subsampled/{barcode}.fastq"),
-    conda: "../envs/seqkit.yaml"
     params:
         n = config["seqkit"]["n"],
     log: "logs/qc/subsample/{barcode}.log"
@@ -109,7 +108,6 @@ rule revcomp_fq_combine:
     output: 
         revcompR = temp("qc/primers_passed/{barcode}R_revcomp.fastq"),
         combined = temp("qc/primers_passed/{barcode}.fastq"),
-    conda: "../envs/seqkit.yaml"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
@@ -172,7 +170,6 @@ def get_chimera_free(chimera_filt= config["chimera_filt"], primer_check = config
 rule q_filter:
     input: get_chimera_free()
     output: "qc/qfilt/{barcode}.fastq"
-    conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min_qual"],
         m = config["seqkit"]["min_len"],
