@@ -37,16 +37,6 @@ seqkit:
   min_len: 800
   max_len: 1600
 
-# filter chimeric reads with yacrd
-chimera_filt: true
-yacrd:
-  minimap2:
-    # ont: -g 500; pacbio: -g 5000
-    g: 500
-  # ont|pacbio P6-C4: -c 4; pacbio Sequal: -c 3
-  c: 4
-  n: 0.4
-
 # primer-pattern check
 primer_check: true
 # order matters
@@ -65,6 +55,16 @@ cutadapt:
   # https://cutadapt.readthedocs.io/en/stable/guide.html#action
   # trim|retain|none
   action: retain 
+
+# filter chimeric reads with yacrd
+chimera_filt: true
+yacrd:
+  minimap2:
+    # ont: -g 500; pacbio: -g 5000
+    g: 500
+  # ont|pacbio P6-C4: -c 4; pacbio Sequal: -c 3
+  c: 4
+  n: 0.4
 ##############################################################
 #  global read clustering
 min_cluster_size: 10
@@ -95,7 +95,6 @@ umapclust:
 meshclust:
   max_batch_size: 25000 # default: -1, no batch use
   t: 0.9 #keep it empty for auto-estimation
-
 ##############################################################
 # consensus mode [kmerCon|miniCon|isoCon|umiCon]
 min_support_reads: 10
@@ -111,9 +110,7 @@ consensus:
 
 miniCon:
   max_batch_size: 5000 # -1, no batch use, may have low yeild for large clusters
-  miniclust:
-    min_score_frac: 0.8
-    max_recursion: -1 # non-zero value to override python's max recursion depth
+  min_score_frac: 0.8
 
 isoCon:
   run_isONcorrect: true
@@ -150,7 +147,6 @@ medaka:
   iter: 1 
   m:  r941_min_hac_g507
   cudnn: False
-
 ##############################################################
 # create abundance matrix by sequence id or minimap2 mapping, the first is the final
 # seqid|minimap2: seqid, recommended in pool mode; minimap2, recommended in single sample mode

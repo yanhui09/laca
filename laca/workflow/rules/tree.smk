@@ -2,31 +2,30 @@
 check_list_ele("phylogeny", config["phylogeny"], ["FastTree", "IQ-TREE", "RAxML"])
 
 # only take the aligned sequences
-# max fprimer and min rprimer
+# minimal patterns: max fprimer and min rprimer
 fprimers_max = config["fprimer_max"]
 rprimers_min = config["rprimer_min"]
-# pattern
-f5al_pattern1 = linked_pattern(fprimers_max, rprimers_min)
-f5al_pattern2 = linked_pattern(rprimers_min, fprimers_max)
-f5al_patterns = f5al_pattern1 + ' ' + f5al_pattern2
+f5_pattern = ['-g ' + f5primer for f5primer in list(fprimers_max.values())]
+f3_pattern = ['-a' + revcomp(r5primer) for r5primer in list(rprimers_min.values())]
+f53_patterns = f5_pattern + f3_pattern
 
-rule trim_repseqs:
+rule check_primers_repseqs:
     input: get_repseqs()
     output: temp("tree/rep_seqs_trimmed.fasta")
     conda: "../envs/cutadapt.yaml"
     params:
-        f = f5al_patterns,
+        f53 = f53_patterns,
         action = "retain",
-    log: "logs/tree/trim_repseqs.log"
-    benchmark: "benchmarks/tree/trim_repseqs.txt"
+    log: "logs/tree/check_primers_repseqs.log"
+    benchmark: "benchmarks/tree/check_primers_repseqs.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
-    shell: "cutadapt --action={params.action} -j {threads} {params.f} -o {output} {input} > {log} 2>&1"
+    shell: "cutadapt --action={params.action} -j {threads} {params.f53} -o {output} {input} > {log} 2>&1"
 
 rule q2_repseqs:
-    input: rules.trim_repseqs.output
+    input: rules.check_primers_repseqs.output
     output: temp("tree/rep_seqs.qza")
     conda: "../envs/q2plugs.yaml"
     log: "logs/tree/q2_repseqs.log"

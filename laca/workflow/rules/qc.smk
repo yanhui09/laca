@@ -50,50 +50,9 @@ def get_raw(subsample = config["subsample"], n = config["seqkit"]["n"]):
     else:
         return rules.collect_fastq.output
 
-# read scrubbing
-rule minimap2ava_yacrd:
-    input: get_raw()
-    output: temp("qc/yacrd/{barcode}.paf")
-    conda: "../envs/yacrd.yaml"
-    params:
-        x = config["minimap2"]["x_ava"],
-        g = config["yacrd"]["minimap2"]["g"],
-        f = config["minimap2"]["f"],
-    log: "logs/qc/yacrd/{barcode}_ava.log"
-    benchmark: "benchmarks/qc/yacrd/{barcode}_ava.txt"
-    threads: config["threads"]["large"]
-    resources:
-        mem = config["mem"]["large"],
-        time = config["runtime"]["simple"],
-    shell: "minimap2 -x {params.x} -g {params.g} -f {params.f} -t {threads} {input} {input} > {output} 2> {log}"
-
-rule yacrd:
-    input: 
-        fq = get_raw(),
-        ava = rules.minimap2ava_yacrd.output
-    output: temp("qc/yacrd/{barcode}.fastq")
-    conda: "../envs/yacrd.yaml"
-    params:
-        c = config["yacrd"]["c"],
-        n = config["yacrd"]["n"],
-    log: "logs/qc/yacrd/{barcode}_scrubb.log"
-    benchmark: "benchmarks/qc/yacrd/{barcode}_scrubb.txt"
-    threads: config["threads"]["large"]
-    resources:
-        mem = config["mem"]["large"],
-        time = config["runtime"]["simple"],
-    shell: "yacrd -i {input.ava} -o {log} -c {params.c} -n {params.n} -t {threads} filter -i {input.fq} -o {output} 2>> {log}"
-
-def get_chimera_free(chimera_filt= config["chimera_filt"], subsample = config["subsample"], n = config["seqkit"]["n"]):
-    check_val("chimera_filt", chimera_filt, bool)
-    if chimera_filt is True:
-        return rules.yacrd.output
-    else:
-        return get_raw(subsample, n)
-
 # check primer-pattern, process two strands independently
 rule check_primers:
-    input: get_chimera_free()
+    input: get_raw()
     output: 
         passed = temp("qc/primers_passed/{barcode}F.fastq"),
         unpassed = temp("qc/primers_unpassed/{barcode}F.fastq"),
@@ -140,40 +99,87 @@ use rule check_primers as check_primersR with:
     benchmark: 
         "benchmarks/qc/check_primersR/{barcode}.txt"
 
-# reverse complement for reverse strand
-rule revcomp_fq:
-    input: rules.check_primersR.output.passed
-    output: temp("qc/primers_passed/{barcode}R_revcomp.fastq")
+# reverse complement for reverse strand; combine two strands
+rule revcomp_fq_combine:
+    input: 
+        primerF = rules.check_primers.output.passed,
+        primerR = rules.check_primersR.output.passed,
+    output: 
+        revcompR = temp("qc/primers_passed/{barcode}R_revcomp.fastq"),
+        combined = temp("qc/primers_passed/{barcode}.fastq"),
     conda: "../envs/seqkit.yaml"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
-    shell: "seqkit seq -j {threads} -r -p -t dna {input} > {output} --quiet"
+    shell: 
+        """
+        seqkit seq -j {threads} -r -p -g -t dna {input.primerR} > {output.revcompR} --quiet
+        cat {input.primerF} {output.revcompR} > {output.combined}
+        """
 
 # option to trim or not
-def primer_check(chimera_filt= config["chimera_filt"], primer_check = config["primer_check"], subsample = config["subsample"], n = config["seqkit"]["n"]):
+def get_primer_check(primer_check = config["primer_check"], subsample = config["subsample"], n = config["seqkit"]["n"]):
     check_val("primer_check", primer_check, bool)
-    out = [rules.check_primers.output.passed, rules.revcomp_fq.output]
-    if primer_check is False:
-        out = get_chimera_free(chimera_filt, subsample, n)
-    return out
+    if primer_check is True:
+        return rules.revcomp_fq_combine.output.combined
+    else:
+        return get_raw(subsample, n)
+
+# filter chimeric reads
+rule minimap2ava_yacrd:
+    input: get_primer_check()
+    output: temp("qc/yacrd/{barcode}.paf")
+    conda: "../envs/yacrd.yaml"
+    params:
+        x = config["minimap2"]["x_ava"],
+        g = config["yacrd"]["minimap2"]["g"],
+        f = config["minimap2"]["f"],
+    log: "logs/qc/yacrd/{barcode}_ava.log"
+    benchmark: "benchmarks/qc/yacrd/{barcode}_ava.txt"
+    threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["simple"],
+    shell: "minimap2 -x {params.x} -g {params.g} -f {params.f} -t {threads} {input} {input} > {output} 2> {log}"
+
+rule yacrd:
+    input: 
+        fq = get_primer_check(),
+        ava = rules.minimap2ava_yacrd.output
+    output: temp("qc/yacrd/{barcode}.fastq")
+    conda: "../envs/yacrd.yaml"
+    params:
+        c = config["yacrd"]["c"],
+        n = config["yacrd"]["n"],
+    log: "logs/qc/yacrd/{barcode}_filter.log"
+    benchmark: "benchmarks/qc/yacrd/{barcode}_filter.txt"
+    threads: config["threads"]["large"]
+    resources:
+        mem = config["mem"]["large"],
+        time = config["runtime"]["simple"],
+    shell: "yacrd -i {input.ava} -o {log} -c {params.c} -n {params.n} -t {threads} filter -i {input.fq} -o {output} 2>> {log}"
+
+def get_chimera_free(chimera_filt= config["chimera_filt"], primer_check = config["primer_check"], subsample = config["subsample"], n = config["seqkit"]["n"]):
+    check_val("chimera_filt", chimera_filt, bool)
+    if chimera_filt is True:
+        return rules.yacrd.output
+    else:
+        return get_primer_check(primer_check, subsample, n)
 
 rule q_filter:
-    input: primer_check()
+    input: get_chimera_free()
     output: "qc/qfilt/{barcode}.fastq"
     conda: "../envs/seqkit.yaml"
     params:
         Q = config["seqkit"]["min_qual"],
         m = config["seqkit"]["min_len"],
         M = config["seqkit"]["max_len"],
-    log: "logs/qc/q_filter/{barcode}.log"
-    benchmark: "benchmarks/qc/q_filter/{barcode}.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
-    shell: "cat {input} | seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i > {output} 2> {log}"
+    shell: "seqkit seq -j {threads} -Q {params.Q} -m {params.m} -M {params.M} -i -g {input} > {output} --quiet"
 
 checkpoint exclude_empty_fqs:
     input: lambda wc: expand("qc/qfilt/{barcode}.fastq", barcode=get_demux_barcodes(wc))

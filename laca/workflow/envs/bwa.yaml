@@ -1,7 +1,9 @@
 name: bwa
 channels:
   - bioconda
+  - conda-forge
   - defaults
 dependencies:
   - bwa
   - samtools
+  - ncurses

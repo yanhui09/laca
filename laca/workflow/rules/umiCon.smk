@@ -831,25 +831,18 @@ use rule trim_adaptors_umi as trim_adaptors_umiR with:
         M = config["seqkit"]["max_len"],
         action = "retain",
     log: 
-        "logs/umiCon/trim_primers_umiR.log"
+        "logs/umiCon/trim_adaptors_umiR.log"
     benchmark: 
-        "benchmarks/umiCon/trim_primers_umiR.txt"
+        "benchmarks/umiCon/trim_adaptors_umiR.txt"
 
 # reverse complement for reverse strand
-use rule revcomp_fq as revcomp_fq_umi with:
+use rule revcomp_fq_combine as revcomp_fq_combine_umi with:
     input: 
-        rules.trim_adaptors_umiR.output.trimmed
+        primerF = rules.trim_adaptors_umi.output.trimmed,
+        primerR = rules.trim_adaptors_umiR.output.trimmed,
     output: 
-        temp("umiCon/umiCon_trimmedR_revcomp.fna")
+        revcompR = temp("umiCon/umiCon_trimmedR_revcomp.fna"),
+        combined = "umiCon/umiCon_trimmed.fna",
 
 rule collect_umiCon_trimmed:
-    input: 
-        rules.trim_adaptors_umi.output.trimmed,
-        rules.revcomp_fq_umi.output
-    output: "umiCon/umiCon_trimmed.fna"
-    run: 
-        with open(output[0], "w") as out:
-            for i in input:
-                with open(i, "r") as inp:
-                    for line in inp:
-                        out.write(line)
+    input: rules.revcomp_fq_combine_umi.output.combined

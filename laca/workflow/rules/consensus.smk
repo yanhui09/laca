@@ -52,9 +52,9 @@ rule ava2clust:
         f = config["minimap2"]["f"],
         max_batch_size = -1 if int(config["miniCon"]["max_batch_size"]) == -1 else int(config["miniCon"]["max_batch_size"]) * 4,
         prefix = "miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}",
-        min_score_frac = config["miniCon"]["miniclust"]["min_score_frac"],
+        min_score_frac = config["miniCon"]["min_score_frac"],
         min_reads = config["min_support_reads"],
-        max_recurs = config["miniCon"]["miniclust"]["max_recursion"],
+        max_recurs = -1,
     log: "logs/miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}.log"
     benchmark: "benchmarks/miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}.txt"
     threads: config["threads"]["large"]
