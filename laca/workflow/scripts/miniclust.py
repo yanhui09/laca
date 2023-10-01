@@ -62,8 +62,8 @@ def main(args):
     df_out['qlen'] = df_out['qname'].map(rls)
     df_out['mean_qlen'] = df_out.groupby('cluster')['qlen'].transform('mean')
     df_out['frac_max_score'] = df_out['clust_read_score'] / ((df_out['mean_qlen'] / 10000) ** 2)
-    # bin id
-    bin_id = args.paf.split('/')[-2]
+    # bin id, basename
+    bin_id = args.paf.split('/')[-1].split('.')[0]
     df_out['bin_id'] = bin_id
     # filter
     df_out = df_out[df_out['frac_max_score'] > args.min_score_frac]

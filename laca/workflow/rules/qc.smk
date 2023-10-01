@@ -61,7 +61,8 @@ rule check_primers:
         f = f5_pattern1,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
-        m = 1,
+        m = config["seqkit"]["min_len"],
+        M = config["seqkit"]["max_len"],
         action = config["cutadapt"]["action"],
     log: "logs/qc/check_primersF/{barcode}.log"
     benchmark: "benchmarks/qc/check_primersF/{barcode}.txt"
@@ -74,7 +75,7 @@ rule check_primers:
         cutadapt \
         --action={params.action} \
         -j {threads} \
-        -e {params.e} -O {params.O} -m {params.m} \
+        -e {params.e} -O {params.O} -m {params.m}  -M {params.M} \
         {params.f} \
         --untrimmed-output {output.unpassed} \
         -o {output.passed} \
@@ -92,7 +93,8 @@ use rule check_primers as check_primersR with:
         f = f5_pattern2,
         e = config["cutadapt"]["max_errors"],
         O = config["cutadapt"]["min_overlap"],
-        m = 1,
+        m = config["seqkit"]["min_len"],
+        M = config["seqkit"]["max_len"],
         action = config["cutadapt"]["action"],
     log: 
         "logs/qc/check_primersR/{barcode}.log"

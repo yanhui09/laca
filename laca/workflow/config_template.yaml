@@ -79,11 +79,10 @@ isONclust:
   w: 20
 
 umapclust:
-  # To mitagate the memory bottleneck of umap in pooling mode, batch mode is induced. 
-  # zero or negative values to bin all reads together; 
-  # postive integer to bin in n batches due to limited rams; 
+  # To mitagate the memory bottleneck of umap, batch mode is induced. 
+  # default: -1, no batch use
   # or use "auto" estimation;
-  batch_size: -1
+  max_batch_size: -1 
   umap:
     n_neighbors: 15 # Increase this for global structure
     min_dist: 0.1 # Lower this to increase density for clustering (0.0, 0.99)
@@ -110,7 +109,7 @@ consensus:
 
 miniCon:
   max_batch_size: 5000 # -1, no batch use, may have low yeild for large clusters
-  min_score_frac: 0.8
+  min_score_frac: 0.85
 
 isoCon:
   run_isONcorrect: true

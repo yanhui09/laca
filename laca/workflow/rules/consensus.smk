@@ -50,7 +50,7 @@ rule ava2clust:
     params:
         x = config["minimap2"]["x_ava"],
         f = config["minimap2"]["f"],
-        max_batch_size = -1 if int(config["miniCon"]["max_batch_size"]) == -1 else int(config["miniCon"]["max_batch_size"]) * 4,
+        max_batch_size = -1 if int(config["miniCon"]["max_batch_size"]) <= 0 else int(config["miniCon"]["max_batch_size"]) * 4,
         prefix = "miniCon/ava2clust/{barcode}_{c1}_{c2}_{c3}",
         min_score_frac = config["miniCon"]["min_score_frac"],
         min_reads = config["min_support_reads"],
@@ -75,12 +75,15 @@ rule ava2clust:
             python {workflow.basedir}/scripts/miniclust.py -p {params.prefix} -R {params.max_recurs} -s {params.min_score_frac} -n {params.min_reads} {params.prefix}.paf >> {log} 2>& 1        
             rm -f {params.prefix}.paf
           else
-            mkdir -p {params.prefix}
             # determine the minimum partion size (number of batches), ceiling division
             min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
             # determine the number of lines per batch, ceiling division, the nearest multiples of 4
             nlines_per_batch=$(((nlines + min_part_size * 4 - 1) / (min_part_size * 4) * 4))
-            split -l $nlines_per_batch -a3 -d --additional-suffix='.fastq' {input} {params.prefix}/b >{log} 2>&1
+            # if batches folder not exist, mkdir & split
+            if [ ! -d {params.prefix} ]; then
+              mkdir -p {params.prefix}
+              split -l $nlines_per_batch -a3 -d --additional-suffix='.fastq' {input} {params.prefix}/b >{log} 2>&1
+            fi
             for fq in {params.prefix}/b*.fastq; do
               batch_id=$(basename $fq | cut -d'.' -f1)
               if [ -f {params.prefix}/$batch_id.csv ]; then
@@ -188,7 +191,7 @@ rule run_isoCon:
         min_candidates = config["min_support_reads"],
         neighbor_search_depth = 2**32 if config["isoCon"]["neighbor_search_depth"] == "default" else int(config["isoCon"]["neighbor_search_depth"]),
         p_value_threshold = config["isoCon"]["p_value_threshold"],
-        max_batch_size = -1 if int(config["isoCon"]["max_batch_size"]) == -1 else int(config["isoCon"]["max_batch_size"]) * 4,
+        max_batch_size = -1 if int(config["isoCon"]["max_batch_size"]) <= 0 else int(config["isoCon"]["max_batch_size"]) * 4,
     log: "logs/isoCon/{barcode}_{c1}_{c2}_{c3}.log"
     benchmark: "benchmarks/isoCon/{barcode}_{c1}_{c2}_{c3}.txt"
     threads: config["threads"]["large"]
@@ -204,13 +207,15 @@ rule run_isoCon:
           --prefilter_candidates --min_candidate_support {params.min_candidates} --cleanup >{log} 2>&1
           find {params.prefix}/IsoCon -mindepth 1 ! -name 'final_candidates.fa' ! -name 'cluster_info.tsv' | xargs rm -rf
         else
-          # split input fastq into batches
-          mkdir -p {params.prefix}/IsoCon/batches
           # determine the minimum partion size (number of batches), ceiling division
           min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
           # determine the number of lines per batch, ceiling division, the nearest multiples of 4
-          nlines_per_batch=$(((nlines + min_part_size * 4 - 1) / (min_part_size * 4) * 4)) 
-          split -l $nlines_per_batch -a3 -d --additional-suffix='.fastq' {input} {params.prefix}/IsoCon/batches/b >{log} 2>&1
+          nlines_per_batch=$(((nlines + min_part_size * 4 - 1) / (min_part_size * 4) * 4))
+          # if batches folder not exist, mkdir & split
+          if [ ! -d {params.prefix}/IsoCon/batches ]; then
+            mkdir -p {params.prefix}/IsoCon/batches
+            split -l $nlines_per_batch -a3 -d --additional-suffix='.fastq' {input} {params.prefix}/IsoCon/batches/b >{log} 2>&1
+          fi
           for fq in {params.prefix}/IsoCon/batches/b*.fastq; do
             batch_id=$(basename $fq | cut -d'.' -f1)
             if [ -f {params.prefix}/IsoCon/batches/$batch_id/final_candidates.fa ] && [ -f {params.prefix}/IsoCon/batches/$batch_id/cluster_info.tsv ]; then
@@ -222,6 +227,7 @@ rule run_isoCon:
             find {params.prefix}/IsoCon/batches/$batch_id -mindepth 1 ! -name 'final_candidates.fa' ! -name 'cluster_info.tsv' | xargs rm -rf
             sed -i "s/_support/${{batch_id}}_support/" {params.prefix}/IsoCon/batches/$batch_id/cluster_info.tsv
             sed -i "s/_support/${{batch_id}}_support/" {params.prefix}/IsoCon/batches/$batch_id/final_candidates.fa
+            rm -f $fq
           done
           # merge the results
           cat {params.prefix}/IsoCon/batches/b*/cluster_info.tsv > {params.prefix}/IsoCon/cluster_info.tsv

@@ -6,8 +6,8 @@ import sys
 with open(sys.argv[1], 'w') as outfile:
     outfile.write('read\tlength\tD1\tD2\tbin_id\tbatch_id\n')
     for file in os.listdir(sys.argv[2]):
-        if file.endswith('.tsv'):
-            batch_id = file.split('.')[0].split('_')[-1].replace('batch', 'b')
+        if file.endswith('.tsv') and file.startswith('umapclust_'):
+            batch_id = file.split('.')[0].split('_')[-1]
             file_path = os.path.join(sys.argv[2], file)
             with open(file_path) as infile:
                 next(infile)

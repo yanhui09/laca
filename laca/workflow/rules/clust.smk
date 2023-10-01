@@ -108,42 +108,28 @@ rule kmer_freqs:
         " -r {input} -t {threads}"
         " 2> {log} > {output}"
 
-def get_batch_size(kmer_freq, batch_size = config["umapclust"]["batch_size"], mem = config["mem"]["large"]):
-    if not os.path.exists(kmer_freq):
-        return -1
-    # total input read size
-    with open(kmer_freq) as f:
-        total = sum(1 for line in f) -1
-    
-    # zero and negtive values to use all reads
+def get_batch_size(batch_size = config["umapclust"]["max_batch_size"], mem = config["mem"]["large"]):
     try: 
         batch_size = int(batch_size)
         if batch_size <= 0:
-            batch_size = total
-        # auto estimation of batch size base on RAM
+            batch_size = -1
+    # auto estimation of batch size based on RAM
     except:
         if batch_size == "auto":
             # estimated constan m
             # max_rss y = 254 + 0.0514x R2=0.96 
             # max_vms y = 1570 + 0.0969x R2 = 0.81
-            
             m = 0.06
             est_size = int((1024 * mem - 254) / m)
-            if est_size > total:
-                batch_size = total
-            else:
-                batch_size = est_size
     return batch_size
 
 rule umapclust:
     input: rules.kmer_freqs.output
-    output: 
-        batch = temp(directory("clust/umapclust/{barcode}_{c1}")),
-        read2cluster = "clust/umapclust/{barcode}_{c1}.tsv",
+    output: "clust/umapclust/{barcode}_{c1}.tsv",
     conda: "../envs/umapclust.yaml"
     params:
-        bc_clss= "{barcode}_{c1}",
-        batch = lambda wc, input: get_batch_size(kmer_freq = input[0]),
+        prefix = "clust/umapclust/{barcode}_{c1}",
+        max_batch_size = get_batch_size(),
         n_neighbors = config["umapclust"]["umap"]["n_neighbors"],
         min_dist = config["umapclust"]["umap"]["min_dist"],
         metric = "cosine",
@@ -159,26 +145,46 @@ rule umapclust:
         time = config["runtime"]["default"],
     shell:
         """
-        mkdir -p {output.batch}
-        sed 1d {input} | shuf --random-source=<(yes 123) > {output.batch}/shuffled
-        split -l {params.batch} -a3 -d --additional-suffix='.tsv' {output.batch}/shuffled {output.batch}/batch         
-        for i in {output.batch}/batch*; do sed -e '1R {input}' -e '1d' $i > /tmp/kb_batch && cat /tmp/kb_batch > $i; done
-        rm -f {output.batch}/header {output.batch}/shuffled
-
-        # umap cluster in loop
-        for i in {output.batch}/batch*tsv; do
-            batchid=$(basename $i .tsv)
-            
-            NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/umapclust.py -k $i \
+        # number of reads in fastqs
+        nlines=$(cat {input} | wc -l)
+        # header excluded
+        nlines=$((nlines - 1))
+        if [ {params.max_batch_size} -eq -1 ] || [ $nlines -le {params.max_batch_size} ]; then
+            # if batch_size <= 0 or batch_size > nlines, run umapclust directly
+            NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/umapclust.py -k {input} \
             -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components} \
             -s {params.min_bin_size} -m {params.min_samples} -e {params.epsilon} \
-            -c  {output.batch}/umap_$batchid.tsv \
+            -c {output} \
             > {log} 2>&1
-            rm -f $i
-        done
-        
-        # combine all batch and add batchid column to read2cluster
-        python {workflow.basedir}/scripts/combine_umapclust.py {output.read2cluster} {output.batch}
+        else
+            # determine the minimum partion size (number of batches), ceiling division
+            min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
+            # determine the number of lines per batch, ceiling division
+            nlines_per_batch=$(((nlines + min_part_size - 1) / min_part_size))
+            # if batch folder not exist, mkdir, shuffle & split
+            if [ ! -d {params.prefix} ]; then
+              mkdir -p {params.prefix}
+              # shuffle split fastq by barcode if in pooling mode
+              sed 1d {input} | shuf --random-source=<(yes 123) > {params.prefix}/shuffled
+              split -l $nlines_per_batch -a3 -d --additional-suffix='.tsv' {params.prefix}/shuffled {params.prefix}/b >{log} 2>&1         
+              for i in {params.prefix}/b*.tsv; do sed -e '1R {input}' -e '1d' $i > /tmp/kb_batch && cat /tmp/kb_batch > $i; done
+              rm -f {params.prefix}/shuffled
+            fi
+            # umap cluster in loop
+            for i in {params.prefix}/b*.tsv; do
+                batchid=$(basename $i .tsv)
+                
+                NUMBA_NUM_THREADS={threads} python {workflow.basedir}/scripts/umapclust.py -k $i \
+                -n {params.n_neighbors} -d {params.min_dist} -r {params.metric} -t {params.n_components} \
+                -s {params.min_bin_size} -m {params.min_samples} -e {params.epsilon} \
+                -c  {params.prefix}/umapclust_$batchid.tsv \
+                >> {log} 2>&1
+                rm -f $i
+            done
+            # combine all batch and add batchid column to read2cluster
+            python {workflow.basedir}/scripts/combine_umapclust.py {output} {params.prefix}
+            rm -rf {params.prefix}
+        fi
         """
 
 def get_umapclust(wildcards, pool = config["pool"], cluster = config["cluster"], fqs=False):
@@ -270,7 +276,7 @@ rule meshclust:
     params:
         prefix = "clust/meshclust/{barcode}_{c1}_{c2}",
         t = "-t " + str(config["meshclust"]["t"]) if config["meshclust"]["t"] else "",
-        max_batch_size = -1 if int(config["meshclust"]["max_batch_size"]) == -1 else int(config["meshclust"]["max_batch_size"]) * 2,
+        max_batch_size = -1 if int(config["meshclust"]["max_batch_size"]) <= 0 else int(config["meshclust"]["max_batch_size"]) * 2,
     singularity: "docker://yanhui09/identity:latest"
     log: "logs/clust/meshclust/{barcode}_{c1}_{c2}.log"
     benchmark: "benchmarks/mechclust/{barcode}_{c1}_{c2}.txt"
@@ -288,12 +294,15 @@ rule meshclust:
           if [ $nlines -le {params.max_batch_size} ]; then
             meshclust -d {input} -o {output} -c {threads} {params.t} > {log} 2>&1
           else
-            mkdir -p {params.prefix}
             # determine the minimum partion size (number of batches), ceiling division
             min_part_size=$(((nlines + {params.max_batch_size} - 1) / {params.max_batch_size}))
             # determine the number of lines per batch, ceiling division, the nearest multiples of 2
             nlines_per_batch=$(((nlines + min_part_size * 2 - 1) / (min_part_size * 2) * 2))
-            split -l $nlines_per_batch -a3 -d --additional-suffix='.fasta' {input} {params.prefix}/b >{log} 2>&1
+            # if batches folder not exist, mkdir & split
+            if [ ! -d {params.prefix} ]; then
+              mkdir -p {params.prefix}
+              split -l $nlines_per_batch -a3 -d --additional-suffix='.fasta' {input} {params.prefix}/b >{log} 2>&1
+            fi
             for fa in {params.prefix}/b*.fasta; do
               batch_id=$(basename $fa | cut -d'.' -f1)
               if [ -f {params.prefix}/$batch_id.tsv ]; then
