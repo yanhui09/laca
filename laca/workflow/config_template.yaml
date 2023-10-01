@@ -92,7 +92,7 @@ umapclust:
     epsilon: 0.5 # Lower this for more micro-clusters
 
 meshclust:
-  max_batch_size: 25000 # default: -1, no batch use
+  max_batch_size: -1 # default: -1, no batch use
   t: 0.9 #keep it empty for auto-estimation
 ##############################################################
 # consensus mode [kmerCon|miniCon|isoCon|umiCon]
