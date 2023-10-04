@@ -6,7 +6,7 @@ check_list_ele("phylogeny", config["phylogeny"], ["FastTree", "IQ-TREE", "RAxML"
 fprimers_max = config["fprimer_max"]
 rprimers_min = config["rprimer_min"]
 f5_pattern = ['-g ' + f5primer for f5primer in list(fprimers_max.values())]
-f3_pattern = ['-a' + revcomp(r5primer) for r5primer in list(rprimers_min.values())]
+f3_pattern = ['-a ' + revcomp(r5primer) for r5primer in list(rprimers_min.values())]
 f53_patterns = ' '.join(f5_pattern + f3_pattern)
 
 rule check_primers_repseqs:
@@ -16,13 +16,15 @@ rule check_primers_repseqs:
     params:
         f53 = f53_patterns,
         action = "retain",
+        m = config["seqkit"]["min_len"],
+        M = config["seqkit"]["max_len"],
     log: "logs/tree/check_primers_repseqs.log"
     benchmark: "benchmarks/tree/check_primers_repseqs.txt"
     threads: config["threads"]["normal"]
     resources:
         mem = config["mem"]["normal"],
         time = config["runtime"]["simple"],
-    shell: "cutadapt --action={params.action} -j {threads} {params.f53} -o {output} {input} > {log} 2>&1"
+    shell: "cutadapt --action={params.action} -j {threads} {params.f53} -m {params.m} -M {params.M} -o {output} {input} > {log} 2>&1"
 
 rule q2_repseqs:
     input: rules.check_primers_repseqs.output
