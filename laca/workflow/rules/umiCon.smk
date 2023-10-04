@@ -785,13 +785,6 @@ rule get_seedfa:
 # polish follows rules in consensus.smk
 
 # trim umi adaptors 
-f5_pattern_umi = ['-g ' + f5primer for f5primer in list(fprimers.values())]
-f3_pattern_umi = ['-a' + revcomp(r5primer) for r5primer in list(rprimers.values())]
-f53_patterns_umi = ' '.join(f5_pattern_umi + f3_pattern_umi)
-r5_pattern_umi = ['-g ' + r5primer for r5primer in list(rprimers.values())]
-r3_pattern_umi = ['-a' + revcomp(f5primer) for f5primer in list(fprimers.values())]
-r53_patterns_umi = ' '.join(r5_pattern_umi + r3_pattern_umi)
-
 rule trim_adaptors_umi:
     input: "umiCon/umiCon.fna"
     output: 
@@ -799,7 +792,7 @@ rule trim_adaptors_umi:
         untrimmed = temp("umiCon/umiCon_untrimmedF.fna"),
     conda: "../envs/cutadapt.yaml"
     params:
-        f53 = f53_patterns_umi,
+        f = f5_pattern1,
         e = 0.1,
         O = 3,
         m = config["seqkit"]["min_len"],
@@ -817,7 +810,7 @@ rule trim_adaptors_umi:
         --action={params.action} \
         -j {threads} \
         -e {params.e} -O {params.O} -m {params.m} -M {params.M} \
-        {params.f53} \
+        {params.f} \
         --untrimmed-output {output.untrimmed} \
         -o {output.trimmed} \
         {input} \
@@ -831,7 +824,7 @@ use rule trim_adaptors_umi as trim_adaptors_umiR with:
         trimmed = temp("umiCon/umiCon_trimmedR.fna"),
         untrimmed = "umiCon/umiCon_untrimmed.fna"
     params:
-        f53 = r53_patterns_umi,
+        f = f5_pattern2,
         e = 0.1,
         O = 3,
         m = config["seqkit"]["min_len"],
