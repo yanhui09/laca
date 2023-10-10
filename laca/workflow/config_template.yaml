@@ -93,7 +93,7 @@ umapclust:
 
 meshclust:
   max_batch_size: -1 # default: -1, no batch use
-  t: 0.9 #keep it empty for auto-estimation
+  t: #keep it empty for auto-estimation
 ##############################################################
 # consensus mode [kmerCon|miniCon|isoCon|umiCon]
 min_support_reads: 10
