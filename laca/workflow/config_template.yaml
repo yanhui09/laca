@@ -67,7 +67,7 @@ yacrd:
   n: 0.4
 ##############################################################
 #  global read clustering
-min_cluster_size: 10
+min_cluster_size: 20
 cluster:
 #  - isONclust
 #  - umapclust
@@ -96,7 +96,7 @@ meshclust:
   t: #keep it empty for auto-estimation
 ##############################################################
 # consensus mode [kmerCon|miniCon|isoCon|umiCon]
-min_support_reads: 10
+min_support_reads: 20
 # kmerCon: consensus from direct kmer bins
 # miniCon: refined kmer consensus based on pairwise alignment with minimap2 [orignal method in https://genome.cshlp.org/content/30/3/437]
 # isoCon: IsoCon (close similarity)

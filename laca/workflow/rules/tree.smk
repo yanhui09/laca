@@ -16,7 +16,7 @@ rule check_primers_repseqs:
     params:
         f53 = f53_patterns,
         action = "retain",
-        m = config["seqkit"]["min_len"],
+        m = 100 if config["seqkit"]["min_len"] - 100 < 100 else config["seqkit"]["min_len"] - 100,
         M = config["seqkit"]["max_len"],
     log: "logs/tree/check_primers_repseqs.log"
     benchmark: "benchmarks/tree/check_primers_repseqs.txt"
