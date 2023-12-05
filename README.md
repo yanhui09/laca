@@ -10,8 +10,7 @@ Using `snakemake` as the job controller, `LACA` is wrapped into a python package
 `LACA` provides an end-to-end solution from bascecalled reads to the final count matrix.
 
 **Important: 
-As `LACA` integrates multiple bioinformatic tools, it is only tested in Linux systems, i.e., Ubuntu.
-**
+`LACA` is only tested in Linux systems, i.e., Ubuntu.**
 
 [preprint on bioRxiv](https://www.biorxiv.org/content/10.1101/2023.11.26.568539v1)
 
