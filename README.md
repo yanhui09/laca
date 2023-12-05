@@ -9,9 +9,11 @@
 Using `snakemake` as the job controller, `LACA` is wrapped into a python package for development and mainteniance.
 `LACA` provides an end-to-end solution from bascecalled reads to the final count matrix.
 
-**Important: `LACA` is under development, and here released as a preview for early access. 
+**Important: 
 As `LACA` integrates multiple bioinformatic tools, it is only tested in Linux systems, i.e., Ubuntu.
-The detailed instruction and manuscript are in preparation.**
+**
+
+[preprint on bioRxiv](https://www.biorxiv.org/content/10.1101/2023.11.26.568539v1)
 
 # Docker image
 The easiest way to use `LACA` is to pull the `docker` image from [Docker Hub](https://hub.docker.com/r/yanhui09/laca) for cross-platform support.
@@ -121,7 +123,6 @@ Options:
   --consensus [kmerCon|miniCon|isoCon|umiCon]
                                   Consensus methods.  [Mutiple]  [default:
                                   kmerCon]
-  --globalclust-umi               Global read clutering before UMI binning.
   --quant [seqid|minimap2]        Create abundance matrix by sequence id or
                                   minimap2.  [Mutiple]  [default: seqid]
   --uchime                        Filter chimeras by uchime-denovo in vsearch.

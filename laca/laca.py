@@ -352,13 +352,6 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
     help="Consensus methods.  [Mutiple]",
 )
 @click.option(
-    "--globalclust-umi",
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="Global read clutering before UMI binning.",
-)
-@click.option(
     "--quant",
     type=click.Choice(["seqid", "minimap2"]),
     default=["seqid"],
@@ -436,14 +429,14 @@ def run_workflow(workflow, workdir, configfile, jobs, maxmem, profile, dryrun, s
 )
 def run_init(
     bascdir, demuxdir, merge, merge_parent, dbdir, workdir, demuxer, fqs_min, no_pool, subsample, no_chimera_filt, no_primer_check, 
-    cluster, consensus, globalclust_umi, quant, uchime, jobs_min, jobs_max, ont, isoseq, longumi, simulate, clean_flags):
+    cluster, consensus, quant, uchime, jobs_min, jobs_max, ont, isoseq, longumi, simulate, clean_flags):
     """
     Prepare config file for LACA.
     """ 
     logger.info(f"LACA version: {__version__}")
     init_conf(
         bascdir, demuxdir, merge, merge_parent, dbdir, workdir, "config.yaml", demuxer, fqs_min, no_pool, subsample, no_chimera_filt,
-        no_primer_check, cluster, consensus, globalclust_umi, quant, uchime, jobs_min, jobs_max, ont, isoseq, longumi, simulate)
+        no_primer_check, cluster, consensus, quant, uchime, jobs_min, jobs_max, ont, isoseq, longumi, simulate)
     # clean flags if requested
     if clean_flags:
         # rm .*_DONE in workdir

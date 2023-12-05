@@ -19,7 +19,6 @@ def init_conf(
     no_primer_check=False,
     cluster=["isONclust", "meshclust"],
     consensus=["kmerCon"],
-    globalclust_umi=False,
     quant=["seqid"],
     uchime=False,
     jobs_m=2,
@@ -48,7 +47,6 @@ def init_conf(
         no_primer_check (bool): if True, do not check primer pattern [default: False]
         cluster (list): list of methods to cluster reads (isONclust, umapclust, meshclust) [default: ["isONclust", "meshclust"]]
         consensus (list): list of methods to generate consensus (kmerCon, miniCon, isoCon, umiCon) [default: ["kmerCon"]]
-        globalclust_umi (bool): if True, use global clustering for UMI consensus [default: False]
         quant (list): list of methods to create abundance matrix (seqid, minimap2) [default: ["seqid"]]
         uchime (bool): if True, filter possible chimeric OTUs by vsearch [default: False]
         jobs_m (int): number of jobs for common tasks [default: 2]
@@ -132,7 +130,6 @@ def init_conf(
         conf["fprimer"]["F"] = "AGRGTTYGATYMTGGCTCAG"
         conf["rprimer"].clear()
         conf["rprimer"]["R"] = "CGACATCGAGGTGCCAAAC"
-        conf["globalclust_umi_reads"] = False
         conf["fprimer_max"].clear()
         conf["fprimer_max"]["F"] = "AGRGTTYGATYMTGGCTCAG"
         conf["rprimer_min"].clear()
@@ -186,7 +183,6 @@ def init_conf(
     conf["subsample"] = subsample
     conf["cluster"] = list(cluster)
     conf["consensus"] = list(consensus)
-    conf["globalclust_umi_reads"] = globalclust_umi
     conf["quant"] = list(quant)
     conf["uchime"] = uchime
     conf["threads"]["normal"] = jobs_m
