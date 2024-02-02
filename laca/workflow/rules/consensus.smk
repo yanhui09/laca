@@ -389,7 +389,7 @@ rule medaka_consensus:
         ext = ["_to_draft.bam", "_to_draft.bam.bai"])),
     params:
         m = config["medaka"]["m"],
-        cudnn = 'CUDA_VISIBLE_DEVICES=""' if config["medaka"]["cudnn"] is False else 'TF_FORCE_GPU_ALLOW_GROWTH=true',
+        cudnn = 'CUDA_VISIBLE_DEVICES=""',
         _dir = "{consensus}/polish/{bc_cls_cand}/medaka_{iter2}",
         inedxs = lambda wc: get_medaka_files(wc, index = True),
     conda: "../envs/medaka.yaml"
@@ -406,16 +406,10 @@ rule medaka_consensus:
             mkdir -p {params._dir} 2> {log}
             touch {output} 2>> {log}
         else
-            export OLD_LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}
-            export LD_LIBRARY_PATH="$CONDA_PREFIX/lib":${{LD_LIBRARY_PATH}}
-            export TF_CPP_MIN_LOG_LEVEL='2'
-
+            export TF_CPP_MIN_LOG_LEVEL='3'
             export {params.cudnn}
             medaka_consensus -i {input.fastq} -d {input.fna} -o {params._dir} -t {threads} -m {params.m} > {log} 2>&1
             rm -f {params.inedxs}
-
-            export LD_LIBRARY_PATH=${{OLD_LD_LIBRARY_PATH}}
-            unset OLD_LD_LIBRARY_PATH
         fi
         """
 

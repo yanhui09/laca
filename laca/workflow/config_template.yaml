@@ -145,7 +145,6 @@ racon:
 medaka:
   iter: 1 
   m:  r941_min_hac_g507
-  cudnn: False
 ##############################################################
 # create abundance matrix by sequence id or minimap2 mapping, the first is the final
 # seqid|minimap2: seqid, recommended in pool mode; minimap2, recommended in single sample mode
